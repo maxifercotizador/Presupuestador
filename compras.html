@@ -1935,7 +1935,10 @@ function procesarTextoVozCompleto(texto) {
   const micFam = document.getElementById('mic-familia').value;
   const numeros = extraerNumerosDeTesto(texto);
 
-  if (!numeros.length) {
+  // Deduplicar — el reconocedor repite resultados al reiniciarse
+  const numerosUnicos = [...new Set(numeros)];
+
+  if (!numerosUnicos.length) {
     document.getElementById('mic-status').textContent = '❓ No encontré números en lo grabado — intentá de nuevo';
     document.getElementById('mic-transcript').textContent = texto;
     return;
@@ -1945,7 +1948,7 @@ function procesarTextoVozCompleto(texto) {
   let noEncontrados = [];
   let sinHistorial = [];
 
-  for (const numero of numeros) {
+  for (const numero of numerosUnicos) {
     const candidatos = DB.filter(p =>
       p.proveedor === proveedorActual &&
       String(p.numero) === String(numero) &&
@@ -1987,7 +1990,7 @@ function procesarTextoVozCompleto(texto) {
   if (noEncontrados.length) msg += (msg ? ' · ' : '') + '❌ no encontrados: ' + noEncontrados.join(', ');
 
   document.getElementById('mic-status').textContent = msg || 'Sin resultados';
-  document.getElementById('mic-transcript').textContent = 'Escuché: ' + numeros.join(', ');
+  document.getElementById('mic-transcript').textContent = 'Códigos procesados: ' + numerosUnicos.sort((a,b)=>a-b).join(', ');
 
   if (sinHistorial.length) {
     toast('Productos sin historial agregados con cantidad 0 — completá la cantidad en la tabla', 'error');
