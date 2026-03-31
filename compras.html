@@ -1750,16 +1750,18 @@ function setModo(modo) {
 // ───────────────────────────────────────────────────────────
 let micActivo = false;
 let recognition = null;
+let micTextoAcumulado = ''; // acumula todo lo que se dice mientras graba
 
 function onMicFamiliaChange() {
-  // Reiniciar mic si estaba activo al cambiar familia
   if (micActivo) stopMic();
-  document.getElementById('mic-status').textContent = 'Tocá el micrófono y decí el número';
+  document.getElementById('mic-status').textContent = 'Tocá el micrófono y dictá los números';
+  document.getElementById('mic-transcript').textContent = '';
+  micTextoAcumulado = '';
 }
 
 function toggleMic() {
   if (micActivo) {
-    stopMic();
+    stopMic(true); // true = procesar al parar
   } else {
     startMic();
   }
@@ -1776,6 +1778,7 @@ function startMic() {
     return;
   }
 
+  micTextoAcumulado = '';
   recognition = new SpeechRecognition();
   recognition.lang = 'es-AR';
   recognition.continuous = true;
@@ -1785,47 +1788,62 @@ function startMic() {
     micActivo = true;
     document.getElementById('mic-btn').classList.add('recording');
     document.getElementById('mic-btn').textContent = '⏹️';
-    document.getElementById('mic-status').textContent = '🔴 Escuchando...';
+    document.getElementById('mic-status').textContent = '🔴 Grabando — dictá todos los números, luego pará';
     document.getElementById('mic-status').classList.add('activo');
+    document.getElementById('mic-transcript').textContent = '';
   };
 
   recognition.onresult = (e) => {
     let interino = '';
-    let final = '';
     for (let i = e.resultIndex; i < e.results.length; i++) {
-      const txt = e.results[i][0].transcript.trim();
-      if (e.results[i].isFinal) final += txt;
-      else interino += txt;
+      const txt = e.results[i][0].transcript;
+      if (e.results[i].isFinal) {
+        micTextoAcumulado += ' ' + txt; // acumular texto final
+      } else {
+        interino = txt; // mostrar solo lo interim (lo que está procesando ahora)
+      }
     }
-    document.getElementById('mic-transcript').textContent = interino || final;
-
-    if (final) {
-      procesarTextoVoz(final);
-    }
+    // Mostrar lo acumulado + lo que está procesando ahora
+    const mostrar = (micTextoAcumulado + ' ' + interino).trim();
+    document.getElementById('mic-transcript').textContent = mostrar;
   };
 
   recognition.onerror = (e) => {
-    if (e.error !== 'no-speech') {
+    if (e.error === 'not-allowed') {
+      toast('Permiso de micrófono denegado — habilitalo en el navegador', 'error');
+      stopMic(false);
+    } else if (e.error !== 'no-speech') {
       toast('Error de micrófono: ' + e.error, 'error');
-      stopMic();
+      stopMic(false);
     }
   };
 
   recognition.onend = () => {
-    if (micActivo) recognition.start(); // mantener continuo
+    if (micActivo) recognition.start(); // mantener continuo hasta que el usuario pare
   };
 
   recognition.start();
 }
 
-function stopMic() {
+function stopMic(procesar = true) {
   micActivo = false;
   if (recognition) { recognition.stop(); recognition = null; }
   document.getElementById('mic-btn').classList.remove('recording');
   document.getElementById('mic-btn').textContent = '🎙️';
-  document.getElementById('mic-status').textContent = 'Tocá el micrófono y decí el número';
   document.getElementById('mic-status').classList.remove('activo');
-  document.getElementById('mic-transcript').textContent = '';
+
+  if (procesar && micTextoAcumulado.trim()) {
+    document.getElementById('mic-status').textContent = '⏳ Procesando...';
+    // Pequeño delay para que el último resultado llegue
+    setTimeout(() => {
+      procesarTextoVozCompleto(micTextoAcumulado.trim());
+      micTextoAcumulado = '';
+    }, 300);
+  } else {
+    document.getElementById('mic-status').textContent = 'Tocá el micrófono y dictá los números';
+    document.getElementById('mic-transcript').textContent = '';
+    micTextoAcumulado = '';
+  }
 }
 
 // Convierte texto hablado a número: "ochocientos cincuenta" → 850
@@ -1850,46 +1868,129 @@ function palabrasANumero(texto) {
   return total > 0 ? total : null;
 }
 
-function procesarTextoVoz(texto) {
-  const numero = palabrasANumero(texto);
-  if (!numero) {
-    document.getElementById('mic-status').textContent = '❓ No entendí: "' + texto + '" — intentá de nuevo';
-    return;
+// Extrae todos los números de un texto hablado largo
+function extraerNumerosDeTesto(texto) {
+  // Normalizar: quitar "y", limpiar
+  texto = texto.toLowerCase()
+    .replace(/\s+y\s+/g, ' ')
+    .replace(/[,\.]/g, ' ')
+    .trim();
+
+  const unidades = { cero:0,uno:1,una:1,dos:2,tres:3,cuatro:4,cinco:5,seis:6,siete:7,ocho:8,nueve:9,diez:10,once:11,doce:12,trece:13,catorce:14,quince:15,'dieciséis':16,dieciseis:16,diecisiete:17,dieciocho:18,diecinueve:19,veinte:20,veintiuno:21,'veintidós':22,veintidos:22,'veintitrés':23,veintitres:23,veinticuatro:24,veinticinco:25,'veintiséis':26,veintiseis:26,veintisiete:27,veintiocho:28,veintinueve:29 };
+  const decenas = { treinta:30,cuarenta:40,cincuenta:50,sesenta:60,setenta:70,ochenta:80,noventa:90 };
+  const centenas = { cien:100,ciento:100,doscientos:200,doscientas:200,trescientos:300,trescientas:300,cuatrocientos:400,cuatrocientas:400,quinientos:500,quinientas:500,seiscientos:600,seiscientas:600,setecientos:700,setecientas:700,ochocientos:800,ochocientas:800,novecientos:900,novecientas:900 };
+  const todasPalabras = { ...unidades, ...decenas, ...centenas };
+
+  const numeros = [];
+  const palabras = texto.split(/\s+/);
+  let i = 0;
+
+  while (i < palabras.length) {
+    const p = palabras[i];
+
+    // Número directo (dígitos)
+    if (/^\d+$/.test(p)) {
+      numeros.push(parseInt(p));
+      i++;
+      continue;
+    }
+
+    // Intentar construir un número con palabras consecutivas
+    if (todasPalabras[p] !== undefined) {
+      let acum = 0;
+      let j = i;
+      // Tomar palabras mientras sean numéricas
+      while (j < palabras.length && todasPalabras[palabras[j]] !== undefined) {
+        const val = todasPalabras[palabras[j]];
+        if (val >= 100) {
+          // centenas: si ya tenemos algo, multiplicar; sino sumar
+          acum = acum > 0 ? acum + val : val;
+        } else if (val >= 10) {
+          acum += val;
+        } else {
+          acum += val;
+        }
+        j++;
+      }
+      if (acum > 0) {
+        numeros.push(acum);
+        i = j;
+        continue;
+      }
+    }
+
+    i++;
   }
 
-  // Buscar en la BD del proveedor actual (filtrado por familia si está seleccionada)
+  return numeros;
+}
+
+function procesarTextoVozCompleto(texto) {
   const micFam = document.getElementById('mic-familia').value;
-  const candidatos = DB.filter(p =>
-    p.proveedor === proveedorActual &&
-    String(p.numero) === String(numero) &&
-    (!micFam || p.familia === micFam)
-  );
+  const numeros = extraerNumerosDeTesto(texto);
 
-  if (candidatos.length === 0) {
-    document.getElementById('mic-status').textContent = '⚠️ Código ' + numero + ' no encontrado en ' + proveedorActual;
+  if (!numeros.length) {
+    document.getElementById('mic-status').textContent = '❓ No encontré números en lo grabado — intentá de nuevo';
+    document.getElementById('mic-transcript').textContent = texto;
     return;
   }
 
-  const prod = candidatos[0];
-  const ultimaCant = getUltimaCantidad(prod.id);
-  const cant = ultimaCant ? ultimaCant.cant : null;
+  let agregados = 0;
+  let noEncontrados = [];
+  let sinHistorial = [];
 
-  if (!cant) {
-    document.getElementById('mic-status').textContent = '⚠️ Código ' + numero + ' encontrado pero sin historial de cantidad';
-    return;
+  for (const numero of numeros) {
+    const candidatos = DB.filter(p =>
+      p.proveedor === proveedorActual &&
+      String(p.numero) === String(numero) &&
+      (!micFam || p.familia === micFam)
+    );
+
+    if (!candidatos.length) {
+      noEncontrados.push(numero);
+      continue;
+    }
+
+    const prod = candidatos[0];
+    const ultimaCant = getUltimaCantidad(prod.id);
+
+    if (!ultimaCant) {
+      sinHistorial.push(numero);
+      // Igual lo agrego con cantidad 0 para que el usuario la complete
+      if (!pedidoActual.find(i => i.id === prod.id)) {
+        pedidoActual.push({ ...prod, cantidad: 0 });
+      }
+      continue;
+    }
+
+    const existe = pedidoActual.find(i => i.id === prod.id);
+    if (existe) {
+      existe.cantidad = ultimaCant.cant;
+    } else {
+      pedidoActual.push({ ...prod, cantidad: ultimaCant.cant });
+    }
+    agregados++;
   }
 
-  // Agregar al pedido
-  const existe = pedidoActual.find(i => i.id === prod.id);
-  if (existe) {
-    existe.cantidad = cant;
-    document.getElementById('mic-status').textContent = '✅ ' + numero + ' · ' + prod.descripcion.substring(0,30) + ' — cantidad actualizada (' + cant + ')';
-  } else {
-    pedidoActual.push({ ...prod, cantidad: cant });
-    document.getElementById('mic-status').textContent = '✅ ' + numero + ' · ' + prod.descripcion.substring(0,30) + ' (' + cant + ' uds)';
-  }
-  document.getElementById('mic-transcript').textContent = '';
   renderTabla();
+
+  // Armar resumen
+  let msg = '';
+  if (agregados) msg += '✅ ' + agregados + ' agregados';
+  if (sinHistorial.length) msg += (msg ? ' · ' : '') + '⚠️ sin historial: ' + sinHistorial.join(', ');
+  if (noEncontrados.length) msg += (msg ? ' · ' : '') + '❌ no encontrados: ' + noEncontrados.join(', ');
+
+  document.getElementById('mic-status').textContent = msg || 'Sin resultados';
+  document.getElementById('mic-transcript').textContent = 'Escuché: ' + numeros.join(', ');
+
+  if (sinHistorial.length) {
+    toast('Productos sin historial agregados con cantidad 0 — completá la cantidad en la tabla', 'error');
+  }
+}
+
+// Mantener función vieja por compatibilidad (ya no se usa desde mic)
+function procesarTextoVoz(texto) {
+  procesarTextoVozCompleto(texto);
 }
 
 // ───────────────────────────────────────────────────────────
