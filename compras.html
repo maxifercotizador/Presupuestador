@@ -1779,6 +1779,7 @@ function startMic() {
   }
 
   micTextoAcumulado = '';
+  micUltimoIndice = 0;
   recognition = new SpeechRecognition();
   recognition.lang = 'es-AR';
   recognition.continuous = true;
@@ -1795,15 +1796,16 @@ function startMic() {
 
   recognition.onresult = (e) => {
     let interino = '';
-    for (let i = e.resultIndex; i < e.results.length; i++) {
+    // Solo procesar resultados nuevos (desde micUltimoIndice en adelante)
+    for (let i = Math.max(e.resultIndex, micUltimoIndice); i < e.results.length; i++) {
       const txt = e.results[i][0].transcript;
       if (e.results[i].isFinal) {
-        micTextoAcumulado += ' ' + txt; // acumular texto final
+        micTextoAcumulado += ' ' + txt;
+        micUltimoIndice = i + 1; // marcar como procesado
       } else {
-        interino = txt; // mostrar solo lo interim (lo que está procesando ahora)
+        interino = txt; // interim: lo que está reconociendo ahora
       }
     }
-    // Mostrar lo acumulado + lo que está procesando ahora
     const mostrar = (micTextoAcumulado + ' ' + interino).trim();
     document.getElementById('mic-transcript').textContent = mostrar;
   };
@@ -1819,7 +1821,11 @@ function startMic() {
   };
 
   recognition.onend = () => {
-    if (micActivo) recognition.start(); // mantener continuo hasta que el usuario pare
+    // Algunos navegadores móviles cortan el reconocimiento automáticamente.
+    // Solo reiniciamos si sigue activo, pero NO reseteamos el índice.
+    if (micActivo) {
+      try { recognition.start(); } catch(e) { /* ya estaba activo */ }
+    }
   };
 
   recognition.start();
