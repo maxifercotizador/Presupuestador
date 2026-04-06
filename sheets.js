@@ -1,6 +1,6 @@
 // api/sheets.js — Proxy para Google Apps Script via GET
 
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwjO02cugWUQix_KdGZ2wZT_sUoYe-k06p6CyDD53jJ86xFb9HO039SM1J8rvuA-von/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxBCXI0iEDfof5GNY6SJg8wI7WuHY18ooC74d5pOAU2701RVzBgI7iyNtEd6t2TgMM3/exec';
 
 export const config = {
   api: { bodyParser: { sizeLimit: '2mb' } },
