@@ -690,7 +690,10 @@
 
 <header>
   <div class="logo">MAXI<span>FER</span> <span style="font-size:13px;color:var(--gris-texto);font-weight:400;letter-spacing:1px;">COMPRAS</span></div>
-  <div class="header-badge">v1.0</div>
+  <div style="display:flex;align-items:center;gap:12px">
+    <span id="sheets-status" style="font-size:11px;color:var(--gris-texto);font-family:'Barlow Condensed',sans-serif;letter-spacing:1px;cursor:default" title="Estado de conexión con Google Sheets">⚪ Sheets</span>
+    <div class="header-badge">v2.0</div>
+  </div>
 </header>
 
 <div class="tabs">
@@ -956,6 +959,44 @@ DB.forEach(p => {
 
 const FAMILIAS = [...new Set(DB.map(p => p.familia).filter(Boolean))].sort();
 const PROVEEDORES = [...new Set(DB.map(p => p.proveedor).filter(Boolean))].sort();
+
+// ═══════════════════════════════════════════════════════════
+// CONFIGURACIÓN GOOGLE SHEETS
+// ═══════════════════════════════════════════════════════════
+// ⚠️ Reemplazá esta URL con la URL de tu Web App de Apps Script
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbwjO02cugWUQix_KdGZ2wZT_sUoYe-k06p6CyDD53jJ86xFb9HO039SM1J8rvuA-von/exec';
+
+// Cache local para no perder datos si Sheets no responde
+let _historialCache = null;
+let _pendientesCache = null;
+
+// Indicador de estado de conexión
+let sheetsConectado = false;
+
+function setSheetsConectado(ok) {
+  sheetsConectado = ok;
+  const ind = document.getElementById('sheets-status');
+  if (ind) {
+    ind.textContent = ok ? '🟢 Sheets' : '🔴 Offline';
+    ind.title = ok ? 'Conectado a Google Sheets' : 'Sin conexión — datos en local';
+  }
+}
+
+// Llamada genérica al Apps Script
+async function sheetsCall(payload) {
+  if (!SHEETS_URL || SHEETS_URL.includes('PEGAR_URL')) {
+    throw new Error('URL de Sheets no configurada');
+  }
+  const resp = await fetch(SHEETS_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' }, // evita preflight CORS
+    body: JSON.stringify(payload)
+  });
+  if (!resp.ok) throw new Error('HTTP ' + resp.status);
+  const data = await resp.json();
+  if (data.error) throw new Error(data.error);
+  return data;
+}
 
 // ═══════════════════════════════════════════════════════════
 // ESTADO DE LA APP
@@ -1251,7 +1292,7 @@ function actualizarTotales() {
 // ═══════════════════════════════════════════════════════════
 // GUARDAR PENDIENTE / APROBAR
 // ═══════════════════════════════════════════════════════════
-function guardarPendiente() {
+async function guardarPendiente() {
   if (pedidoActual.length === 0) { toast('El pedido está vacío', 'error'); return; }
   const pedido = {
     id: Date.now(),
@@ -1263,9 +1304,7 @@ function guardarPendiente() {
     items: [...pedidoActual],
     estado: 'pendiente'
   };
-  const pendientes = getPendientes();
-  pendientes.push(pedido);
-  setPendientes(pendientes);
+  await guardarPendienteEnSheets(pedido);
   actualizarBadge();
   toast('Pedido guardado como pendiente ✓');
   pedidoActual = [];
@@ -1508,47 +1547,85 @@ function generarCSV(items) {
 }
 
 // ═══════════════════════════════════════════════════════════
-// HISTORIAL — localStorage
+// HISTORIAL — Google Sheets (con fallback a localStorage)
 // ═══════════════════════════════════════════════════════════
+
+// Lectura: devuelve array de órdenes desde cache o localStorage
 function getHistorial() {
+  if (_historialCache) return _historialCache;
   try { return JSON.parse(localStorage.getItem('mxf_historial') || '[]'); } catch { return []; }
 }
 
 // Obtiene la última cantidad de un producto (historial app primero, luego historial inicial del Excel)
 function getUltimaCantidad(prodId) {
-  // 1. Buscar en historial de la app (más reciente)
   const hist = getHistorial();
   for (let i = hist.length - 1; i >= 0; i--) {
     const item = hist[i].items.find(it => it.id === prodId);
     if (item) return { cant: item.cantidad, fecha: hist[i].fecha, fuente: 'app' };
   }
-  // 2. Fallback: historial inicial del Excel
   if (HIST_INICIAL[prodId]) {
     return { cant: HIST_INICIAL[prodId][0], fecha: HIST_INICIAL[prodId][1], fuente: 'historial' };
   }
   return null;
 }
-function setHistorial(h) { localStorage.setItem('mxf_historial', JSON.stringify(h)); }
 
-function guardarEnHistorial(items, proveedor, obs) {
-  const hist = getHistorial();
-  hist.push({
-    id: Date.now(),
+// Carga historial desde Sheets y actualiza cache + localStorage
+async function cargarHistorialDesdeSheets() {
+  try {
+    const data = await sheetsCall({ action: 'getHistorial' });
+    _historialCache = data.historial || [];
+    localStorage.setItem('mxf_historial', JSON.stringify(_historialCache));
+    setSheetsConectado(true);
+  } catch (e) {
+    console.warn('Sheets no disponible, usando localStorage:', e.message);
+    setSheetsConectado(false);
+    _historialCache = null; // usa localStorage en getHistorial()
+  }
+}
+
+// Escritura: guarda la orden completa en Sheets (una fila por ítem) + localStorage backup
+async function guardarEnHistorial(items, proveedor, obs) {
+  const ordenId = Date.now();
+  const orden = {
+    id: ordenId,
     proveedor,
     operador: document.getElementById('sel-operador').value,
     obs,
     fecha: new Date().toLocaleDateString('es-AR'),
     fechaISO: new Date().toISOString(),
-    items: items.map(i => ({ id: i.id, numero: i.numero, codigoProv: i.codigoProv, descripcion: i.descripcion, cantidad: i.cantidad, costo: i.costo, precio: i.costo, familia: i.familia, codigoBS: i.codigoBS }))
-  });
-  // Mantener solo último año
+    items: items.map(i => ({ id: i.id, numero: i.numero, codigoProv: i.codigoProv,
+      descripcion: i.descripcion, cantidad: i.cantidad, costo: i.costo,
+      precio: i.costo, familia: i.familia, codigoBS: i.codigoBS }))
+  };
+
+  // Siempre guardar en localStorage como respaldo
+  const hist = getHistorial();
+  hist.push(orden);
   const unAnioAtras = new Date();
   unAnioAtras.setFullYear(unAnioAtras.getFullYear() - 1);
   const filtrado = hist.filter(h => new Date(h.fechaISO) >= unAnioAtras);
-  setHistorial(filtrado);
+  localStorage.setItem('mxf_historial', JSON.stringify(filtrado));
+  _historialCache = filtrado;
+
+  // Intentar guardar en Sheets (no bloquea si falla)
+  try {
+    await sheetsCall({ action: 'guardarHistorial', orden });
+    setSheetsConectado(true);
+  } catch (e) {
+    console.warn('No se pudo guardar en Sheets, quedó en localStorage:', e.message);
+    setSheetsConectado(false);
+    toast('⚠️ Guardado solo en local — Sheets no disponible', 'error');
+  }
 }
 
 function renderHistorial() {
+  // Mostrar datos locales inmediatamente mientras carga
+  _renderHistorialUI();
+  // Luego actualizar desde Sheets en background
+  cargarHistorialDesdeSheets().then(() => _renderHistorialUI());
+}
+
+function _renderHistorialUI() {
   const hist = getHistorial();
   const provFilter = document.getElementById('hist-prov-filter').value;
   const search = document.getElementById('hist-search').value.toLowerCase();
@@ -1624,12 +1701,76 @@ function exportarHistorialCSV() {
 }
 
 // ═══════════════════════════════════════════════════════════
-// PENDIENTES — localStorage
+// PENDIENTES — Google Sheets (con fallback a localStorage)
 // ═══════════════════════════════════════════════════════════
+
 function getPendientes() {
+  if (_pendientesCache) return _pendientesCache;
   try { return JSON.parse(localStorage.getItem('mxf_pendientes') || '[]'); } catch { return []; }
 }
-function setPendientes(p) { localStorage.setItem('mxf_pendientes', JSON.stringify(p)); }
+
+async function cargarPendientesDesdeSheets() {
+  try {
+    const data = await sheetsCall({ action: 'getPendientes' });
+    _pendientesCache = data.pendientes || [];
+    localStorage.setItem('mxf_pendientes', JSON.stringify(_pendientesCache));
+    setSheetsConectado(true);
+  } catch (e) {
+    console.warn('Sheets no disponible, usando localStorage:', e.message);
+    setSheetsConectado(false);
+    _pendientesCache = null;
+  }
+}
+
+async function guardarPendienteEnSheets(pedido) {
+  // Siempre guardar local primero
+  const pendientes = getPendientes();
+  pendientes.push(pedido);
+  localStorage.setItem('mxf_pendientes', JSON.stringify(pendientes));
+  _pendientesCache = pendientes;
+
+  try {
+    await sheetsCall({ action: 'guardarPendiente', pedido });
+    setSheetsConectado(true);
+  } catch (e) {
+    console.warn('Pendiente guardado solo en local:', e.message);
+    setSheetsConectado(false);
+  }
+}
+
+async function actualizarEstadoPendienteEnSheets(id, estado) {
+  // Actualizar local
+  const pendientes = getPendientes();
+  const p = pendientes.find(x => x.id === id);
+  if (p) {
+    p.estado = estado;
+    localStorage.setItem('mxf_pendientes', JSON.stringify(pendientes));
+    _pendientesCache = pendientes;
+  }
+
+  try {
+    await sheetsCall({ action: 'actualizarPendiente', id, estado });
+    setSheetsConectado(true);
+  } catch (e) {
+    console.warn('Estado actualizado solo en local:', e.message);
+    setSheetsConectado(false);
+  }
+}
+
+async function eliminarPendienteEnSheets(id) {
+  // Eliminar local
+  const pendientes = getPendientes().filter(p => p.id !== id);
+  localStorage.setItem('mxf_pendientes', JSON.stringify(pendientes));
+  _pendientesCache = pendientes;
+
+  try {
+    await sheetsCall({ action: 'eliminarPendiente', id });
+    setSheetsConectado(true);
+  } catch (e) {
+    console.warn('Eliminado solo en local:', e.message);
+    setSheetsConectado(false);
+  }
+}
 
 function actualizarBadge() {
   const n = getPendientes().filter(p => p.estado === 'pendiente').length;
@@ -1637,6 +1778,16 @@ function actualizarBadge() {
 }
 
 function renderPendientes() {
+  // Mostrar datos locales inmediatamente
+  _renderPendientesUI();
+  // Actualizar desde Sheets en background
+  cargarPendientesDesdeSheets().then(() => {
+    actualizarBadge();
+    _renderPendientesUI();
+  });
+}
+
+function _renderPendientesUI() {
   const pendientes = getPendientes();
   const total = pendientes.length;
   const pen = pendientes.filter(p => p.estado === 'pendiente').length;
@@ -1676,38 +1827,33 @@ function renderPendientes() {
 }
 
 function aprobarDesdeListado(id) {
-  const pendientes = getPendientes();
-  const pedido = pendientes.find(p => p.id === id);
+  const pedido = getPendientes().find(p => p.id === id);
   if (!pedido) return;
-  pedido.estado = 'aprobado';
-  setPendientes(pendientes);
+  actualizarEstadoPendienteEnSheets(id, 'aprobado');
   mostrarModalAprobar(pedido.items, pedido.proveedor);
   window._pedidoAprobadoId = id;
   actualizarBadge();
-  renderPendientes();
+  _renderPendientesUI();
 }
 
 function cargarEnEditor(id) {
-  const pendientes = getPendientes();
-  const pedido = pendientes.find(p => p.id === id);
+  const pedido = getPendientes().find(p => p.id === id);
   if (!pedido) return;
   proveedorActual = pedido.proveedor;
   document.getElementById('inp-proveedor').value = pedido.proveedor;
   document.getElementById('sel-operador').value = pedido.operador;
   document.getElementById('inp-obs').value = pedido.obs || '';
   pedidoActual = [...pedido.items];
-  onProveedorChange(); // actualiza filtros de familia
-  // Restaurar items (el onProveedorChange limpia la tabla, así que re-seteamos)
+  onProveedorChange();
   pedidoActual = [...pedido.items];
   renderTabla();
   showPage('nuevo');
 }
 
 function eliminarPendiente(id) {
-  const pendientes = getPendientes().filter(p => p.id !== id);
-  setPendientes(pendientes);
+  eliminarPendienteEnSheets(id);
   actualizarBadge();
-  renderPendientes();
+  _renderPendientesUI();
 }
 
 function limpiarPedido() {
@@ -2155,6 +2301,8 @@ function agregarMasivo() {
 // ═══════════════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', () => {
   initSelects();
+  // Precargar pendientes desde Sheets para tener badge actualizado
+  cargarPendientesDesdeSheets().then(() => actualizarBadge());
   actualizarBadge();
   // Cerrar búsqueda al clickear afuera
   document.addEventListener('click', e => {
