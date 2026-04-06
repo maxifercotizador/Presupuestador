@@ -2,6 +2,14 @@
 
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwjO02cugWUQix_KdGZ2wZT_sUoYe-k06p6CyDD53jJ86xFb9HO039SM1J8rvuA-von/exec';
 
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '2mb',
+    },
+  },
+};
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -16,13 +24,21 @@ export default async function handler(req, res) {
   }
 
   try {
-    const body = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+    const body = typeof req.body === 'string'
+      ? req.body
+      : JSON.stringify(req.body);
 
     const response = await fetch(APPS_SCRIPT_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
-      body
+      body,
+      redirect: 'follow',
     });
+
+    if (!response.ok) {
+      const text = await response.text();
+      return res.status(502).json({ error: 'Apps Script error: ' + response.status, detail: text.slice(0, 200) });
+    }
 
     const data = await response.json();
     return res.status(200).json(data);
