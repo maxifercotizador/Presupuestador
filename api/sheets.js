@@ -1,6 +1,6 @@
-// api/sheets.js — Proxy para Google Apps Script
+// api/sheets.js — Proxy para Google Apps Script via GET
 
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwjO02cugWUQix_KdGZ2wZT_sUoYe-k06p6CyDD53jJ86xFb9HO039SM1J8rvuA-von/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxBCXI0iEDfof5GNY6SJg8wI7WuHY18ooC74d5pOAU2701RVzBgI7iyNtEd6t2TgMM3/exec';
 
 export const config = {
   api: { bodyParser: { sizeLimit: '2mb' } },
@@ -17,31 +17,19 @@ export default async function handler(req, res) {
   try {
     const body = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
 
-    // Google Apps Script redirige POST a una URL diferente
-    // Hay que seguir la redirección manualmente repostando el body
-    let response = await fetch(APPS_SCRIPT_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      body,
-      redirect: 'manual', // no seguir automáticamente
-    });
+    // Enviar como GET con payload en query string (Apps Script lo acepta sin redirección)
+    const url = APPS_SCRIPT_URL + '?payload=' + encodeURIComponent(body);
 
-    // Si hay redirección (302), seguirla con el body original
-    if (response.status === 301 || response.status === 302 || response.status === 307 || response.status === 308) {
-      const redirectUrl = response.headers.get('location');
-      response = await fetch(redirectUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain' },
-        body,
-      });
-    }
+    const response = await fetch(url, {
+      method: 'GET',
+      redirect: 'follow',
+    });
 
     const text = await response.text();
     try {
-      const data = JSON.parse(text);
-      return res.status(200).json(data);
+      return res.status(200).json(JSON.parse(text));
     } catch {
-      return res.status(200).send(text);
+      return res.status(502).json({ error: 'Respuesta no JSON', detail: text.slice(0, 300) });
     }
   } catch (err) {
     return res.status(500).json({ error: err.message });
