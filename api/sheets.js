@@ -1,5 +1,3 @@
-// api/sheets.js — Proxy para Google Apps Script via GET
-
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxBCXI0iEDfof5GNY6SJg8wI7WuHY18ooC74d5pOAU2701RVzBgI7iyNtEd6t2TgMM3/exec';
 
 export const config = {
@@ -16,8 +14,6 @@ export default async function handler(req, res) {
 
   try {
     const body = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
-
-    // Enviar como GET con payload en query string (Apps Script lo acepta sin redirección)
     const url = APPS_SCRIPT_URL + '?payload=' + encodeURIComponent(body);
 
     const response = await fetch(url, {
