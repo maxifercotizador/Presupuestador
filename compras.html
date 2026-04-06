@@ -964,7 +964,7 @@ const PROVEEDORES = [...new Set(DB.map(p => p.proveedor).filter(Boolean))].sort(
 // CONFIGURACIÓN GOOGLE SHEETS
 // ═══════════════════════════════════════════════════════════
 // ⚠️ Reemplazá esta URL con la URL de tu Web App de Apps Script
-const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbwjO02cugWUQix_KdGZ2wZT_sUoYe-k06p6CyDD53jJ86xFb9HO039SM1J8rvuA-von/exec';
+const SHEETS_URL = 'https://presupuestador-eight.vercel.app/api/sheets';
 
 // Cache local para no perder datos si Sheets no responde
 let _historialCache = null;
