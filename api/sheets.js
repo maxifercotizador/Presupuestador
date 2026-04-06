@@ -15,7 +15,6 @@ export default async function handler(req, res) {
   try {
     const body = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
     const url = APPS_SCRIPT_URL + '?payload=' + encodeURIComponent(body);
-
     const response = await fetch(url, { method: 'GET', redirect: 'follow' });
     const text = await response.text();
 
