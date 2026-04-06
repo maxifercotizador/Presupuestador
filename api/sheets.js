@@ -13,7 +13,7 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    const body = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+    const body = JSON.stringify(req.body);
     const url = APPS_SCRIPT_URL + '?payload=' + encodeURIComponent(body);
     const response = await fetch(url, { method: 'GET', redirect: 'follow' });
     const text = await response.text();
