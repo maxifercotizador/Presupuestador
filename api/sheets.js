@@ -15,12 +15,21 @@ export default async function handler(req, res) {
   try {
     const body = JSON.stringify(req.body);
     const url = APPS_SCRIPT_URL + '?payload=' + encodeURIComponent(body);
-    const response = await fetch(url, { method: 'GET', redirect: 'follow' });
+
+    // Seguir redirecciones manualmente
+    let response = await fetch(url, { method: 'GET', redirect: 'manual' });
+    
+    while (response.status === 301 || response.status === 302 || response.status === 307 || response.status === 308) {
+      const location = response.headers.get('location');
+      if (!location) break;
+      response = await fetch(location, { method: 'GET', redirect: 'manual' });
+    }
+
     const text = await response.text();
     try {
       return res.status(200).json(JSON.parse(text));
     } catch {
-      return res.status(502).json({ error: 'Respuesta no JSON', detail: text.slice(0, 300) });
+      return res.status(502).json({ error: 'No JSON', detail: text.slice(0, 500) });
     }
   } catch (err) {
     return res.status(500).json({ error: err.message });
