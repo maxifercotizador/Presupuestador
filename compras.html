@@ -964,7 +964,7 @@ const PROVEEDORES = [...new Set(DB.map(p => p.proveedor).filter(Boolean))].sort(
 // CONFIGURACIÓN GOOGLE SHEETS
 // ═══════════════════════════════════════════════════════════
 // ⚠️ Reemplazá esta URL con la URL de tu Web App de Apps Script
-const SHEETS_URL = 'https://presupuestador-eight.vercel.app/api/sheets';
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbxBCXI0iEDfof5GNY6SJg8wI7WuHY18ooC74d5pOAU2701RVzBgI7iyNtEd6t2TgMM3/exec';
 
 // Cache local para no perder datos si Sheets no responde
 let _historialCache = null;
@@ -987,11 +987,8 @@ async function sheetsCall(payload) {
   if (!SHEETS_URL || SHEETS_URL.includes('PEGAR_URL')) {
     throw new Error('URL de Sheets no configurada');
   }
-  const resp = await fetch(SHEETS_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain' }, // evita preflight CORS
-    body: JSON.stringify(payload)
-  });
+  const url = SHEETS_URL + '?payload=' + encodeURIComponent(JSON.stringify(payload));
+  const resp = await fetch(url, { method: 'GET' });
   if (!resp.ok) throw new Error('HTTP ' + resp.status);
   const data = await resp.json();
   if (data.error) throw new Error(data.error);
