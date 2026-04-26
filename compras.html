@@ -73,6 +73,23 @@
     padding: 4px 12px;
     border-radius: 2px;
   }
+  .btn-header-icon {
+    background: var(--gris-medio);
+    border: 1px solid var(--gris-borde);
+    color: var(--blanco);
+    width: 36px;
+    height: 36px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+  }
+  .btn-header-icon:hover { background: var(--rojo-dark); border-color: var(--rojo); }
+  .btn-header-icon.spinning { animation: btn-spin 0.9s linear infinite; pointer-events: none; }
+  @keyframes btn-spin { to { transform: rotate(360deg); } }
 
   /* ── TABS ── */
   .tabs {
@@ -788,7 +805,10 @@
 <!-- ═══════════════════════════════════════════════════════════ -->
 <header>
   <div class="logo">MAXI<span>FER</span></div>
-  <div class="header-badge">COMPRAS</div>
+  <div style="display:flex; align-items:center; gap:8px">
+    <button type="button" id="btn-actualizar-datos" class="btn-header-icon" title="Actualizar productos desde el servidor">🔄</button>
+    <div class="header-badge">COMPRAS</div>
+  </div>
 </header>
 
 <nav class="tabs" role="tablist">
@@ -1246,8 +1266,13 @@ function fechaCompacta() {
 // ═══════════════════════════════════════════════════════════════════
 // CARGA DE DATOS
 // ═══════════════════════════════════════════════════════════════════
-async function loadData() {
-  const urls = [PRODUCTOS_URL_RELATIVA, PRODUCTOS_URL_FALLBACK];
+async function loadData(forceRefresh) {
+  // forceRefresh agrega timestamp para evitar cache (CDN/browser/Service Worker)
+  const cacheBust = forceRefresh ? '?t=' + Date.now() : '';
+  const urls = [
+    PRODUCTOS_URL_RELATIVA + cacheBust,
+    PRODUCTOS_URL_FALLBACK + cacheBust,
+  ];
   let lastError = null;
 
   for (const url of urls) {
@@ -1258,7 +1283,26 @@ async function loadData() {
       if (!response.ok) throw new Error('HTTP ' + response.status);
       const data = await response.json();
       if (!Array.isArray(data)) throw new Error('JSON no es un array');
-      State.DB = data.map(p => ({ ...p, id: p.numero }));
+
+      // Normalizar campos: el JSON real usa nombres cortos (prov, n, d, pl, p, cp, cm)
+      // mientras que el resto del código espera (proveedor, numero, descripcion, precio, familia, codprov, min).
+      // Acepto ambas convenciones por compatibilidad.
+      State.DB = data.map(item => {
+        const numero = item.numero ?? item.n ?? '';
+        return {
+          id: item.id ?? numero,
+          numero: String(numero),
+          codprov: item.codprov ?? item.cp ?? '',
+          descripcion: item.descripcion ?? item.d ?? '',
+          familia: item.familia ?? item.p ?? '',
+          proveedor: item.proveedor ?? item.prov ?? '',
+          precio: Number(item.precio ?? item.pc ?? item.pl ?? 0) || 0, // costo (pc) si está, si no lista (pl)
+          precio_lista: Number(item.pl ?? item.precio ?? 0) || 0,
+          min: Number(item.min ?? item.cm ?? 0) || null,
+          codigo_alt: item.c ?? '', // código tipo "039.039.0003"
+        };
+      });
+
       log('info', '✅ Cargados', State.DB.length, 'productos desde', url);
       return State.DB;
     } catch (error) {
@@ -1309,6 +1353,61 @@ function init() {
   updateBadges();
 
   log('info', '✅ App lista');
+}
+
+async function actualizarDatos() {
+  const btn = $('btn-actualizar-datos');
+  if (!btn) return;
+  if (btn.classList.contains('spinning')) return; // ya está corriendo
+  btn.classList.add('spinning');
+
+  const dbAntes = State.DB.length;
+  const provAntes = State.PROVEEDORES.length;
+
+  try {
+    toast('🔄 Actualizando productos...', 'info', 1500);
+    await loadData(true); // force refresh
+
+    // Regenerar listas únicas
+    const provMap = new Map();
+    const famMap = new Map();
+    for (const p of State.DB) {
+      if (p.proveedor) {
+        const k = normalizar(p.proveedor);
+        if (!provMap.has(k)) provMap.set(k, p.proveedor);
+      }
+      if (p.familia) {
+        const k = normalizar(p.familia);
+        if (!famMap.has(k)) famMap.set(k, p.familia);
+      }
+    }
+    State.PROVEEDORES = [...provMap.values()].sort((a,b) => a.localeCompare(b, 'es'));
+    State.FAMILIAS = [...famMap.values()].sort((a,b) => a.localeCompare(b, 'es'));
+
+    // Si hay un proveedor activo, refrescar su lista de productos
+    if (State.proveedorActual) {
+      State.productosDelProveedor = State.DB.filter(p => p.proveedor === State.proveedorActual);
+      const stats = $('pa-stats');
+      if (stats) stats.textContent = `${State.productosDelProveedor.length} productos disponibles`;
+    }
+
+    // Regenerar selects
+    renderFamiliasSelect();
+    renderMasivoFamiliasSelect();
+
+    const dbDespues = State.DB.length;
+    const provDespues = State.PROVEEDORES.length;
+    const diff = dbDespues - dbAntes;
+    let msg = `✅ ${dbDespues} productos / ${provDespues} proveedores`;
+    if (diff !== 0) msg += ` (${diff > 0 ? '+' : ''}${diff})`;
+    toast(msg, 'success', 4000);
+    log('info', 'Datos actualizados:', msg);
+  } catch (err) {
+    log('error', 'Error actualizando:', err);
+    toast('❌ Error: ' + (err.message || err), 'error', 5000);
+  } finally {
+    btn.classList.remove('spinning');
+  }
 }
 
 function renderProveedoresList(filtro) {
@@ -1412,6 +1511,9 @@ function wireEvents() {
   document.querySelectorAll('.tab').forEach(t => {
     t.addEventListener('click', () => showPage(t.dataset.page));
   });
+
+  // Botón actualizar datos del header
+  $on('btn-actualizar-datos', 'click', actualizarDatos);
 
   // Modos en página Nuevo
   document.querySelectorAll('.modo-tab').forEach(t => {
