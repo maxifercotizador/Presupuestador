@@ -870,7 +870,7 @@
       <div class="btn-row" style="margin-top:0">
         <button class="btn btn-secondary" onclick="limpiarPedido()">🗑 Limpiar</button>
         <button class="btn btn-warning" onclick="guardarPendiente()">💾 Guardar Pendiente</button>
-        <button class="btn" onclick="guardarBorrador(); loadBorradores(); showPage('borradores')" style="background:var(--amarillo); color:var(--gris-oscuro)">📋 Guardar Borrador</button>
+        <button class="btn" onclick="guardarYVerBorrador()" style="background:var(--amarillo); color:var(--gris-oscuro)">📋 Guardar Borrador</button>
         <button class="btn" onclick="enviarParaAprobacion()" style="background:var(--rojo-light); color:white">📤 Enviar para Aprobación</button>
         <button class="btn btn-success" onclick="aprobarPedido()">✅ Aprobar y Generar</button>
       </div>
@@ -2472,6 +2472,14 @@ function guardarBorrador() {
   alert(`Borrador guardado.\\n\\nCódigo: ${codigo}`);
   
   return codigo;
+}
+
+function guardarYVerBorrador() {
+  const codigo = guardarBorrador();
+  if (codigo) {
+    // Ir a la pestaña de borradores después de guardar
+    showPage('borradores');
+  }
 }
 
 function cargarBorrador(codigo) {
