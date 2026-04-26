@@ -684,6 +684,44 @@
   .cant-global-row label { margin: 0; font-size: 11px; }
   .cant-global-row input { width: 80px; }
 
+  .seleccion-masiva-row {
+    margin: 12px 0;
+    padding: 10px;
+    background: var(--gris-oscuro);
+    border-radius: 3px;
+    border: 1px solid var(--gris-borde);
+  }
+  
+  .btn-filtro {
+    background: var(--gris-medio);
+    color: var(--gris-texto);
+    border: 1px solid var(--gris-borde);
+    padding: 4px 8px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 11px;
+    transition: background-color 0.15s;
+  }
+  .btn-filtro:hover {
+    background: var(--gris-borde);
+    color: var(--blanco);
+  }
+
+  .preview-item {
+    position: relative;
+  }
+  .item-checkbox {
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px;
+    height: 16px;
+  }
+  .preview-item.has-checkbox .pi-num {
+    margin-left: 28px;
+  }
+
 </style>
 </head>
 <body>
@@ -698,7 +736,7 @@
 
 <div class="tabs">
   <button class="tab active" onclick="showPage('nuevo')">📋 Nuevo Pedido</button>
-  <button class="tab" onclick="showPage('borradores')" id="tab-borradores">💾 Mis Borradores <span class="tab-badge" id="badge-borradores">0</span></button>
+  <button class="tab" onclick="showPage('borradores'); setTimeout(loadBorradores, 100)" id="tab-borradores">💾 Mis Borradores <span class="tab-badge" id="badge-borradores">0</span></button>
   <button class="tab" onclick="showPage('revisar')" id="tab-revisar">👁️ Revisar Borrador</button>
   <button class="tab" onclick="showPage('pendientes')" id="tab-pendientes">⏳ Pendientes <span class="tab-badge" id="badge-pendientes">0</span></button>
   <button class="tab" onclick="showPage('historial')">📚 Historial</button>
@@ -803,18 +841,34 @@
         placeholder="Ejemplos:&#10;850&#10;910, 120, 340&#10;850-910-120&#10;850 910 120"
         oninput="parsearMasivo(this.value)"></textarea>
 
+      <!-- CONTROLES DE SELECCIÓN -->
+      <div class="seleccion-masiva-row" id="seleccion-masiva-row" style="display:none">
+        <div style="margin-bottom:12px">
+          <label style="font-size:13px; color:var(--gris-texto); display:block; margin-bottom:6px">SELECCIÓN MASIVA</label>
+          <div style="display:flex; gap:8px; flex-wrap:wrap">
+            <button class="btn-filtro" onclick="seleccionarTodos()">☑️ Todos</button>
+            <button class="btn-filtro" onclick="deseleccionarTodos()">☐ Ninguno</button>
+            <button class="btn-filtro" onclick="seleccionarConHistorial()">✅ Con historial</button>
+            <button class="btn-filtro" onclick="seleccionarSinHistorial()">⚠️ Sin historial</button>
+            <button class="btn-filtro" onclick="seleccionarConCantidad()">🔢 Con cantidad</button>
+            <button class="btn-filtro" onclick="seleccionarSinCantidad()">❌ Sin cantidad</button>
+          </div>
+        </div>
+      </div>
+
       <div class="cant-global-row" id="cant-global-row" style="display:none">
-        <label>Aplicar misma cantidad a todos:</label>
-        <input type="number" id="cant-global" placeholder="Ej: 300" min="1"
-          oninput="aplicarCantGlobal(this.value)" style="width:90px">
-        <button class="btn btn-secondary btn-sm" onclick="aplicarCantGlobal(document.getElementById('cant-global').value)">Aplicar</button>
-        <span class="text-muted" style="font-size:11px">— o editá cada uno abajo</span>
+        <label>Aplicar cantidad a seleccionados:</label>
+        <input type="number" id="cant-global" placeholder="Ej: 300" min="1" style="width:90px">
+        <button class="btn btn-secondary btn-sm" onclick="aplicarCantGlobalSeleccionados()">📝 Aplicar</button>
+        <label style="font-size:11px; margin-left:10px">
+          <input type="checkbox" id="sobrescribir-check" checked> Sobrescribir existentes
+        </label>
       </div>
 
       <div class="preview-masiva" id="preview-masiva">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
           <span style="font-size:12px;color:var(--gris-texto)" id="preview-count"></span>
-          <button class="btn btn-success btn-sm" onclick="agregarMasivo()">✅ Agregar todos al pedido</button>
+          <button class="btn btn-success btn-sm" onclick="agregarMasivoSeleccionados()">✅ Agregar seleccionados al pedido</button>
         </div>
         <div id="preview-lista" style="background:var(--gris-oscuro);border:1px solid var(--gris-borde);border-radius:3px"></div>
       </div>
@@ -902,11 +956,20 @@
 <div class="page" id="page-borradores" style="display:none">
   <div class="section-title">💾 Mis Borradores</div>
   <div class="panel">
+    <!-- Botón de debug al inicio -->
+    <div style="margin-bottom:15px; padding:10px; background:var(--gris-oscuro); border-radius:4px">
+      <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap">
+        <button onclick="loadBorradores()" style="background:var(--azul); color:white; border:none; padding:8px 16px; border-radius:4px; cursor:pointer; font-size:12px">🔄 Recargar borradores</button>
+        <button onclick="debugBorradores()" style="background:var(--amarillo); color:var(--gris-oscuro); border:none; padding:8px 16px; border-radius:4px; cursor:pointer; font-size:12px">🔍 Debug localStorage</button>
+        <button onclick="limpiarBorradores()" style="background:var(--rojo); color:white; border:none; padding:8px 16px; border-radius:4px; cursor:pointer; font-size:12px">🗑️ Limpiar todo</button>
+      </div>
+    </div>
+    
     <div id="borradores-list">
       <div style="text-align:center; padding:40px; color:var(--gris-texto)">
         <div style="font-size:48px; margin-bottom:16px">📋</div>
-        <div style="font-size:18px; margin-bottom:8px">No hay borradores guardados</div>
-        <div>Completá una compra y guardala como borrador</div>
+        <div style="font-size:18px; margin-bottom:8px">Cargando borradores...</div>
+        <div>Si no aparece nada, usá el botón "Debug" arriba</div>
       </div>
     </div>
     
@@ -2300,19 +2363,24 @@ function renderPreviewMasivo() {
   const preview = document.getElementById('preview-masiva');
   const countEl = document.getElementById('preview-count');
   const cantRow = document.getElementById('cant-global-row');
+  const seleccionRow = document.getElementById('seleccion-masiva-row');
 
   if (!previaMasiva.length) {
     preview.classList.remove('visible');
     cantRow.style.display = 'none';
+    seleccionRow.style.display = 'none';
     return;
   }
 
   preview.classList.add('visible');
   cantRow.style.display = 'flex';
+  seleccionRow.style.display = 'block';
 
   const ok = previaMasiva.filter(i => i.estado !== 'error').length;
   const err = previaMasiva.filter(i => i.estado === 'error').length;
-  countEl.textContent = ok + ' encontrados' + (err ? ' · ' + err + ' no encontrados' : '');
+  const seleccionados = previaMasiva.filter(i => i.seleccionado && i.estado !== 'error').length;
+  
+  countEl.textContent = `${ok} encontrados${err ? ' · ' + err + ' no encontrados' : ''} · ${seleccionados} seleccionados`;
 
   container.innerHTML = previaMasiva.map((item, idx) => {
     if (item.estado === 'error') {
@@ -2322,8 +2390,16 @@ function renderPreviewMasivo() {
         <span class="pi-status pi-err">ERROR</span>
       </div>`;
     }
+    
+    // Inicializar selección si no existe
+    if (typeof item.seleccionado === 'undefined') {
+      item.seleccionado = true; // Por defecto seleccionado
+    }
+    
     const histLabel = item.cantidad ? '' : ' (sin historial)';
-    return `<div class="preview-item">
+    return `<div class="preview-item has-checkbox">
+      <input type="checkbox" class="item-checkbox" ${item.seleccionado ? 'checked' : ''} 
+        onchange="previaMasiva[${idx}].seleccionado = this.checked; actualizarContadorSeleccionados()">
       <div class="pi-num">${item.numero}</div>
       <div class="pi-desc">${item.prod.descripcion}</div>
       <input type="number" class="pi-cant masiva-area" style="min-height:unset;padding:4px 6px;width:70px"
@@ -2347,6 +2423,149 @@ function aplicarCantGlobal(val) {
     const items = previaMasiva.filter(x => x.estado !== 'error');
     if (items[i]) inp.value = cant;
   });
+}
+
+// ── FUNCIONES DE SELECCIÓN MASIVA ──────────────────────────────
+function actualizarContadorSeleccionados() {
+  const countEl = document.getElementById('preview-count');
+  const ok = previaMasiva.filter(i => i.estado !== 'error').length;
+  const err = previaMasiva.filter(i => i.estado === 'error').length;
+  const seleccionados = previaMasiva.filter(i => i.seleccionado && i.estado !== 'error').length;
+  
+  countEl.textContent = `${ok} encontrados${err ? ' · ' + err + ' no encontrados' : ''} · ${seleccionados} seleccionados`;
+}
+
+function seleccionarTodos() {
+  previaMasiva.forEach(item => {
+    if (item.estado !== 'error') {
+      item.seleccionado = true;
+    }
+  });
+  document.querySelectorAll('.item-checkbox').forEach(cb => cb.checked = true);
+  actualizarContadorSeleccionados();
+}
+
+function deseleccionarTodos() {
+  previaMasiva.forEach(item => item.seleccionado = false);
+  document.querySelectorAll('.item-checkbox').forEach(cb => cb.checked = false);
+  actualizarContadorSeleccionados();
+}
+
+function seleccionarConHistorial() {
+  previaMasiva.forEach((item, idx) => {
+    if (item.estado === 'ok') { // tiene historial
+      item.seleccionado = true;
+      const checkbox = document.querySelectorAll('.item-checkbox')[idx];
+      if (checkbox) checkbox.checked = true;
+    }
+  });
+  actualizarContadorSeleccionados();
+}
+
+function seleccionarSinHistorial() {
+  previaMasiva.forEach((item, idx) => {
+    if (item.estado === 'warn') { // sin historial
+      item.seleccionado = true;
+      const checkbox = document.querySelectorAll('.item-checkbox')[idx];
+      if (checkbox) checkbox.checked = true;
+    }
+  });
+  actualizarContadorSeleccionados();
+}
+
+function seleccionarConCantidad() {
+  previaMasiva.forEach((item, idx) => {
+    if (item.estado !== 'error' && item.cantidad > 0) {
+      item.seleccionado = true;
+      const checkbox = document.querySelectorAll('.item-checkbox')[idx];
+      if (checkbox) checkbox.checked = true;
+    }
+  });
+  actualizarContadorSeleccionados();
+}
+
+function seleccionarSinCantidad() {
+  previaMasiva.forEach((item, idx) => {
+    if (item.estado !== 'error' && (!item.cantidad || item.cantidad === 0)) {
+      item.seleccionado = true;
+      const checkbox = document.querySelectorAll('.item-checkbox')[idx];
+      if (checkbox) checkbox.checked = true;
+    }
+  });
+  actualizarContadorSeleccionados();
+}
+
+function aplicarCantGlobalSeleccionados() {
+  const cant = parseInt(document.getElementById('cant-global').value);
+  const sobrescribir = document.getElementById('sobrescribir-check').checked;
+  
+  if (!cant || cant <= 0) {
+    alert('Ingresá una cantidad válida');
+    return;
+  }
+  
+  let aplicados = 0;
+  previaMasiva.forEach((item, idx) => {
+    if (item.seleccionado && item.estado !== 'error') {
+      // Solo aplicar si no tiene cantidad o si está marcado sobrescribir
+      if (!item.cantidad || item.cantidad === 0 || sobrescribir) {
+        item.cantidad = cant;
+        aplicados++;
+        
+        // Actualizar input visual
+        const cantInput = document.querySelectorAll('#preview-lista .pi-cant')[idx];
+        if (cantInput) cantInput.value = cant;
+      }
+    }
+  });
+  
+  if (aplicados > 0) {
+    toast(`Cantidad ${cant} aplicada a ${aplicados} productos`);
+  } else {
+    toast('No se aplicó cantidad a ningún producto', 'warn');
+  }
+}
+
+function agregarMasivoSeleccionados() {
+  const seleccionados = previaMasiva.filter(item => 
+    item.seleccionado && 
+    item.estado !== 'error' && 
+    item.cantidad > 0
+  );
+  
+  if (seleccionados.length === 0) {
+    alert('No hay productos seleccionados con cantidad válida');
+    return;
+  }
+  
+  let agregados = 0;
+  let actualizados = 0;
+  
+  seleccionados.forEach(item => {
+    const existe = pedidoActual.find(p => p.id === item.prod.id);
+    if (existe) {
+      existe.cantidad = item.cantidad;
+      actualizados++;
+    } else {
+      pedidoActual.push({ ...item.prod, cantidad: item.cantidad });
+      agregados++;
+    }
+  });
+  
+  // Limpiar preview
+  document.getElementById('masiva-textarea').value = '';
+  previaMasiva = [];
+  document.getElementById('preview-masiva').classList.remove('visible');
+  document.getElementById('cant-global-row').style.display = 'none';
+  document.getElementById('seleccion-masiva-row').style.display = 'none';
+  
+  renderTabla();
+  
+  const mensaje = [];
+  if (agregados > 0) mensaje.push(`${agregados} productos agregados`);
+  if (actualizados > 0) mensaje.push(`${actualizados} cantidades actualizadas`);
+  
+  toast(mensaje.join(' · ') + ' ✓');
 }
 
 function agregarMasivo() {
@@ -2894,6 +3113,57 @@ function updateBorradoresBadge() {
     badge.textContent = count;
     badge.style.display = count > 0 ? 'inline' : 'none';
   }
+}
+
+
+// ── FUNCIONES DE DEBUG ──────────────────────────────────────
+function debugBorradores() {
+  console.log('🔍 Debug de borradores iniciado');
+  
+  const rawData = localStorage.getItem('maxifer_borradores');
+  console.log('Raw localStorage data:', rawData);
+  
+  if (!rawData) {
+    alert('❌ No hay datos en localStorage para "maxifer_borradores"');
+    return;
+  }
+  
+  try {
+    const borradores = JSON.parse(rawData);
+    const count = Object.keys(borradores).length;
+    
+    console.log('Borradores parseados:', borradores);
+    console.log('Cantidad:', count);
+    
+    let detalle = `📋 Debug de Borradores\n\n`;
+    detalle += `Total: ${count} borradores\n\n`;
+    
+    Object.values(borradores).forEach((b, i) => {
+      detalle += `${i + 1}. ${b.codigo}\n`;
+      detalle += `   Estado: ${b.estado}\n`;
+      detalle += `   Proveedor: ${b.proveedor || 'Sin proveedor'}\n`;
+      detalle += `   Items: ${b.totales?.items || 0}\n`;
+      detalle += `   Total: $${(b.totales?.total || 0).toLocaleString('es-AR')}\n\n`;
+    });
+    
+    alert(detalle);
+    
+  } catch (error) {
+    console.error('Error parseando borradores:', error);
+    alert(`❌ Error parseando datos: ${error.message}`);
+  }
+}
+
+function limpiarBorradores() {
+  if (!confirm('⚠️ ¿Estás seguro?\n\nEsto eliminará TODOS los borradores guardados.')) {
+    return;
+  }
+  
+  localStorage.removeItem('maxifer_borradores');
+  updateBorradoresBadge();
+  loadBorradores();
+  
+  alert('🗑️ Todos los borradores han sido eliminados');
 }
 
 // Modificar función showPage para cargar borradores
