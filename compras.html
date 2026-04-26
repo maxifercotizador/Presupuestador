@@ -546,6 +546,116 @@
     color: var(--azul);
   }
 
+  /* ── SELECT CUSTOM (mobile-friendly) ── */
+  .select-custom {
+    width: 100%;
+    background: var(--gris-oscuro);
+    border: 1px solid var(--gris-borde);
+    border-radius: 3px;
+    padding: 10px 12px;
+    color: var(--blanco);
+    font-family: 'Barlow', sans-serif;
+    font-size: 14px;
+    text-align: left;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    transition: border 0.2s;
+  }
+  .select-custom:hover, .select-custom:focus {
+    border-color: var(--rojo);
+    outline: none;
+  }
+  .select-custom.placeholder { color: var(--gris-texto); }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.75);
+    z-index: 9500;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    animation: modal-fade 0.18s ease-out;
+  }
+  @keyframes modal-fade { from { opacity: 0; } to { opacity: 1; } }
+  .modal-card {
+    background: var(--gris-panel);
+    border-top: 3px solid var(--rojo);
+    border-radius: 8px 8px 0 0;
+    width: 100%;
+    max-width: 600px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    animation: modal-slide 0.22s ease-out;
+  }
+  @keyframes modal-slide { from { transform: translateY(40px); } to { transform: translateY(0); } }
+  @media (min-width: 700px) {
+    .modal-overlay { align-items: center; }
+    .modal-card { border-radius: 8px; border: 1px solid var(--rojo); }
+  }
+  .modal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--gris-borde);
+  }
+  .modal-head h3 {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 16px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--rojo-light);
+    margin: 0;
+  }
+  .modal-close {
+    background: none;
+    border: none;
+    color: var(--gris-texto);
+    font-size: 28px;
+    cursor: pointer;
+    padding: 0 6px;
+    line-height: 1;
+  }
+  .modal-close:hover { color: var(--rojo-light); }
+  .modal-search {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--gris-borde);
+  }
+  .modal-list {
+    overflow-y: auto;
+    flex: 1;
+    padding: 6px 0;
+  }
+  .modal-item {
+    padding: 14px 18px;
+    cursor: pointer;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    color: var(--blanco);
+    font-size: 15px;
+    transition: background 0.12s;
+  }
+  .modal-item:active, .modal-item:hover {
+    background: var(--rojo-dark);
+  }
+  .modal-item .mi-stats {
+    font-size: 11px;
+    color: var(--gris-texto);
+    margin-top: 2px;
+  }
+  .modal-empty {
+    padding: 30px;
+    text-align: center;
+    color: var(--gris-texto);
+    font-style: italic;
+  }
+
   /* ── PROVEEDOR DISPLAY ── */
   .proveedor-actual {
     display: flex;
@@ -703,15 +813,18 @@
     <div class="form-row three-cols">
       <div>
         <label>Proveedor</label>
-        <input type="text" id="inp-proveedor" list="proveedores-list" placeholder="Escribir o elegir proveedor..." autocomplete="off">
-        <datalist id="proveedores-list"></datalist>
+        <button type="button" id="btn-abrir-proveedor" class="select-custom">
+          <span id="btn-abrir-proveedor-label">Tocá para elegir proveedor...</span>
+          <span style="color:var(--gris-texto); font-size:18px">▾</span>
+        </button>
+        <!-- input oculto para mantener compat con código que lee value -->
+        <input type="hidden" id="inp-proveedor" value="">
       </div>
       <div>
         <label>Operador / Vendedor</label>
         <select id="sel-operador">
           <option value="Maximiliano Gordillo">Maximiliano Gordillo</option>
-          <option value="Micky">Micky</option>
-          <option value="Victor Gordillo">Victor Gordillo</option>
+          <option value="Alex Bravo">Alex Bravo</option>
         </select>
       </div>
       <div>
@@ -984,6 +1097,22 @@ Ejemplo:
   </div>
 </div>
 
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- MODAL SELECTOR DE PROVEEDOR                                  -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-proveedor" style="display:none">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h3>Elegir Proveedor</h3>
+      <button class="modal-close" type="button" id="btn-cerrar-modal-prov" aria-label="Cerrar">×</button>
+    </div>
+    <div class="modal-search">
+      <input type="text" id="inp-buscar-proveedor" placeholder="Buscar proveedor..." autocomplete="off">
+    </div>
+    <div class="modal-list" id="lista-proveedores"></div>
+  </div>
+</div>
+
 <!-- DEBUG PANEL (solo desktop) -->
 <div class="debug-panel" id="debug-panel" title="Click para expandir">
   <span id="debug-summary">⚙️ DEBUG</span>
@@ -1011,8 +1140,7 @@ const PRODUCTOS_URL_FALLBACK = 'https://maxifercotizador.github.io/Presupuestado
 
 const VENDEDORES = {
   'Maximiliano Gordillo': '11-5040-8378',
-  'Micky': '11-6486-5752',
-  'Victor Gordillo': '11-4936-7336',
+  'Alex Bravo': '',
 };
 
 // ─── Estado global ────────────────────────────────────────────────
@@ -1170,6 +1298,9 @@ function init() {
   renderProveedoresList();
   renderFamiliasSelect();
   renderMasivoFamiliasSelect();
+  // Inicializar botón proveedor en estado placeholder
+  const btnProv = $('btn-abrir-proveedor');
+  if (btnProv) btnProv.classList.add('placeholder');
 
   // Wire all event listeners
   wireEvents();
@@ -1180,15 +1311,54 @@ function init() {
   log('info', '✅ App lista');
 }
 
-function renderProveedoresList() {
-  const datalist = $('proveedores-list');
-  if (!datalist) return;
-  datalist.innerHTML = '';
-  for (const p of State.PROVEEDORES) {
-    const opt = document.createElement('option');
-    opt.value = p;
-    datalist.appendChild(opt);
+function renderProveedoresList(filtro) {
+  const cont = $('lista-proveedores');
+  if (!cont) return;
+  const f = normalizar(filtro || '');
+  // Calcular cantidad de productos por proveedor (1 sola vez al iniciar — pero acá rapido)
+  const stats = {};
+  for (const p of State.DB) {
+    if (!p.proveedor) continue;
+    stats[p.proveedor] = (stats[p.proveedor] || 0) + 1;
   }
+  const filtered = State.PROVEEDORES.filter(p => !f || normalizar(p).includes(f));
+  cont.innerHTML = '';
+  if (filtered.length === 0) {
+    cont.innerHTML = '<div class="modal-empty">Sin resultados</div>';
+    return;
+  }
+  filtered.forEach(p => {
+    const div = document.createElement('div');
+    div.className = 'modal-item';
+    div.innerHTML = `
+      <div>${escapeHtml(p)}</div>
+      <div class="mi-stats">${stats[p] || 0} productos</div>
+    `;
+    div.addEventListener('click', () => seleccionarProveedorDesdeModal(p));
+    cont.appendChild(div);
+  });
+}
+
+function abrirModalProveedor() {
+  $('modal-proveedor').style.display = 'flex';
+  $('inp-buscar-proveedor').value = '';
+  renderProveedoresList('');
+  // foco con un pequeño delay para mobile
+  setTimeout(() => { try { $('inp-buscar-proveedor').focus(); } catch(e){} }, 100);
+}
+
+function cerrarModalProveedor() {
+  $('modal-proveedor').style.display = 'none';
+}
+
+function seleccionarProveedorDesdeModal(nombre) {
+  $('inp-proveedor').value = nombre;
+  // Actualizar el label del botón
+  const lbl = $('btn-abrir-proveedor-label');
+  if (lbl) lbl.textContent = nombre;
+  $('btn-abrir-proveedor').classList.remove('placeholder');
+  cerrarModalProveedor();
+  onProveedorInput(nombre);
 }
 
 function renderFamiliasSelect() {
@@ -1230,9 +1400,14 @@ function wireEvents() {
     t.addEventListener('click', () => showModo(t.dataset.modo));
   });
 
-  // Proveedor
-  $on('inp-proveedor', 'input', (e) => onProveedorInput(e.target.value));
-  $on('inp-proveedor', 'change', (e) => onProveedorInput(e.target.value));
+  // Proveedor (selector custom mobile-friendly)
+  $on('btn-abrir-proveedor', 'click', abrirModalProveedor);
+  $on('btn-cerrar-modal-prov', 'click', cerrarModalProveedor);
+  $on('inp-buscar-proveedor', 'input', (e) => renderProveedoresList(e.target.value));
+  // Cerrar modal al click en overlay (afuera del card)
+  $on('modal-proveedor', 'click', (e) => {
+    if (e.target.id === 'modal-proveedor') cerrarModalProveedor();
+  });
   $on('btn-cambiar-prov', 'click', cambiarProveedor);
 
   // Búsqueda manual
@@ -1391,12 +1566,12 @@ function cambiarProveedor() {
   if (State.pedidoActual.length > 0) {
     if (!confirm('Hay items en el pedido. ¿Querés cambiar de proveedor de todas formas?')) return;
   }
-  $('inp-proveedor').value = '';
+  syncUIProveedor('');
   State.proveedorActual = '';
   State.productosDelProveedor = [];
   $('panel-agregar').style.display = 'none';
   $('proveedor-info-wrap').style.display = 'none';
-  $('inp-proveedor').focus();
+  abrirModalProveedor();
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -2307,14 +2482,29 @@ function renderBorradorCard(b, acciones) {
   return card;
 }
 
+function syncUIProveedor(nombreProveedor) {
+  $('inp-proveedor').value = nombreProveedor || '';
+  const lbl = $('btn-abrir-proveedor-label');
+  const btn = $('btn-abrir-proveedor');
+  if (nombreProveedor) {
+    if (lbl) lbl.textContent = nombreProveedor;
+    if (btn) btn.classList.remove('placeholder');
+  } else {
+    if (lbl) lbl.textContent = 'Tocá para elegir proveedor...';
+    if (btn) btn.classList.add('placeholder');
+  }
+}
+
 function cargarBorradorEnEditor(b) {
   State.borradorActualId = b.id;
   State.proveedorActual = b.proveedor || '';
   State.productosDelProveedor = State.DB.filter(p => p.proveedor === b.proveedor);
   State.pedidoActual = JSON.parse(JSON.stringify(b.items || []));
 
-  $('inp-proveedor').value = b.proveedor || '';
-  $('sel-operador').value = b.operador || 'Maximiliano Gordillo';
+  syncUIProveedor(b.proveedor || '');
+  // Fallback a Maximiliano si el operador guardado ya no existe en el select
+  const opVal = b.operador && VENDEDORES.hasOwnProperty(b.operador) ? b.operador : 'Maximiliano Gordillo';
+  $('sel-operador').value = opVal;
   $('inp-obs').value = b.observaciones || '';
 
   if (State.proveedorActual) {
@@ -2335,8 +2525,10 @@ function duplicarComoNuevoPedido(b) {
   State.productosDelProveedor = State.DB.filter(p => p.proveedor === b.proveedor);
   State.pedidoActual = JSON.parse(JSON.stringify(b.items || []));
 
-  $('inp-proveedor').value = b.proveedor || '';
-  $('sel-operador').value = b.operador || 'Maximiliano Gordillo';
+  syncUIProveedor(b.proveedor || '');
+  // Fallback a Maximiliano si el operador guardado ya no existe en el select
+  const opVal = b.operador && VENDEDORES.hasOwnProperty(b.operador) ? b.operador : 'Maximiliano Gordillo';
+  $('sel-operador').value = opVal;
   $('inp-obs').value = b.observaciones || '';
 
   if (State.proveedorActual) {
