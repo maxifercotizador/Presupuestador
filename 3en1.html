@@ -329,10 +329,62 @@
       cursor: pointer;
       transition: all 0.15s;
     }
-    .drop-zone:hover { border-color: var(--azul-light); background: #f0f4ff; }
-    .drop-zone.loaded { background: #f0fff7; border-color: var(--success); }
+    .drop-zone:hover,
+    .drop-zone.drag-over { 
+      border-color: var(--azul-light); 
+      background: #f0f4ff; 
+    }
+    .drop-zone.loaded { 
+      background: #f0fff7; 
+      border-color: var(--success); 
+    }
     .drop-icon { font-size: 32px; margin-bottom: 8px; }
     .drop-label { color: var(--gris-muted); font-size: 13px; }
+    
+    /* ── LISTA DE FOTOS ── */
+    .photos-list {
+      display: none;
+      margin-top: 12px;
+    }
+    .photo-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      background: white;
+      border: 1px solid var(--gris-border);
+      border-radius: 8px;
+      margin-bottom: 6px;
+      transition: background-color 0.15s;
+    }
+    .photo-item:hover {
+      background: var(--gris-bg);
+    }
+    .photo-icon {
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+    .photo-name {
+      flex: 1;
+      font-size: 12px;
+      color: var(--gris-text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .photo-remove {
+      background: none;
+      border: none;
+      color: var(--danger);
+      cursor: pointer;
+      font-size: 14px;
+      padding: 4px;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+    .photo-remove:hover {
+      background: rgba(192, 57, 43, 0.1);
+    }
 
     /* ── BUTTONS ── */
     .btn-primary {
@@ -832,13 +884,17 @@
       <div id="panelImagen" style="display:none">
         <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
           <div class="drop-icon">📷</div>
-          <span id="dropLabel" class="drop-label">Tocá para elegir foto del pedido</span>
+          <span id="dropLabel" class="drop-label">Arrastrá las fotos aquí o tocá para elegir</span>
         </div>
-        <input type="file" id="fileInput" accept="image/*" style="display:none" onchange="onFileSelected(event)">
-        <button class="btn-orange" id="btnTranscribe" onclick="transcribeImage()" style="display:none">📝 Transcribir foto a texto</button>
+        <input type="file" id="fileInput" accept="image/*" multiple style="display:none" onchange="onFileSelected(event)">
+        
+        <!-- Lista de fotos cargadas -->
+        <div class="photos-list" id="photosList"></div>
+        
+        <button class="btn-orange" id="btnTranscribe" onclick="transcribeAllImages()" style="display:none">📝 Transcribir fotos a texto</button>
         <button id="btnQuitarImg"
           style="display:none;margin-top:6px;font-size:11px;background:none;border:none;color:#e53e3e;cursor:pointer"
-          onclick="clearImage()">✕ Quitar imagen</button>
+          onclick="clearAllImages()">✕ Quitar todas las imágenes</button>
       </div>
     </div>
 
@@ -1236,7 +1292,7 @@ const SYNONYM_MAP = {
 };
 let ALL_PRODUCTS = [];
 
-let state = { mode:'texto', loading:false, pedidoImage:null, result:null, errors:null, downloads:[], orientacionLabels:{} };
+let state = { mode:'texto', loading:false, pedidoImages:[], result:null, errors:null, downloads:[], orientacionLabels:{} };
 
 // ── NORM ────────────────────────────────────────────────────
 function norm(str) {
@@ -1932,28 +1988,182 @@ function setMode(mode) {
   if(mode!=='voz') stopVoz();
 }
 function onFileSelected(e) {
-  const file=e.target.files[0]; if(!file) return;
-  const reader=new FileReader();
-  reader.onload=ev=>{
-    state.pedidoImage={data:ev.target.result.split(',')[1],type:file.type,name:file.name};
-    document.getElementById('dropLabel').textContent='✅ '+file.name;
-    document.getElementById('dropZone').classList.add('loaded');
-    document.getElementById('btnTranscribe').style.display='block';
-    document.getElementById('btnQuitarImg').style.display='inline';
-    document.getElementById('noticeTrans').style.display='none';
+  const files = Array.from(e.target.files);
+  if (files.length === 0) return;
+  
+  files.forEach(file => addImageToState(file));
+  updatePhotosUI();
+}
+
+function addImageToState(file) {
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const imageData = {
+      data: ev.target.result.split(',')[1],
+      type: file.type,
+      name: file.name,
+      id: Date.now() + Math.random() // ID único
+    };
+    
+    state.pedidoImages.push(imageData);
+    updatePhotosUI();
   };
   reader.readAsDataURL(file);
 }
-function clearImage() {
-  state.pedidoImage=null;
-  document.getElementById('dropLabel').textContent='Tocá para elegir foto del pedido';
-  document.getElementById('dropZone').classList.remove('loaded');
-  document.getElementById('btnTranscribe').style.display='none';
-  document.getElementById('btnQuitarImg').style.display='none';
-  document.getElementById('fileInput').value='';
-  document.getElementById('noticeTrans').style.display='none';
-  document.getElementById('pedidoText').value='';
+
+function updatePhotosUI() {
+  const photosList = document.getElementById('photosList');
+  const dropLabel = document.getElementById('dropLabel');
+  const btnTranscribe = document.getElementById('btnTranscribe');
+  const btnQuitarImg = document.getElementById('btnQuitarImg');
+  const dropZone = document.getElementById('dropZone');
+  
+  if (state.pedidoImages.length === 0) {
+    photosList.style.display = 'none';
+    photosList.innerHTML = '';
+    dropLabel.textContent = 'Arrastrá las fotos aquí o tocá para elegir';
+    btnTranscribe.style.display = 'none';
+    btnQuitarImg.style.display = 'none';
+    dropZone.classList.remove('loaded');
+    document.getElementById('noticeTrans').style.display = 'none';
+    return;
+  }
+  
+  // Mostrar lista de fotos
+  photosList.style.display = 'block';
+  photosList.innerHTML = state.pedidoImages.map(img => `
+    <div class="photo-item" data-id="${img.id}">
+      <span class="photo-icon">📷</span>
+      <span class="photo-name">${img.name}</span>
+      <button class="photo-remove" onclick="removeImage('${img.id}')" title="Quitar foto">✕</button>
+    </div>
+  `).join('');
+  
+  // Actualizar UI
+  dropLabel.textContent = `${state.pedidoImages.length} foto${state.pedidoImages.length > 1 ? 's' : ''} seleccionada${state.pedidoImages.length > 1 ? 's' : ''}`;
+  dropZone.classList.add('loaded');
+  btnTranscribe.style.display = 'block';
+  btnQuitarImg.style.display = 'inline';
+  document.getElementById('noticeTrans').style.display = 'none';
 }
+
+function removeImage(imageId) {
+  state.pedidoImages = state.pedidoImages.filter(img => img.id !== imageId);
+  updatePhotosUI();
+}
+
+function clearAllImages() {
+  state.pedidoImages = [];
+  document.getElementById('fileInput').value = '';
+  updatePhotosUI();
+}
+function clearImage() {
+  // Función mantenida por compatibilidad, redirige a clearAllImages
+  clearAllImages();
+}
+
+// ── DRAG & DROP ─────────────────────────────────────────────
+function setupDragAndDrop() {
+  const dropZone = document.getElementById('dropZone');
+  
+  ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+    dropZone.addEventListener(eventName, preventDefaults, false);
+  });
+  
+  function preventDefaults(e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+  
+  ['dragenter', 'dragover'].forEach(eventName => {
+    dropZone.addEventListener(eventName, highlight, false);
+  });
+  
+  ['dragleave', 'drop'].forEach(eventName => {
+    dropZone.addEventListener(eventName, unhighlight, false);
+  });
+  
+  function highlight() {
+    dropZone.classList.add('drag-over');
+  }
+  
+  function unhighlight() {
+    dropZone.classList.remove('drag-over');
+  }
+  
+  dropZone.addEventListener('drop', handleDrop, false);
+  
+  function handleDrop(e) {
+    const dt = e.dataTransfer;
+    const files = Array.from(dt.files).filter(file => file.type.startsWith('image/'));
+    
+    if (files.length > 0) {
+      files.forEach(file => addImageToState(file));
+    }
+  }
+}
+
+// Inicializar drag & drop cuando se carga la página
+document.addEventListener('DOMContentLoaded', setupDragAndDrop);
+
+async function transcribeAllImages() {
+  if (state.pedidoImages.length === 0) {
+    alert('No hay fotos para transcribir');
+    return;
+  }
+  
+  setLog('Transcribiendo ' + state.pedidoImages.length + ' foto' + (state.pedidoImages.length > 1 ? 's' : '') + '...');
+  let allTranscriptions = [];
+  
+  for (let i = 0; i < state.pedidoImages.length; i++) {
+    const img = state.pedidoImages[i];
+    setLog(`Transcribiendo foto ${i + 1}/${state.pedidoImages.length}: ${img.name}...`);
+    
+    try {
+      const transcription = await transcribeSingleImage(img);
+      if (transcription.trim()) {
+        allTranscriptions.push(`// ${img.name}\n${transcription}`);
+      }
+    } catch (error) {
+      console.error('Error transcribiendo', img.name, error);
+      allTranscriptions.push(`// ${img.name}\n// Error al transcribir esta imagen`);
+    }
+  }
+  
+  const finalText = allTranscriptions.join('\n\n');
+  document.getElementById('pedidoText').value = finalText;
+  document.getElementById('noticeTrans').style.display = 'block';
+  setLog(null);
+}
+
+async function transcribeSingleImage(imageData) {
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1000,
+      messages: [{
+        role: 'user',
+        content: [
+          {
+            type: 'image',
+            source: { type: 'base64', media_type: imageData.type, data: imageData.data }
+          },
+          {
+            type: 'text',
+            text: 'Transcribí este pedido a texto plano. Solo los productos y cantidades, nada más. Formato: una línea por familia, códigos y cantidades en líneas siguientes.'
+          }
+        ]
+      }]
+    })
+  });
+  
+  if (!response.ok) throw new Error('HTTP ' + response.status);
+  const data = await response.json();
+  return data.content?.[0]?.text || '';
+}
+
 function cancelar() {
   state.loading=false; setLog('Cancelado.');
   document.getElementById('btnProcesar').disabled=false;
@@ -2207,58 +2417,9 @@ function usarTextoVoz() {
 
 // ── TRANSCRIBE ───────────────────────────────────────────────
 async function transcribeImage() {
-  if(!state.pedidoImage) return;
-  const btn=document.getElementById('btnTranscribe');
-  btn.disabled=true; btn.textContent='⏳ Transcribiendo...';
-  setLog('Enviando foto a Claude para leer el texto...');
-  try {
-    const data = await apiFetch({
-      model:'claude-sonnet-4-20250514',
-      max_tokens:2000,
-      system:`Sos un experto en leer pedidos manuscritos de ferretería argentina.
-Tu tarea: transcribir EXACTAMENTE lo que dice la imagen, conservando la estructura.
-
-REGLAS CRÍTICAS:
-- Las familias de productos van en su propia línea (ej: "Conectores Combustible", "Conexiones Aluminio", "Tuercas Rapidas")
-- Los códigos con cantidad usan guión: "codigo-cantidad" (ej: "1-3" = código 1, cantidad 3)
-- Si hay múltiples por línea, ponelos en la misma línea separados por espacio
-- NO inventes ni corrijas códigos — transcribí exactamente lo que ves
-- NO agregues texto explicativo
-- Solo devolvé el pedido transcripto`,
-      messages:[{role:'user',content:[
-        {type:'image',source:{type:'base64',media_type:state.pedidoImage.type,data:state.pedidoImage.data}},
-        {type:'text',text:'Transcribí este pedido de ferretería manteniendo el formato codigo-cantidad con guión.'}
-      ]}]
-    });
-    const text=(data.content||[]).map(b=>b.text||'').join('').trim();
-    document.getElementById('pedidoText').value=text;
-    setMode('texto');
-    document.getElementById('noticeTrans').style.display='block';
-    setLog('');
-  } catch(err) {
-    setLog('❌ Error al transcribir: '+err.message+'. Intentá de nuevo o escribí el pedido a mano.');
-  }
-  btn.disabled=false; btn.textContent='📝 Transcribir foto a texto';
-}
-
-async function apiFetch(body, timeoutMs=60000, retries=2) {
-  for (let attempt=0; attempt<=retries; attempt++) {
-    try {
-      const controller=new AbortController();
-      const tid=setTimeout(()=>controller.abort(),timeoutMs);
-      const response=await fetch('https://presupuestador-eight.vercel.app/api/transcribir',{
-        method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify(body),signal:controller.signal
-      });
-      clearTimeout(tid);
-      if(!response.ok){const e=await response.json().catch(()=>({}));throw new Error(e.error?.message||'HTTP '+response.status);}
-      return response.json();
-    } catch(err) {
-      if(attempt<retries){setLog('Reintentando ('+(attempt+1)+'/'+retries+')...');await new Promise(r=>setTimeout(r,2000));continue;}
-      throw err;
-    }
-  }
-}
+  // Función de compatibilidad - redirige a transcribeAllImages
+  await transcribeAllImages();
+}}
 
 // ── NORMALIZACIÓN IA ─────────────────────────────────────────
 function getPromptNormalizar() {
