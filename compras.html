@@ -6,6 +6,7 @@
 <meta name="theme-color" content="#111111">
 <title>MAXIFER — Compras v3.0</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;900&family=Barlow:wght@300;400;500;600&display=swap');
 
@@ -392,6 +393,37 @@
   .btn-filtro:hover { background: var(--gris-borde); }
 
   /* ── BORRADORES / PENDIENTES list ── */
+  .share-bar {
+    background: rgba(192, 57, 43, 0.12);
+    border: 1px solid var(--rojo);
+    border-radius: 4px;
+    padding: 10px 14px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    animation: share-bar-in 0.2s ease-out;
+  }
+  @keyframes share-bar-in {
+    from { transform: translateY(-8px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  .share-info { font-family: 'Barlow Condensed', sans-serif; letter-spacing: 1px; font-size: 14px; }
+  .share-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+  .borrador-card.modo-compartir { padding-left: 50px; position: relative; }
+  .bc-share-check {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%) scale(1.5);
+    cursor: pointer;
+  }
+  .borrador-card.share-selected {
+    background: rgba(192, 57, 43, 0.08);
+    border-color: var(--rojo);
+  }
   .borrador-card {
     background: var(--gris-panel);
     border: 1px solid var(--gris-borde);
@@ -806,6 +838,7 @@
 <header>
   <div class="logo">MAXI<span>FER</span></div>
   <div style="display:flex; align-items:center; gap:8px">
+    <button type="button" id="btn-importar-codigo" class="btn-header-icon" title="Importar borradores compartidos">📥</button>
     <button type="button" id="btn-actualizar-datos" class="btn-header-icon" title="Actualizar productos desde el servidor">🔄</button>
     <div class="header-badge">COMPRAS</div>
   </div>
@@ -1036,7 +1069,21 @@ Ejemplo:
 <div class="page" id="page-borradores">
   <div class="panel">
     <h2>Mis Borradores</h2>
-    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px">
+
+    <!-- Barra superior: compartir -->
+    <div class="share-bar" id="share-bar" style="display:none">
+      <div class="share-info">
+        <strong id="share-count">0 seleccionados</strong>
+      </div>
+      <div class="share-actions">
+        <button class="btn btn-sm btn-secondary" type="button" id="btn-share-marcar-todos">☑️ Todos</button>
+        <button class="btn btn-sm btn-secondary" type="button" id="btn-share-desmarcar-todos">☐ Ninguno</button>
+        <button class="btn btn-sm btn-success" type="button" id="btn-share-compartir">📤 Compartir</button>
+      </div>
+    </div>
+
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; align-items:center">
+      <button class="btn btn-primary btn-sm" type="button" id="btn-modo-compartir">📤 Compartir borradores</button>
       <button class="btn btn-info btn-sm" type="button" id="btn-recargar-borradores">🔄 Recargar</button>
       <button class="btn btn-warning btn-sm" type="button" id="btn-debug-borradores">🔍 Debug</button>
       <button class="btn btn-danger btn-sm" type="button" id="btn-limpiar-borradores">🗑️ Limpiar todo</button>
@@ -1113,6 +1160,30 @@ Ejemplo:
     </div>
     <div id="historial-list">
       <p style="text-align:center; color:var(--gris-texto); padding: 20px">Cargando...</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- MODAL IMPORTAR CÓDIGO                                        -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-importar" style="display:none">
+  <div class="modal-card" style="max-height: 75vh">
+    <div class="modal-head">
+      <h3>📥 Importar Borradores</h3>
+      <button class="modal-close" type="button" id="btn-cerrar-modal-importar" aria-label="Cerrar">×</button>
+    </div>
+    <div style="padding: 16px">
+      <div class="hint-box info" style="margin-bottom: 12px">
+        Pegá el texto que te mandó el empleado por WhatsApp. Debe empezar con <code>MXFC1:</code>
+      </div>
+      <label>Código completo</label>
+      <textarea id="inp-importar-texto" placeholder="MXFC1:..." style="min-height: 120px; font-family: 'Courier New', monospace; font-size: 11px"></textarea>
+      <div id="importar-preview" style="display:none; margin-top: 14px; padding: 12px; background: var(--gris-medio); border-radius: 4px"></div>
+      <div class="btn-row" style="justify-content: flex-end; margin-top: 16px">
+        <button type="button" class="btn btn-secondary" id="btn-importar-pegar">📋 Pegar del portapapeles</button>
+        <button type="button" class="btn btn-primary" id="btn-importar-confirmar">✅ Importar</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1607,6 +1678,22 @@ function wireEvents() {
   $on('btn-recargar-borradores', 'click', renderBorradores);
   $on('btn-debug-borradores', 'click', debugBorradores);
   $on('btn-limpiar-borradores', 'click', limpiarTodosBorradores);
+
+  // Compartir borradores
+  $on('btn-modo-compartir', 'click', toggleModoCompartir);
+  $on('btn-share-marcar-todos', 'click', shareMarcarTodos);
+  $on('btn-share-desmarcar-todos', 'click', shareDesmarcarTodos);
+  $on('btn-share-compartir', 'click', compartirSeleccionados);
+
+  // Importar código
+  $on('btn-importar-codigo', 'click', abrirModalImportar);
+  $on('btn-cerrar-modal-importar', 'click', cerrarModalImportar);
+  $on('btn-importar-pegar', 'click', pegarDelPortapapeles);
+  $on('btn-importar-confirmar', 'click', confirmarImportacion);
+  $on('inp-importar-texto', 'input', previsualizarImportacion);
+  $on('modal-importar', 'click', (e) => {
+    if (e.target.id === 'modal-importar') cerrarModalImportar();
+  });
 
   // Revisar
   $on('btn-cargar-revisar', 'click', cargarBorradorParaRevisar);
@@ -2547,12 +2634,21 @@ function renderHistorial() {
 
 function renderBorradorCard(b, acciones) {
   const card = document.createElement('div');
+  const enModoShare = ShareMode.active && acciones && acciones.includes('continuar');
   card.className = `borrador-card estado-${b.estado || 'editando'}`;
+  if (enModoShare) {
+    card.classList.add('modo-compartir');
+    if (ShareMode.selectedIds.has(b.id)) card.classList.add('share-selected');
+  }
 
   const totalUnidades = (b.items || []).reduce((s, it) => s + (it.cantidad || 0), 0);
   const totalCosto = (b.items || []).reduce((s, it) => s + (it.cantidad || 0) * (it.precio || 0), 0);
 
+  const checkboxHTML = enModoShare ?
+    `<input type="checkbox" class="bc-share-check" ${ShareMode.selectedIds.has(b.id) ? 'checked' : ''}>` : '';
+
   card.innerHTML = `
+    ${checkboxHTML}
     <div class="bc-head">
       <div>
         <div class="bc-codigo">${escapeHtml(b.id)}</div>
@@ -2567,8 +2663,27 @@ function renderBorradorCard(b, acciones) {
       📦 ${(b.items || []).length} items • ${totalUnidades.toLocaleString('es-AR')} unidades • <strong style="color:var(--verde)">${fmtMoney(totalCosto)}</strong>
     </div>
     ${b.comentarios ? `<div class="hint-box warning" style="margin-top:8px">💬 ${escapeHtml(b.comentarios)}</div>` : ''}
-    <div class="bc-acciones"></div>
+    ${enModoShare ? '' : '<div class="bc-acciones"></div>'}
   `;
+
+  // En modo compartir, click en cualquier parte del card toggle el checkbox
+  if (enModoShare) {
+    const cb = card.querySelector('.bc-share-check');
+    const toggle = (e) => {
+      if (e.target.tagName === 'INPUT') return; // dejar que el click nativo del checkbox funcione
+      e.preventDefault();
+      cb.checked = !cb.checked;
+      cb.dispatchEvent(new Event('change'));
+    };
+    card.addEventListener('click', toggle);
+    cb.addEventListener('change', () => {
+      if (cb.checked) ShareMode.selectedIds.add(b.id);
+      else ShareMode.selectedIds.delete(b.id);
+      card.classList.toggle('share-selected', cb.checked);
+      actualizarShareCount();
+    });
+    return card;
+  }
 
   const accionesEl = card.querySelector('.bc-acciones');
   for (const acc of acciones) {
@@ -2767,6 +2882,370 @@ Primer borrador (si hay):
 ${b.length ? JSON.stringify(b[0], null, 2).slice(0, 500) : '—'}`;
   alert(out);
   log('info', out);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// COMPARTIR BORRADORES (vía texto comprimido + WhatsApp)
+// ═══════════════════════════════════════════════════════════════════
+const SHARE_PREFIX = 'MXFC1:'; // MAXIFER Compras v1
+
+// Estado del modo compartir
+const ShareMode = {
+  active: false,
+  selectedIds: new Set(),
+};
+
+function activarModoCompartir() {
+  ShareMode.active = true;
+  ShareMode.selectedIds.clear();
+  $('share-bar').style.display = 'flex';
+  $('btn-modo-compartir').textContent = '✕ Cancelar';
+  $('btn-modo-compartir').classList.remove('btn-primary');
+  $('btn-modo-compartir').classList.add('btn-secondary');
+  renderBorradores();
+  actualizarShareCount();
+}
+
+function desactivarModoCompartir() {
+  ShareMode.active = false;
+  ShareMode.selectedIds.clear();
+  $('share-bar').style.display = 'none';
+  $('btn-modo-compartir').textContent = '📤 Compartir borradores';
+  $('btn-modo-compartir').classList.remove('btn-secondary');
+  $('btn-modo-compartir').classList.add('btn-primary');
+  renderBorradores();
+}
+
+function toggleModoCompartir() {
+  if (ShareMode.active) desactivarModoCompartir();
+  else activarModoCompartir();
+}
+
+function actualizarShareCount() {
+  const n = ShareMode.selectedIds.size;
+  $('share-count').textContent = n === 0 ? 'Tocá los borradores que querés compartir'
+    : n === 1 ? '1 seleccionado' : `${n} seleccionados`;
+}
+
+function shareMarcarTodos() {
+  const borradores = lsGet(KEY_BORRADORES, []);
+  borradores.forEach(b => ShareMode.selectedIds.add(b.id));
+  renderBorradores();
+  actualizarShareCount();
+}
+
+function shareDesmarcarTodos() {
+  ShareMode.selectedIds.clear();
+  renderBorradores();
+  actualizarShareCount();
+}
+
+function compartirSeleccionados() {
+  if (ShareMode.selectedIds.size === 0) {
+    toast('No hay borradores seleccionados', 'warning');
+    return;
+  }
+  if (typeof LZString === 'undefined') {
+    toast('Falta la librería LZString — verificá tu conexión', 'error');
+    return;
+  }
+
+  const borradores = lsGet(KEY_BORRADORES, []);
+  const seleccionados = borradores.filter(b => ShareMode.selectedIds.has(b.id));
+
+  // Reducir el tamaño: descartar campos pesados/innecesarios y "id" del producto en items
+  const payload = {
+    v: 1,
+    t: Date.now(),
+    b: seleccionados.map(b => ({
+      id: b.id,
+      es: b.estado,
+      pr: b.proveedor,
+      op: b.operador,
+      ob: b.observaciones || '',
+      cr: b.creado,
+      it: (b.items || []).map(it => ({
+        n: it.numero,
+        cp: it.codprov,
+        d: it.descripcion,
+        f: it.familia,
+        c: it.cantidad,
+        p: it.precio,
+        m: it.min || null,
+      })),
+    })),
+  };
+
+  const json = JSON.stringify(payload);
+  const compressed = LZString.compressToEncodedURIComponent(json);
+  const codigo = SHARE_PREFIX + compressed;
+
+  log('info', `Compartiendo ${seleccionados.length} borradores. JSON: ${json.length}b → comprimido: ${codigo.length}b`);
+
+  // Construir mensaje WhatsApp
+  const totalItems = seleccionados.reduce((s, b) => s + (b.items || []).length, 0);
+  const totalCosto = seleccionados.reduce((s, b) =>
+    s + (b.items || []).reduce((s2, it) => s2 + (it.cantidad || 0) * (it.precio || 0), 0), 0);
+
+  const resumen = seleccionados.map(b => {
+    const u = (b.items || []).reduce((s, it) => s + (it.cantidad || 0), 0);
+    return `• ${b.id} — ${b.proveedor} (${(b.items || []).length} items, ${u} unid.)`;
+  }).join('\n');
+
+  const mensaje = `*MAXIFER — Borradores compartidos*
+
+${seleccionados.length} pedido(s) — ${totalItems} items — $${totalCosto.toLocaleString('es-AR', {minimumFractionDigits:2, maximumFractionDigits:2})}
+
+${resumen}
+
+📋 Pegá este código en tu app MAXIFER Compras (botón 📥 Importar):
+
+${codigo}`;
+
+  // Mostrar diálogo con opciones
+  mostrarDialogoCompartir(mensaje, codigo, seleccionados.length);
+}
+
+function mostrarDialogoCompartir(mensaje, codigo, count) {
+  // Crear overlay con opciones
+  const ov = document.createElement('div');
+  ov.className = 'modal-overlay';
+  ov.id = 'modal-share-result';
+  ov.style.display = 'flex';
+
+  ov.innerHTML = `
+    <div class="modal-card" style="max-height: 80vh">
+      <div class="modal-head">
+        <h3>📤 Listo para enviar</h3>
+        <button class="modal-close" type="button" aria-label="Cerrar" id="btn-cerrar-share-result">×</button>
+      </div>
+      <div style="padding: 16px">
+        <div class="hint-box" style="margin-bottom: 14px">
+          ✅ Se prepararon ${count} borrador(es) para compartir.<br>
+          <span style="font-size:11px; color: var(--gris-texto)">Tamaño del código: ${codigo.length.toLocaleString('es-AR')} caracteres</span>
+        </div>
+        <p style="font-size: 13px; margin-bottom: 10px">Elegí cómo enviarlo:</p>
+        <div class="btn-row" style="flex-direction: column; gap: 8px">
+          <button class="btn btn-success" type="button" id="btn-share-whatsapp" style="width:100%; justify-content: center">📱 Abrir WhatsApp</button>
+          <button class="btn btn-info" type="button" id="btn-share-copiar" style="width:100%; justify-content: center">📋 Copiar mensaje completo</button>
+          <button class="btn btn-secondary" type="button" id="btn-share-solo-codigo" style="width:100%; justify-content: center">🔑 Copiar solo el código</button>
+        </div>
+        <details style="margin-top: 16px">
+          <summary style="cursor:pointer; color: var(--gris-texto); font-size: 12px">Ver mensaje completo</summary>
+          <textarea readonly style="margin-top: 8px; min-height: 180px; font-family: 'Courier New', monospace; font-size: 11px">${escapeHtml(mensaje)}</textarea>
+        </details>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(ov);
+
+  const cerrar = () => ov.remove();
+  ov.querySelector('#btn-cerrar-share-result').addEventListener('click', cerrar);
+  ov.addEventListener('click', (e) => { if (e.target === ov) cerrar(); });
+
+  ov.querySelector('#btn-share-whatsapp').addEventListener('click', () => {
+    const url = 'https://wa.me/?text=' + encodeURIComponent(mensaje);
+    window.open(url, '_blank');
+    toast('Abriendo WhatsApp...', 'info');
+  });
+
+  ov.querySelector('#btn-share-copiar').addEventListener('click', async () => {
+    const ok = await copiarAlPortapapeles(mensaje);
+    toast(ok ? '✅ Mensaje copiado' : '❌ No se pudo copiar', ok ? 'success' : 'error');
+  });
+
+  ov.querySelector('#btn-share-solo-codigo').addEventListener('click', async () => {
+    const ok = await copiarAlPortapapeles(codigo);
+    toast(ok ? '✅ Código copiado' : '❌ No se pudo copiar', ok ? 'success' : 'error');
+  });
+}
+
+async function copiarAlPortapapeles(texto) {
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(texto);
+      return true;
+    }
+    // Fallback antiguo
+    const ta = document.createElement('textarea');
+    ta.value = texto;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    return ok;
+  } catch (e) {
+    log('warn', 'Clipboard fail:', e);
+    return false;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// IMPORTAR CÓDIGO COMPARTIDO
+// ═══════════════════════════════════════════════════════════════════
+function abrirModalImportar() {
+  $('modal-importar').style.display = 'flex';
+  $('inp-importar-texto').value = '';
+  $('importar-preview').style.display = 'none';
+  setTimeout(() => { try { $('inp-importar-texto').focus(); } catch(e){} }, 100);
+}
+
+function cerrarModalImportar() {
+  $('modal-importar').style.display = 'none';
+}
+
+async function pegarDelPortapapeles() {
+  try {
+    if (navigator.clipboard && navigator.clipboard.readText) {
+      const texto = await navigator.clipboard.readText();
+      $('inp-importar-texto').value = texto;
+      previsualizarImportacion();
+      toast('📋 Pegado del portapapeles', 'info');
+    } else {
+      toast('Tu navegador no permite leer del portapapeles. Pegá manualmente.', 'warning');
+    }
+  } catch (e) {
+    toast('No se pudo pegar — pegalo manualmente', 'warning');
+  }
+}
+
+function extraerCodigoDelTexto(texto) {
+  // El texto puede venir solo el código o un mensaje de WhatsApp con el código adentro.
+  // Buscar la primera ocurrencia de MXFC1: y tomar todos los caracteres válidos hasta whitespace
+  const idx = texto.indexOf(SHARE_PREFIX);
+  if (idx < 0) return null;
+  let resto = texto.slice(idx);
+  // El cuerpo comprimido por LZString.compressToEncodedURIComponent usa solo
+  // caracteres URL-safe: A-Z a-z 0-9 - _ + (y a veces $). Cortamos en el primer whitespace.
+  const m = resto.match(/^MXFC1:[A-Za-z0-9\-_+$.,'!*~]+/);
+  return m ? m[0] : null;
+}
+
+function previsualizarImportacion() {
+  const txt = ($('inp-importar-texto').value || '').trim();
+  const preview = $('importar-preview');
+
+  if (!txt) {
+    preview.style.display = 'none';
+    return null;
+  }
+
+  const codigo = extraerCodigoDelTexto(txt);
+  if (!codigo) {
+    preview.style.display = 'block';
+    preview.innerHTML = '<div style="color: var(--rojo-light)">⚠️ No se encontró un código MXFC1: en el texto pegado.</div>';
+    return null;
+  }
+
+  if (typeof LZString === 'undefined') {
+    preview.style.display = 'block';
+    preview.innerHTML = '<div style="color: var(--rojo-light)">⚠️ Falta LZString. Verificá tu conexión.</div>';
+    return null;
+  }
+
+  try {
+    const compressed = codigo.slice(SHARE_PREFIX.length);
+    const json = LZString.decompressFromEncodedURIComponent(compressed);
+    if (!json) throw new Error('No se pudo descomprimir el código');
+    const payload = JSON.parse(json);
+    if (!payload.b || !Array.isArray(payload.b)) throw new Error('Formato inválido');
+
+    const totalItems = payload.b.reduce((s, b) => s + (b.it || []).length, 0);
+    const totalCosto = payload.b.reduce((s, b) =>
+      s + (b.it || []).reduce((s2, it) => s2 + (it.c || 0) * (it.p || 0), 0), 0);
+
+    let html = `
+      <div style="font-family: 'Barlow Condensed', sans-serif; letter-spacing: 1px; color: var(--verde); margin-bottom: 8px">
+        ✅ CÓDIGO VÁLIDO
+      </div>
+      <div style="font-size: 13px; margin-bottom: 6px">
+        <strong>${payload.b.length}</strong> borrador(es) • <strong>${totalItems}</strong> items •
+        <span style="color: var(--verde); font-weight: 600">${fmtMoney(totalCosto)}</span>
+      </div>
+      <div style="font-size: 11px; color: var(--gris-texto); margin-bottom: 8px">
+        Enviado: ${fmtFecha(new Date(payload.t).toISOString())}
+      </div>
+      <div style="font-size: 12px; max-height: 140px; overflow-y: auto">
+    `;
+    payload.b.forEach(b => {
+      const u = (b.it || []).reduce((s, it) => s + (it.c || 0), 0);
+      html += `<div style="padding: 4px 0; border-bottom: 1px solid var(--gris-borde)">
+        <strong>${escapeHtml(b.id)}</strong> — ${escapeHtml(b.pr || '—')} • ${(b.it || []).length} items, ${u} unid.
+      </div>`;
+    });
+    html += '</div>';
+
+    preview.style.display = 'block';
+    preview.innerHTML = html;
+    preview.dataset.payload = JSON.stringify(payload);
+    return payload;
+  } catch (e) {
+    preview.style.display = 'block';
+    preview.innerHTML = `<div style="color: var(--rojo-light)">⚠️ El código está corrupto o incompleto: ${escapeHtml(e.message)}</div>`;
+    return null;
+  }
+}
+
+function confirmarImportacion() {
+  const payload = previsualizarImportacion();
+  if (!payload) {
+    toast('Pegá un código válido primero', 'warning');
+    return;
+  }
+
+  // Reconstituir borradores en el formato interno
+  const importados = payload.b.map(b => ({
+    id: b.id,
+    estado: 'pendiente', // siempre los importo como pendientes
+    proveedor: b.pr || '',
+    operador: b.op || 'Maximiliano Gordillo',
+    observaciones: b.ob || '',
+    creado: b.cr || new Date().toISOString(),
+    modificado: new Date().toISOString(),
+    importado_en: new Date().toISOString(),
+    comentarios: '',
+    items: (b.it || []).map(it => ({
+      numero: it.n,
+      codprov: it.cp || '',
+      descripcion: it.d || '',
+      familia: it.f || '',
+      proveedor: b.pr || '',
+      cantidad: it.c || 0,
+      precio: it.p || 0,
+      min: it.m || null,
+    })),
+  }));
+
+  // Mergear con borradores actuales — si hay ID duplicado, agregar sufijo
+  const actuales = lsGet(KEY_BORRADORES, []);
+  const idsActuales = new Set(actuales.map(b => b.id));
+  let conflictos = 0;
+  importados.forEach(b => {
+    if (idsActuales.has(b.id)) {
+      b.id = b.id + '-IMP';
+      let n = 2;
+      while (idsActuales.has(b.id)) {
+        b.id = b.id.replace(/-IMP\d*$/, '') + '-IMP' + n;
+        n++;
+      }
+      conflictos++;
+    }
+    idsActuales.add(b.id);
+    actuales.push(b);
+  });
+  lsSet(KEY_BORRADORES, actuales);
+
+  cerrarModalImportar();
+  let msg = `✅ ${importados.length} borrador(es) importado(s) como pendientes`;
+  if (conflictos > 0) msg += ` (${conflictos} renombrado/s por conflicto de ID)`;
+  toast(msg, 'success', 5000);
+  log('info', 'Importados:', importados.length, '— Conflictos:', conflictos);
+
+  // Refrescar UI
+  showPage('pendientes');
+  updateBadges();
 }
 
 
