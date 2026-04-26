@@ -1391,9 +1391,14 @@ async function actualizarDatos() {
       if (stats) stats.textContent = `${State.productosDelProveedor.length} productos disponibles`;
     }
 
-    // Regenerar selects
-    renderFamiliasSelect();
-    renderMasivoFamiliasSelect();
+    // Regenerar selects (respetando el proveedor activo si hay uno)
+    if (State.proveedorActual) {
+      renderFamiliasSelect(State.proveedorActual);
+      renderMasivoFamiliasSelect(State.proveedorActual);
+    } else {
+      renderFamiliasSelect();
+      renderMasivoFamiliasSelect();
+    }
 
     const dbDespues = State.DB.length;
     const provDespues = State.PROVEEDORES.length;
@@ -1478,27 +1483,62 @@ function seleccionarProveedorDesdeModal(nombre) {
   onProveedorInput(nombre);
 }
 
-function renderFamiliasSelect() {
+function renderFamiliasSelect(filtroProveedor) {
   const sel = $('sel-familia');
   if (!sel) return;
+  // Si se pasa un proveedor, calcular las familias que ese proveedor tiene
+  let familias;
+  if (filtroProveedor) {
+    const famSet = new Set();
+    for (const p of State.DB) {
+      if (p.proveedor === filtroProveedor && p.familia) famSet.add(p.familia);
+    }
+    familias = [...famSet].sort((a,b) => a.localeCompare(b, 'es'));
+  } else {
+    familias = State.FAMILIAS;
+  }
+  // Preservar selección actual si la familia sigue siendo válida
+  const valorPrevio = sel.value;
   sel.innerHTML = '<option value="">— Todas las familias —</option>';
-  for (const f of State.FAMILIAS) {
+  for (const f of familias) {
     const opt = document.createElement('option');
     opt.value = f;
     opt.textContent = f;
     sel.appendChild(opt);
   }
+  // Restaurar selección si todavía existe en la lista filtrada
+  if (valorPrevio && familias.includes(valorPrevio)) {
+    sel.value = valorPrevio;
+  } else {
+    sel.value = '';
+  }
 }
 
-function renderMasivoFamiliasSelect() {
+function renderMasivoFamiliasSelect(filtroProveedor) {
   const sel = $('masivo-familia');
   if (!sel) return;
+  let familias;
+  if (filtroProveedor) {
+    const famSet = new Set();
+    for (const p of State.DB) {
+      if (p.proveedor === filtroProveedor && p.familia) famSet.add(p.familia);
+    }
+    familias = [...famSet].sort((a,b) => a.localeCompare(b, 'es'));
+  } else {
+    familias = State.FAMILIAS;
+  }
+  const valorPrevio = sel.value;
   sel.innerHTML = '<option value="">— Sin filtro —</option>';
-  for (const f of State.FAMILIAS) {
+  for (const f of familias) {
     const opt = document.createElement('option');
     opt.value = f;
     opt.textContent = f;
     sel.appendChild(opt);
+  }
+  if (valorPrevio && familias.includes(valorPrevio)) {
+    sel.value = valorPrevio;
+  } else {
+    sel.value = '';
   }
 }
 
@@ -1643,6 +1683,9 @@ function onProveedorInput(value) {
     State.productosDelProveedor = [];
     $('panel-agregar').style.display = 'none';
     $('proveedor-info-wrap').style.display = 'none';
+    // Restaurar familias completas
+    renderFamiliasSelect();
+    renderMasivoFamiliasSelect();
     return;
   }
 
@@ -1668,6 +1711,10 @@ function onProveedorInput(value) {
   // Mostrar panel de agregar
   $('panel-agregar').style.display = 'block';
 
+  // Filtrar selects de familia para mostrar SOLO las del proveedor
+  renderFamiliasSelect(match);
+  renderMasivoFamiliasSelect(match);
+
   // Resetear búsqueda
   if ($('inp-codigo')) $('inp-codigo').value = '';
   if ($('search-results')) $('search-results').classList.remove('show');
@@ -1691,6 +1738,8 @@ function cambiarProveedor() {
   State.productosDelProveedor = [];
   $('panel-agregar').style.display = 'none';
   $('proveedor-info-wrap').style.display = 'none';
+  renderFamiliasSelect();
+  renderMasivoFamiliasSelect();
   abrirModalProveedor();
 }
 
@@ -2632,6 +2681,11 @@ function cargarBorradorEnEditor(b) {
     $('proveedor-info-wrap').style.display = 'block';
     $('pa-nombre').textContent = State.proveedorActual;
     $('pa-stats').textContent = `${State.productosDelProveedor.length} productos disponibles`;
+    renderFamiliasSelect(State.proveedorActual);
+    renderMasivoFamiliasSelect(State.proveedorActual);
+  } else {
+    renderFamiliasSelect();
+    renderMasivoFamiliasSelect();
   }
 
   renderTablaPedido();
@@ -2656,6 +2710,11 @@ function duplicarComoNuevoPedido(b) {
     $('proveedor-info-wrap').style.display = 'block';
     $('pa-nombre').textContent = State.proveedorActual;
     $('pa-stats').textContent = `${State.productosDelProveedor.length} productos`;
+    renderFamiliasSelect(State.proveedorActual);
+    renderMasivoFamiliasSelect(State.proveedorActual);
+  } else {
+    renderFamiliasSelect();
+    renderMasivoFamiliasSelect();
   }
 
   renderTablaPedido();
