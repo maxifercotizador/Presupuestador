@@ -956,7 +956,7 @@
       <!-- Modo Micrófono -->
       <div class="modo-panel" id="modo-micro">
         <div class="hint-box info">
-          Tocá el micrófono y dictá: "código 1234 cantidad 100" o "el producto X cantidad Y"
+          Dictá los códigos uno por uno, separados por una pausa o coma. Ej: <code>"1, 4, 5, 23, 27"</code>. Después de procesar pasa a Carga Masiva donde podés revisar y ajustar las cantidades antes de agregar al pedido.
         </div>
         <div class="mic-control">
           <button class="mic-btn" id="btn-mic" type="button" aria-label="Iniciar grabación">🎙️</button>
@@ -2318,11 +2318,14 @@ function parsearMasivo() {
     }
 
     const ultimaCant = prod ? hist[prod.numero] : null;
+    const minProducto = prod ? (Number(prod.min) || null) : null;
+    // Fallback de cantidad: la dictada > la última histórica > la compra mínima del producto > null
+    const cantFinal = cantidad ?? ultimaCant ?? minProducto ?? null;
 
     return {
       codigoOriginal: codigo,
       codigo,
-      cantidad: cantidad ?? (ultimaCant || null),
+      cantidad: cantFinal,
       cantidadManual: cantidad !== null,
       ultimaCant,
       producto: prod || null,
@@ -2569,72 +2572,72 @@ function procesarTranscriptMic() {
     toast('Elegí un proveedor primero', 'warning');
     return;
   }
-  const txt = ($('mic-transcript').textContent || '').toLowerCase().trim();
+  const txt = ($('mic-transcript').textContent || '').trim();
   if (!txt || txt === 'el texto aparecerá acá...') {
     toast('No hay texto para procesar', 'warning');
     return;
   }
 
-  // Heurística: buscar patrones "código X cantidad Y", "X por Y", "X cantidad Y", etc.
-  // También intentar matchear contra descripciones.
-  const segmentos = txt.split(/[,;.]|\sy\s| coma /).map(s => s.trim()).filter(Boolean);
+  // Estrategia: extraer todos los "tokens" del dictado (números o palabras alfanuméricas)
+  // y tratar cada uno como un código separado.
+  // El reconocimiento de voz puede devolver:
+  //  - números separados por espacios: "1 4 5 23 27"
+  //  - números con palabras intercaladas: "uno coma cuatro y cinco"
+  //  - frases enteras: "código 1234 cantidad 100"
+  //
+  // Convertimos números escritos en palabras (uno, dos...) a dígitos y limpiamos.
 
-  const hist = lsGet(KEY_HIST_CANTIDADES, {});
-  let agregados = 0, fallos = [];
+  const numerosEscritos = {
+    'cero': '0', 'uno': '1', 'una': '1', 'dos': '2', 'tres': '3',
+    'cuatro': '4', 'cinco': '5', 'seis': '6', 'siete': '7', 'ocho': '8',
+    'nueve': '9', 'diez': '10', 'once': '11', 'doce': '12', 'trece': '13',
+    'catorce': '14', 'quince': '15', 'dieciseis': '16', 'dieciséis': '16',
+    'diecisiete': '17', 'dieciocho': '18', 'diecinueve': '19', 'veinte': '20',
+  };
 
-  for (const seg of segmentos) {
-    // Patrón 1: "codigo X cantidad Y" o "X cantidad Y" o "X por Y"
-    let m = seg.match(/(?:c[oó]digo\s+)?([\w\d\-]+)\s+(?:cantidad\s+|por\s+|x\s+)?(\d+)/i);
-    if (!m) {
-      // Patrón 2: solo número + cantidad implícita 1 — no, muy ambiguo. Saltar.
-      fallos.push(seg);
-      continue;
-    }
-    const codigo = m[1].trim();
-    const cant = parseInt(m[2], 10);
-    if (!cant || cant <= 0) { fallos.push(seg); continue; }
+  // Limpiar: quitar palabras que no son códigos
+  let limpio = txt.toLowerCase()
+    .replace(/[,;.!?¿¡]/g, ' ')
+    .replace(/\b(c[oó]digo|cantidad|por|y|coma|el|la|los|las|de|producto|item)\b/gi, ' ');
 
-    const cNorm = normalizar(codigo);
-    let prod = State.productosDelProveedor.find(p =>
-      normalizar(p.numero) === cNorm || normalizar(p.codprov) === cNorm
-    );
-    if (!prod) {
-      // intentar match por descripción
-      prod = State.productosDelProveedor.find(p => normalizar(p.descripcion).includes(cNorm));
-    }
-
-    if (!prod) {
-      fallos.push(`${codigo} (no encontrado)`);
-      continue;
-    }
-
-    const existente = State.pedidoActual.find(x => x.numero === prod.numero);
-    if (existente) {
-      existente.cantidad += cant;
-    } else {
-      State.pedidoActual.push({
-        numero: prod.numero,
-        codprov: prod.codprov || '',
-        descripcion: prod.descripcion || '',
-        familia: prod.familia || '',
-        proveedor: prod.proveedor || State.proveedorActual,
-        cantidad: cant,
-        precio: Number(prod.precio) || 0,
-        min: prod.min || null,
-      });
-    }
-    hist[prod.numero] = cant;
-    agregados++;
+  // Convertir números escritos
+  for (const [palabra, num] of Object.entries(numerosEscritos)) {
+    limpio = limpio.replace(new RegExp('\\b' + palabra + '\\b', 'gi'), num);
   }
 
-  lsSet(KEY_HIST_CANTIDADES, hist);
+  // Tokenizar: extraer secuencias alfanuméricas (incluido guiones)
+  const tokens = limpio.match(/[\w-]+/g) || [];
+  // Filtrar tokens vacíos o muy cortos (1 char puede ser válido para códigos como "1")
+  const codigos = tokens.filter(t => t.length >= 1 && /[\d]/.test(t)); // al menos un dígito
 
-  let msg = `✓ ${agregados} items agregados`;
-  if (fallos.length) msg += ` • ${fallos.length} no procesados`;
-  toast(msg, agregados > 0 ? 'success' : 'warning');
-  if (fallos.length) log('warn', 'Mic fallos:', fallos);
+  if (codigos.length === 0) {
+    toast('No se detectó ningún código en el dictado', 'warning');
+    log('warn', 'Mic: tokens sin números:', tokens);
+    return;
+  }
 
-  renderTablaPedido();
+  log('info', `Mic: extraídos ${codigos.length} códigos:`, codigos);
+
+  // Pasar cada código como una línea al textarea de Carga Masiva
+  const ta = $('masiva-textarea');
+  if (!ta) {
+    toast('Error: no se encontró el área de carga masiva', 'error');
+    return;
+  }
+
+  // Si ya hay contenido, lo concatenamos (no pisamos)
+  const previo = (ta.value || '').trim();
+  const nuevoTexto = (previo ? previo + '\n' : '') + codigos.join('\n');
+  ta.value = nuevoTexto;
+
+  // Cambiar al modo masivo y disparar el parser para que arme la preview
+  showModo('masivo');
+  parsearMasivo();
+
+  // Limpiar el transcript del mic
+  $('mic-transcript').textContent = 'El texto aparecerá acá...';
+
+  toast(`🎙️ ${codigos.length} código(s) enviados a Carga Masiva. Revisá y agregalos al pedido.`, 'success', 5000);
 }
 
 
