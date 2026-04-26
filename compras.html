@@ -3739,24 +3739,23 @@ function generarPDFExport(borrador, valorizado) {
   y += 4;
 
   // Definir columnas según valorizado o no
-  // Cantidad va PEGADA al código del proveedor (más usable visualmente)
+  // Cantidad va PEGADA al código del proveedor (más usable visualmente).
+  // El "Núm." es código interno MAXIFER → NO va en el PDF (es para el proveedor).
   let cols;
   if (valorizado) {
     cols = [
       { w: 8,  h: '#',          align: 'right', getter: (it, idx) => String(idx + 1) },
-      { w: 24, h: 'Cód. Prov.', align: 'left',  getter: (it) => String(it.codprov || '') },
-      { w: 14, h: 'Cant.',      align: 'right', getter: (it) => String(it.cantidad || 0) },
-      { w: 16, h: 'Núm.',       align: 'left',  getter: (it) => String(it.numero || '') },
-      { w: 70, h: 'Descripción',align: 'left',  isDesc: true },
+      { w: 28, h: 'Cód. Prov.', align: 'left',  getter: (it) => String(it.codprov || '') },
+      { w: 16, h: 'Cant.',      align: 'right', getter: (it) => String(it.cantidad || 0) },
+      { w: 78, h: 'Descripción',align: 'left',  isDesc: true },
       { w: 22, h: 'Precio',     align: 'right', getter: (it) => fmtMoneyPDF(it.precio) },
-      { w: 28, h: 'Subtotal',   align: 'right', getter: (it) => fmtMoneyPDF((it.cantidad || 0) * (it.precio || 0)) },
+      { w: 30, h: 'Subtotal',   align: 'right', getter: (it) => fmtMoneyPDF((it.cantidad || 0) * (it.precio || 0)) },
     ];
   } else {
     cols = [
-      { w: 10, h: '#',          align: 'right', getter: (it, idx) => String(idx + 1) },
-      { w: 30, h: 'Cód. Prov.', align: 'left',  getter: (it) => String(it.codprov || '') },
-      { w: 22, h: 'Cant.',      align: 'right', getter: (it) => String(it.cantidad || 0) },
-      { w: 20, h: 'Núm.',       align: 'left',  getter: (it) => String(it.numero || '') },
+      { w: 12, h: '#',          align: 'right', getter: (it, idx) => String(idx + 1) },
+      { w: 36, h: 'Cód. Prov.', align: 'left',  getter: (it) => String(it.codprov || '') },
+      { w: 24, h: 'Cant.',      align: 'right', getter: (it) => String(it.cantidad || 0) },
       { w: 110,h: 'Descripción',align: 'left',  isDesc: true },
     ];
   }
@@ -4028,16 +4027,15 @@ function generarPDF(borrador) {
   y += 4;
 
   // Tabla
-  // Columnas: # | Cód.Prov | Cant | Núm. | Descripción | Precio | Subtotal
-  // (Cantidad pegada al código del proveedor para mejor lectura)
+  // Columnas: # | Cód.Prov | Cant | Descripción | Precio | Subtotal
+  // (El "Núm." es código interno MAXIFER y NO se incluye en el PDF al proveedor)
   const cols = [
     { w: 8,  h: '#',          align: 'right' },
-    { w: 24, h: 'Cód. Prov.', align: 'left'  },
-    { w: 14, h: 'Cant.',      align: 'right' },
-    { w: 16, h: 'Núm.',       align: 'left'  },
-    { w: 70, h: 'Descripción',align: 'left'  },
+    { w: 28, h: 'Cód. Prov.', align: 'left'  },
+    { w: 16, h: 'Cant.',      align: 'right' },
+    { w: 78, h: 'Descripción',align: 'left'  },
     { w: 22, h: 'Precio',     align: 'right' },
-    { w: 28, h: 'Subtotal',   align: 'right' },
+    { w: 30, h: 'Subtotal',   align: 'right' },
   ];
 
   function drawHeader() {
@@ -4065,8 +4063,8 @@ function generarPDF(borrador) {
     totalUnidades += (it.cantidad || 0);
     totalCosto += subtotal;
 
-    // Wrap descripción (col índice 4 ahora)
-    const descLines = doc.splitTextToSize(it.descripcion || '', cols[4].w - 2);
+    // Wrap descripción (col índice 3 ahora)
+    const descLines = doc.splitTextToSize(it.descripcion || '', cols[3].w - 2);
     const rowH = Math.max(5, descLines.length * 4) + 1;
 
     // Si no entra en la página, nueva página
@@ -4081,7 +4079,6 @@ function generarPDF(borrador) {
       String(idx + 1),
       String(it.codprov || ''),
       String(it.cantidad || 0),
-      String(it.numero || ''),
       descLines,
       fmtMoneyPDF(it.precio),
       fmtMoneyPDF(subtotal),
