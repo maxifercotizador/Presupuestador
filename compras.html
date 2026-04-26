@@ -2519,12 +2519,24 @@ function enviarParaAprobacion() {
 }
 
 function loadBorradores() {
+  console.log('🔍 loadBorradores() ejecutándose...');
+  
   const borradores = JSON.parse(localStorage.getItem('maxifer_borradores') || '{}');
   const lista = document.getElementById('borradores-list');
   
+  console.log('📋 Borradores encontrados:', Object.keys(borradores).length);
+  console.log('🎯 Elemento lista:', lista);
+  
+  if (!lista) {
+    console.error('❌ Elemento borradores-list no encontrado!');
+    return;
+  }
+  
   const misBorradores = Object.values(borradores).sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+  console.log('📋 Borradores procesados:', misBorradores.length);
   
   if (misBorradores.length === 0) {
+    console.log('📭 No hay borradores, mostrando mensaje vacío');
     lista.innerHTML = `
       <div style="text-align:center; padding:40px; color:var(--gris-texto)">
         <div style="font-size:48px; margin-bottom:16px">📋</div>
@@ -2533,12 +2545,21 @@ function loadBorradores() {
         <button onclick="migrarPendientesABorradores()" style="background:var(--amarillo); color:var(--gris-oscuro); border:none; padding:10px 20px; border-radius:4px; cursor:pointer; margin-top:15px">
           📦 Migrar pendientes a borradores
         </button>
+        <button onclick="console.log('Test localStorage:', localStorage.getItem('maxifer_borradores'))" style="background:var(--gris-medio); color:var(--blanco); border:none; padding:10px 20px; border-radius:4px; cursor:pointer; margin-top:10px">
+          🔍 Debug localStorage
+        </button>
       </div>
     `;
     return;
   }
   
-  lista.innerHTML = misBorradores.map(borrador => {
+  // Si hay borradores, mostrar la lista
+  console.log('📋 Renderizando', misBorradores.length, 'borradores...');
+  
+  let html = '';
+  misBorradores.forEach((borrador, index) => {
+    console.log(`📋 Procesando borrador ${index + 1}:`, borrador.codigo);
+    
     const fecha = new Date(borrador.fecha).toLocaleDateString('es-AR');
     const total = borrador.totales?.total || 0;
     const proveedor = borrador.proveedor || 'Sin proveedor';
@@ -2564,7 +2585,7 @@ function loadBorradores() {
         break;
     }
     
-    return `
+    html += `
       <div style="background:var(--gris-panel); padding:15px; border-radius:4px; margin-bottom:15px; border-left:4px solid ${estadoColor}">
         <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:10px">
           <div>
@@ -2601,16 +2622,20 @@ function loadBorradores() {
         ` : ''}
       </div>
     `;
-  }).join('');
+  });
   
-  // Agregar botón de migración al final si hay borradores
-  lista.innerHTML += `
+  // Agregar botón de migración al final
+  html += `
     <div style="text-align:center; margin-top:20px; padding-top:20px; border-top:1px solid var(--gris-borde)">
       <button onclick="migrarPendientesABorradores()" style="background:var(--gris-medio); color:var(--gris-texto); border:none; padding:8px 16px; border-radius:4px; cursor:pointer; font-size:12px">
         📦 Migrar pendientes a borradores
       </button>
     </div>
   `;
+  
+  console.log('✅ Estableciendo HTML en elemento lista');
+  lista.innerHTML = html;
+  console.log('✅ loadBorradores() completado');
 }
 
 function editarBorrador(codigo) {
@@ -2865,10 +2890,10 @@ function updateBorradoresBadge() {
 
 // Modificar función showPage para cargar borradores
 const originalShowPage = showPage;
-showPage = function(pageId) {
-  originalShowPage(pageId);
+showPage = function(name) {
+  originalShowPage(name);
   
-  if (pageId === 'borradores') {
+  if (name === 'borradores') {
     loadBorradores();
   }
 };
