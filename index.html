@@ -15,6 +15,8 @@
       --azul-pale: #e8eef8;
       --naranja: #e8510a;
       --naranja-light: #f26920;
+      --verde: #16a085;
+      --verde-light: #1abc9c;
       --rojo: #C0392B;
       --rojo-light: #e74c3c;
       --gris-bg: #f0f2f7;
@@ -105,6 +107,7 @@
     }
     .stripe-azul { background: var(--azul); }
     .stripe-naranja { background: var(--naranja); }
+    .stripe-verde { background: var(--verde); }
     .stripe-rojo { background: var(--rojo); }
 
     .card-body {
@@ -125,6 +128,7 @@
     }
     .icon-azul { background: var(--azul-pale); }
     .icon-naranja { background: #fdeee8; }
+    .icon-verde { background: #e8f6f3; }
     .icon-rojo { background: #fdeaea; }
 
     .card-info { flex: 1; min-width: 0; }
@@ -161,6 +165,10 @@
       background: #fdeee8;
       color: var(--naranja);
     }
+    .tag-verde {
+      background: #e8f6f3;
+      color: var(--verde);
+    }
     .tag-rojo {
       background: #fdeaea;
       color: var(--rojo);
@@ -193,6 +201,23 @@
 
   <div class="body">
     <div class="section-title">Seleccioná una herramienta</div>
+
+    <a href="MAXIFER_consultor_precios.html" class="app-card">
+      <div class="card-stripe stripe-verde"></div>
+      <div class="card-body">
+        <div class="card-icon icon-verde">🔍</div>
+        <div class="card-info">
+          <div class="card-name">Consultor de Precios</div>
+          <div class="card-desc">Buscá productos por familia, número o descripción con cálculo de descuentos en tiempo real.</div>
+          <div class="card-tags">
+            <span class="tag tag-verde">Búsqueda Rápida</span>
+            <span class="tag tag-verde">Descuentos</span>
+            <span class="tag tag-verde">Filtros</span>
+          </div>
+        </div>
+        <div class="card-arrow">›</div>
+      </div>
+    </a>
 
     <a href="3en1.html" class="app-card">
       <div class="card-stripe stripe-azul"></div>
