@@ -1068,8 +1068,6 @@ Ejemplo:
         <button class="btn btn-secondary" type="button" id="btn-limpiar">🗑 Limpiar</button>
         <button class="btn btn-warning" type="button" id="btn-guardar-pendiente">💾 Guardar Pendiente</button>
         <button class="btn btn-info" type="button" id="btn-guardar-borrador">📋 Guardar Borrador</button>
-        <button class="btn btn-primary" type="button" id="btn-enviar-aprobacion">📤 Enviar para Aprobación</button>
-        <button class="btn btn-success" type="button" id="btn-aprobar-generar">✅ Aprobar y Generar PDF</button>
       </div>
     </div>
   </div>
@@ -1707,8 +1705,6 @@ function wireEvents() {
   $on('btn-pedido-eliminar-sel', 'click', eliminarSeleccionadosPedido);
   $on('btn-guardar-pendiente', 'click', () => guardarComoPendiente());
   $on('btn-guardar-borrador', 'click', () => guardarComoBorrador());
-  $on('btn-enviar-aprobacion', 'click', enviarParaAprobacion);
-  $on('btn-aprobar-generar', 'click', aprobarYGenerar);
 
   // Borradores
   $on('btn-recargar-borradores', 'click', renderBorradores);
@@ -3547,6 +3543,9 @@ function exportarExcel() {
   if (!pedidos) return;
 
   // Construir AOA (array of arrays) con todo el contenido
+  // 7 columnas: Proveedor | Código Prov. | Núm. MAXIFER | Cantidad | Descripción | Precio Unit. | Precio Total
+  const NCOLS = 7;
+  const emptyRow = () => Array(NCOLS).fill('');
   const aoa = [];
   let totalGeneralSubtotal = 0;
   const merges = [];
@@ -3555,18 +3554,18 @@ function exportarExcel() {
     // Encabezado del pedido (fila merge)
     const headerRow = aoa.length;
     const titulo = `PEDIDO ${pi + 1}: ${p.id} — ${p.proveedor} — ${p.operador} — ${fmtFechaExcel(p.creado)}`;
-    aoa.push([titulo, '', '', '', '', '']);
-    merges.push({ s: { r: headerRow, c: 0 }, e: { r: headerRow, c: 5 } });
+    const r = emptyRow(); r[0] = titulo; aoa.push(r);
+    merges.push({ s: { r: headerRow, c: 0 }, e: { r: headerRow, c: NCOLS - 1 } });
 
     // Observaciones (opcional)
     if (p.observaciones) {
       const obsRow = aoa.length;
-      aoa.push([`Obs: ${p.observaciones}`, '', '', '', '', '']);
-      merges.push({ s: { r: obsRow, c: 0 }, e: { r: obsRow, c: 5 } });
+      const r2 = emptyRow(); r2[0] = `Obs: ${p.observaciones}`; aoa.push(r2);
+      merges.push({ s: { r: obsRow, c: 0 }, e: { r: obsRow, c: NCOLS - 1 } });
     }
 
     // Headers de columnas
-    aoa.push(['Proveedor', 'Código', 'Cantidad', 'Descripción', 'Precio Unitario', 'Precio Total']);
+    aoa.push(['Proveedor', 'Código Prov.', 'Núm. MAXIFER', 'Cantidad', 'Descripción', 'Precio Unitario', 'Precio Total']);
 
     // Items
     let subtotal = 0;
@@ -3577,7 +3576,8 @@ function exportarExcel() {
       subtotal += total;
       aoa.push([
         p.proveedor,
-        it.codprov || it.numero || '',
+        it.codprov || '',
+        it.numero || '',
         cant,
         it.descripcion || '',
         precio,
@@ -3585,18 +3585,21 @@ function exportarExcel() {
       ]);
     });
 
-    // Totales del pedido
+    // Totales del pedido — el label va en la 6ta col, el monto en la 7ma
     const iva = subtotal * IVA_RATE;
     const totalConIva = subtotal + iva;
     totalGeneralSubtotal += subtotal;
 
-    aoa.push(['', '', '', '', 'SUBTOTAL:', subtotal]);
-    aoa.push(['', '', '', '', `IVA ${(IVA_RATE * 100).toFixed(0)}%:`, iva]);
-    aoa.push(['', '', '', '', 'TOTAL:', totalConIva]);
+    const totRow = (label, valor) => {
+      const r = emptyRow(); r[5] = label; r[6] = valor; return r;
+    };
+    aoa.push(totRow('SUBTOTAL:', subtotal));
+    aoa.push(totRow(`IVA ${(IVA_RATE * 100).toFixed(0)}%:`, iva));
+    aoa.push(totRow('TOTAL:', totalConIva));
 
     // Fila vacía separadora
-    aoa.push([]);
-    aoa.push([]);
+    aoa.push(emptyRow());
+    aoa.push(emptyRow());
   });
 
   // Total general al final
@@ -3604,39 +3607,42 @@ function exportarExcel() {
   const totalGeneralFinal = totalGeneralSubtotal + totalGeneralIva;
 
   const totalHeaderRow = aoa.length;
-  aoa.push([`TOTAL GENERAL — ${pedidos.length} pedido(s)`, '', '', '', '', '']);
-  merges.push({ s: { r: totalHeaderRow, c: 0 }, e: { r: totalHeaderRow, c: 5 } });
-  aoa.push(['', '', '', '', 'SUBTOTAL GENERAL:', totalGeneralSubtotal]);
-  aoa.push(['', '', '', '', `IVA ${(IVA_RATE * 100).toFixed(0)}%:`, totalGeneralIva]);
-  aoa.push(['', '', '', '', 'TOTAL + IVA:', totalGeneralFinal]);
+  const tgr = emptyRow(); tgr[0] = `TOTAL GENERAL — ${pedidos.length} pedido(s)`; aoa.push(tgr);
+  merges.push({ s: { r: totalHeaderRow, c: 0 }, e: { r: totalHeaderRow, c: NCOLS - 1 } });
+
+  const totGenRow = (label, valor) => {
+    const r = emptyRow(); r[5] = label; r[6] = valor; return r;
+  };
+  aoa.push(totGenRow('SUBTOTAL GENERAL:', totalGeneralSubtotal));
+  aoa.push(totGenRow(`IVA ${(IVA_RATE * 100).toFixed(0)}%:`, totalGeneralIva));
+  aoa.push(totGenRow('TOTAL + IVA:', totalGeneralFinal));
 
   // Crear workbook
   const ws = XLSX.utils.aoa_to_sheet(aoa);
   ws['!merges'] = merges;
-  // Anchos de columna (en caracteres aprox)
+  // Anchos de columna
   ws['!cols'] = [
     { wch: 18 }, // Proveedor
-    { wch: 14 }, // Código
+    { wch: 14 }, // Código Prov.
+    { wch: 14 }, // Núm. MAXIFER
     { wch: 10 }, // Cantidad
-    { wch: 50 }, // Descripción
+    { wch: 48 }, // Descripción
     { wch: 16 }, // Precio Unitario
     { wch: 16 }, // Precio Total
   ];
 
-  // Aplicar formato moneda a las columnas E y F (precio unit y total) en filas que sean numéricas
-  // Excel format: $#,##0.00
+  // Formato: cantidad (D) entero, precio unit (F) y precio total (G) moneda
   Object.keys(ws).forEach(addr => {
     if (addr[0] === '!') return;
     const cell = ws[addr];
     const m = addr.match(/^([A-Z]+)(\d+)$/);
     if (!m) return;
     const col = m[1];
-    if ((col === 'E' || col === 'F') && typeof cell.v === 'number') {
+    if ((col === 'F' || col === 'G') && typeof cell.v === 'number') {
       cell.z = '"$"#,##0.00';
       cell.t = 'n';
     }
-    // Cantidad como entero
-    if (col === 'C' && typeof cell.v === 'number') {
+    if (col === 'D' && typeof cell.v === 'number') {
       cell.z = '#,##0';
       cell.t = 'n';
     }
@@ -3645,7 +3651,6 @@ function exportarExcel() {
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Pedidos');
 
-  // Nombre del archivo: pedidos_compras_YYYYMMDD.xlsx
   const filename = `pedidos_compras_${fechaCompacta()}.xlsx`;
   XLSX.writeFile(wb, filename);
 
@@ -3734,24 +3739,25 @@ function generarPDFExport(borrador, valorizado) {
   y += 4;
 
   // Definir columnas según valorizado o no
+  // Cantidad va PEGADA al código del proveedor (más usable visualmente)
   let cols;
   if (valorizado) {
     cols = [
-      { w: 8, h: '#', align: 'right', getter: (it, idx) => String(idx + 1) },
-      { w: 24, h: 'Cód. Prov.', align: 'left', getter: (it) => String(it.codprov || '') },
-      { w: 16, h: 'Núm.', align: 'left', getter: (it) => String(it.numero || '') },
-      { w: 70, h: 'Descripción', align: 'left', isDesc: true },
-      { w: 14, h: 'Cant.', align: 'right', getter: (it) => String(it.cantidad || 0) },
-      { w: 22, h: 'Precio', align: 'right', getter: (it) => fmtMoneyPDF(it.precio) },
-      { w: 28, h: 'Subtotal', align: 'right', getter: (it) => fmtMoneyPDF((it.cantidad || 0) * (it.precio || 0)) },
+      { w: 8,  h: '#',          align: 'right', getter: (it, idx) => String(idx + 1) },
+      { w: 24, h: 'Cód. Prov.', align: 'left',  getter: (it) => String(it.codprov || '') },
+      { w: 14, h: 'Cant.',      align: 'right', getter: (it) => String(it.cantidad || 0) },
+      { w: 16, h: 'Núm.',       align: 'left',  getter: (it) => String(it.numero || '') },
+      { w: 70, h: 'Descripción',align: 'left',  isDesc: true },
+      { w: 22, h: 'Precio',     align: 'right', getter: (it) => fmtMoneyPDF(it.precio) },
+      { w: 28, h: 'Subtotal',   align: 'right', getter: (it) => fmtMoneyPDF((it.cantidad || 0) * (it.precio || 0)) },
     ];
   } else {
     cols = [
-      { w: 10, h: '#', align: 'right', getter: (it, idx) => String(idx + 1) },
-      { w: 30, h: 'Cód. Prov.', align: 'left', getter: (it) => String(it.codprov || '') },
-      { w: 20, h: 'Núm.', align: 'left', getter: (it) => String(it.numero || '') },
-      { w: 110, h: 'Descripción', align: 'left', isDesc: true },
-      { w: 22, h: 'Cant.', align: 'right', getter: (it) => String(it.cantidad || 0) },
+      { w: 10, h: '#',          align: 'right', getter: (it, idx) => String(idx + 1) },
+      { w: 30, h: 'Cód. Prov.', align: 'left',  getter: (it) => String(it.codprov || '') },
+      { w: 22, h: 'Cant.',      align: 'right', getter: (it) => String(it.cantidad || 0) },
+      { w: 20, h: 'Núm.',       align: 'left',  getter: (it) => String(it.numero || '') },
+      { w: 110,h: 'Descripción',align: 'left',  isDesc: true },
     ];
   }
 
@@ -4022,15 +4028,16 @@ function generarPDF(borrador) {
   y += 4;
 
   // Tabla
-  // Columnas: # | Cód.Prov | Núm. | Descripción | Cant | Precio | Subtotal
+  // Columnas: # | Cód.Prov | Cant | Núm. | Descripción | Precio | Subtotal
+  // (Cantidad pegada al código del proveedor para mejor lectura)
   const cols = [
-    { w: 8, h: '#', align: 'right' },
-    { w: 24, h: 'Cód. Prov.', align: 'left' },
-    { w: 18, h: 'Núm.', align: 'left' },
-    { w: 70, h: 'Descripción', align: 'left' },
-    { w: 14, h: 'Cant.', align: 'right' },
-    { w: 22, h: 'Precio', align: 'right' },
-    { w: 26, h: 'Subtotal', align: 'right' },
+    { w: 8,  h: '#',          align: 'right' },
+    { w: 24, h: 'Cód. Prov.', align: 'left'  },
+    { w: 14, h: 'Cant.',      align: 'right' },
+    { w: 16, h: 'Núm.',       align: 'left'  },
+    { w: 70, h: 'Descripción',align: 'left'  },
+    { w: 22, h: 'Precio',     align: 'right' },
+    { w: 28, h: 'Subtotal',   align: 'right' },
   ];
 
   function drawHeader() {
@@ -4058,8 +4065,8 @@ function generarPDF(borrador) {
     totalUnidades += (it.cantidad || 0);
     totalCosto += subtotal;
 
-    // Wrap descripción
-    const descLines = doc.splitTextToSize(it.descripcion || '', cols[3].w - 2);
+    // Wrap descripción (col índice 4 ahora)
+    const descLines = doc.splitTextToSize(it.descripcion || '', cols[4].w - 2);
     const rowH = Math.max(5, descLines.length * 4) + 1;
 
     // Si no entra en la página, nueva página
@@ -4073,9 +4080,9 @@ function generarPDF(borrador) {
     const vals = [
       String(idx + 1),
       String(it.codprov || ''),
+      String(it.cantidad || 0),
       String(it.numero || ''),
       descLines,
-      String(it.cantidad || 0),
       fmtMoneyPDF(it.precio),
       fmtMoneyPDF(subtotal),
     ];
