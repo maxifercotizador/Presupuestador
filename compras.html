@@ -7,6 +7,7 @@
 <title>MAXIFER — Compras v3.0</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;900&family=Barlow:wght@300;400;500;600&display=swap');
 
@@ -358,6 +359,7 @@
     border-bottom: 1px solid var(--gris-borde);
   }
   .preview-item.no-encontrado { background: rgba(192, 57, 43, 0.08); }
+  .preview-item.pedido-sel { background: rgba(192, 57, 43, 0.10); border-left: 3px solid var(--rojo); }
   .preview-item input[type="checkbox"] {
     width: auto;
     transform: scale(1.2);
@@ -1019,22 +1021,32 @@ Ejemplo:
   <div id="panel-tabla" style="display:none">
     <div class="panel">
       <h2>Items del Pedido</h2>
-      <div class="tabla-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Cód.</th>
-              <th>Núm.</th>
-              <th>Descripción</th>
-              <th class="num">Cant.</th>
-              <th class="num">Precio</th>
-              <th class="num">Subtotal</th>
-              <th class="center">×</th>
-            </tr>
-          </thead>
-          <tbody id="tabla-body"></tbody>
-        </table>
+
+      <!-- Filtros de selección (mismo estilo que Carga Masiva) -->
+      <div class="filtros-masivo" id="pedido-filtros-row">
+        <button type="button" class="btn-filtro" data-pedido-filtro="todos">☑️ Todos</button>
+        <button type="button" class="btn-filtro" data-pedido-filtro="ninguno">☐ Ninguno</button>
+        <button type="button" class="btn-filtro" data-pedido-filtro="con-cantidad">🔢 Con cantidad</button>
+        <button type="button" class="btn-filtro" data-pedido-filtro="sin-cantidad">❌ Sin cantidad</button>
+        <button type="button" class="btn-filtro" data-pedido-filtro="por-familia">📦 Por familia...</button>
+      </div>
+
+      <div id="pedido-cant-global-row" style="display:flex; gap:8px; align-items:center; margin: 10px 0; flex-wrap: wrap">
+        <label style="margin:0">Cantidad global:</label>
+        <input type="number" id="pedido-cant-global" placeholder="Ej: 50" min="1" style="width:100px">
+        <button class="btn btn-secondary btn-sm" type="button" id="btn-pedido-aplicar-global">Aplicar a seleccionados</button>
+        <label style="margin:0; display:flex; align-items:center; gap:4px; font-size:12px">
+          <input type="checkbox" id="pedido-sobrescribir-check" checked style="width:auto"> Sobrescribir
+        </label>
+        <button class="btn btn-danger btn-sm" type="button" id="btn-pedido-eliminar-sel">🗑 Eliminar seleccionados</button>
+      </div>
+
+      <div id="pedido-sel-info" style="font-size:12px; color:var(--gris-texto); margin-bottom:8px">
+        0 seleccionados / 0 items
+      </div>
+
+      <div class="preview-masiva" id="pedido-lista-wrap" style="margin-top: 0">
+        <div id="pedido-lista"></div>
       </div>
 
       <div class="totales">
@@ -1138,7 +1150,25 @@ Ejemplo:
 <div class="page" id="page-pendientes">
   <div class="panel">
     <h2>Pedidos Pendientes</h2>
+
+    <!-- Barra de exportación (visible solo en modo exportar) -->
+    <div class="share-bar" id="export-bar" style="display:none">
+      <div class="share-info">
+        <strong id="export-count">0 seleccionados</strong>
+      </div>
+      <div class="share-actions">
+        <button class="btn btn-sm btn-secondary" type="button" id="btn-export-marcar-todos">☑️ Todos</button>
+        <button class="btn btn-sm btn-secondary" type="button" id="btn-export-desmarcar-todos">☐ Ninguno</button>
+        <label style="margin:0; display:flex; align-items:center; gap:4px; font-size:12px; padding: 0 8px; background: var(--gris-medio); border-radius: 3px; height: 32px">
+          <input type="checkbox" id="export-valorizado-check" checked style="width:auto"> Con precios
+        </label>
+        <button class="btn btn-sm btn-success" type="button" id="btn-export-excel">📊 Excel</button>
+        <button class="btn btn-sm btn-info" type="button" id="btn-export-pdf">📄 PDF(s)</button>
+      </div>
+    </div>
+
     <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px">
+      <button class="btn btn-primary btn-sm" type="button" id="btn-modo-exportar">📤 Exportar pedidos</button>
       <button class="btn btn-info btn-sm" type="button" id="btn-recargar-pendientes">🔄 Recargar</button>
       <button class="btn btn-warning btn-sm" type="button" id="btn-migrar-pendientes">↪️ Migrar a Borradores</button>
     </div>
@@ -1669,6 +1699,12 @@ function wireEvents() {
 
   // Acciones del pedido
   $on('btn-limpiar', 'click', limpiarPedido);
+  // Filtros de selección masiva en el pedido
+  document.querySelectorAll('button[data-pedido-filtro]').forEach(b => {
+    b.addEventListener('click', () => aplicarFiltroPedido(b.dataset.pedidoFiltro));
+  });
+  $on('btn-pedido-aplicar-global', 'click', aplicarCantGlobalPedido);
+  $on('btn-pedido-eliminar-sel', 'click', eliminarSeleccionadosPedido);
   $on('btn-guardar-pendiente', 'click', () => guardarComoPendiente());
   $on('btn-guardar-borrador', 'click', () => guardarComoBorrador());
   $on('btn-enviar-aprobacion', 'click', enviarParaAprobacion);
@@ -1705,6 +1741,13 @@ function wireEvents() {
   // Pendientes
   $on('btn-recargar-pendientes', 'click', renderPendientes);
   $on('btn-migrar-pendientes', 'click', migrarPendientesABorradores);
+
+  // Modo exportar pedidos
+  $on('btn-modo-exportar', 'click', toggleModoExportar);
+  $on('btn-export-marcar-todos', 'click', exportMarcarTodos);
+  $on('btn-export-desmarcar-todos', 'click', exportDesmarcarTodos);
+  $on('btn-export-excel', 'click', exportarExcel);
+  $on('btn-export-pdf', 'click', exportarPDFsSeleccionados);
 
   // Historial
   $on('btn-recargar-historial', 'click', renderHistorial);
@@ -2038,44 +2081,183 @@ function limpiarPedido() {
 }
 
 function renderTablaPedido() {
-  const tbody = $('tabla-body');
-  if (!tbody) return;
+  const lista = $('pedido-lista');
+  if (!lista) return;
 
   // Mostrar/ocultar panel-tabla
   $('panel-tabla').style.display = State.pedidoActual.length > 0 ? 'block' : 'none';
 
   if (State.pedidoActual.length === 0) {
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="8">No hay items en el pedido</td></tr>';
+    lista.innerHTML = '<div class="search-empty">No hay items en el pedido</div>';
     actualizarTotales();
+    actualizarPedidoSelInfo();
     return;
   }
 
-  tbody.innerHTML = '';
+  lista.innerHTML = '';
   State.pedidoActual.forEach((it, idx) => {
-    const tr = document.createElement('tr');
-    tr.className = 'row-pedido';
-    const subtotal = (Number(it.cantidad) || 0) * (Number(it.precio) || 0);
-    tr.innerHTML = `
-      <td>${idx + 1}</td>
-      <td>${escapeHtml(it.codprov || '—')}</td>
-      <td>${escapeHtml(it.numero || '—')}</td>
-      <td>${escapeHtml(it.descripcion || '—')}</td>
-      <td class="num"><input type="number" class="qty-input" data-idx="${idx}" value="${it.cantidad}" min="1"></td>
-      <td class="num">${fmtMoney(it.precio)}</td>
-      <td class="num">${fmtMoney(subtotal)}</td>
-      <td class="center"><button class="btn btn-sm btn-danger" data-eliminar="${idx}" type="button">×</button></td>
-    `;
-    tbody.appendChild(tr);
-  });
+    // Asegurar que tenga el flag de seleccionado
+    if (it.seleccionado === undefined) it.seleccionado = false;
 
-  tbody.querySelectorAll('input.qty-input').forEach(inp => {
-    inp.addEventListener('change', e => actualizarCantidadItem(parseInt(e.target.dataset.idx, 10), e.target.value));
-  });
-  tbody.querySelectorAll('button[data-eliminar]').forEach(btn => {
-    btn.addEventListener('click', e => eliminarItem(parseInt(e.currentTarget.dataset.eliminar, 10)));
+    const subtotal = (Number(it.cantidad) || 0) * (Number(it.precio) || 0);
+    const div = document.createElement('div');
+    div.className = 'preview-item' + (it.seleccionado ? ' pedido-sel' : '');
+
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = !!it.seleccionado;
+    cb.addEventListener('change', e => {
+      State.pedidoActual[idx].seleccionado = e.target.checked;
+      div.classList.toggle('pedido-sel', e.target.checked);
+      actualizarPedidoSelInfo();
+    });
+
+    const info = document.createElement('div');
+    info.className = 'pi-info';
+    info.innerHTML = `
+      <div class="pi-codigo">${escapeHtml(it.codprov || it.numero)} <span style="font-weight:400; color:var(--gris-texto); font-size:11px">[${escapeHtml(it.numero)}]</span></div>
+      <div class="pi-desc">${escapeHtml(it.descripcion || '—')} • ${fmtMoney(it.precio)} c/u${it.familia ? ' • ' + escapeHtml(it.familia) : ''}</div>
+      <div style="font-size:11px; color:var(--verde); margin-top:2px">Subtotal: ${fmtMoney(subtotal)}</div>
+    `;
+
+    const cantInp = document.createElement('input');
+    cantInp.type = 'number';
+    cantInp.min = '1';
+    cantInp.value = it.cantidad;
+    cantInp.placeholder = 'Cant.';
+    cantInp.addEventListener('change', e => actualizarCantidadItem(idx, e.target.value));
+
+    const eliminarBtn = document.createElement('button');
+    eliminarBtn.type = 'button';
+    eliminarBtn.className = 'btn btn-sm btn-danger';
+    eliminarBtn.textContent = '×';
+    eliminarBtn.style.cssText = 'min-width:28px; padding:4px 8px';
+    eliminarBtn.addEventListener('click', () => eliminarItem(idx));
+
+    const idxLabel = document.createElement('div');
+    idxLabel.style.cssText = 'font-size:11px; color:var(--gris-texto); width: 24px; text-align:right; flex-shrink:0';
+    idxLabel.textContent = '#' + (idx + 1);
+
+    // Cambiar el grid del item: checkbox | info | cant | × | #idx
+    div.style.gridTemplateColumns = 'auto 1fr auto auto auto';
+    div.appendChild(cb);
+    div.appendChild(info);
+    div.appendChild(cantInp);
+    div.appendChild(eliminarBtn);
+    div.appendChild(idxLabel);
+    lista.appendChild(div);
   });
 
   actualizarTotales();
+  actualizarPedidoSelInfo();
+}
+
+function actualizarPedidoSelInfo() {
+  const total = State.pedidoActual.length;
+  const sel = State.pedidoActual.filter(it => it.seleccionado).length;
+  const info = $('pedido-sel-info');
+  if (info) info.textContent = `${sel} seleccionados / ${total} items`;
+}
+
+function aplicarFiltroPedido(filtro) {
+  if (filtro === 'por-familia') {
+    abrirSelectorFamiliaPedido();
+    return;
+  }
+  const items = State.pedidoActual;
+  switch (filtro) {
+    case 'todos':       items.forEach(i => i.seleccionado = true); break;
+    case 'ninguno':     items.forEach(i => i.seleccionado = false); break;
+    case 'con-cantidad': items.forEach(i => i.seleccionado = (i.cantidad > 0)); break;
+    case 'sin-cantidad': items.forEach(i => i.seleccionado = !(i.cantidad > 0)); break;
+  }
+  renderTablaPedido();
+}
+
+function abrirSelectorFamiliaPedido() {
+  // Mostrar modal con las familias presentes en el pedido
+  const familias = [...new Set(State.pedidoActual.map(it => it.familia).filter(Boolean))].sort((a,b) => a.localeCompare(b, 'es'));
+  if (familias.length === 0) {
+    toast('No hay familias para filtrar', 'warning');
+    return;
+  }
+  // Crear modal dinámicamente
+  let existing = document.getElementById('modal-familia-pedido');
+  if (existing) existing.remove();
+  const ov = document.createElement('div');
+  ov.className = 'modal-overlay';
+  ov.id = 'modal-familia-pedido';
+  ov.style.display = 'flex';
+  let listaHTML = '';
+  familias.forEach(f => {
+    const count = State.pedidoActual.filter(it => it.familia === f).length;
+    listaHTML += `
+      <div class="modal-item" data-fam="${escapeHtml(f)}">
+        <div>${escapeHtml(f)}</div>
+        <div class="mi-stats">${count} item${count > 1 ? 's' : ''}</div>
+      </div>
+    `;
+  });
+  ov.innerHTML = `
+    <div class="modal-card" style="max-height: 70vh">
+      <div class="modal-head">
+        <h3>Seleccionar por Familia</h3>
+        <button class="modal-close" type="button" id="btn-cerrar-fam-pedido" aria-label="Cerrar">×</button>
+      </div>
+      <div class="modal-list">${listaHTML}</div>
+    </div>
+  `;
+  document.body.appendChild(ov);
+
+  const cerrar = () => ov.remove();
+  ov.querySelector('#btn-cerrar-fam-pedido').addEventListener('click', cerrar);
+  ov.addEventListener('click', (e) => { if (e.target === ov) cerrar(); });
+  ov.querySelectorAll('.modal-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const fam = item.dataset.fam;
+      State.pedidoActual.forEach(it => { it.seleccionado = (it.familia === fam); });
+      renderTablaPedido();
+      cerrar();
+      toast(`Seleccionados items de "${fam}"`, 'info');
+    });
+  });
+}
+
+function aplicarCantGlobalPedido() {
+  const v = parseInt($('pedido-cant-global').value, 10);
+  if (!v || v <= 0) {
+    toast('Ingresá una cantidad válida', 'warning');
+    return;
+  }
+  const sel = State.pedidoActual.filter(i => i.seleccionado);
+  if (sel.length === 0) {
+    toast('No hay items seleccionados', 'warning');
+    return;
+  }
+  const sobrescribir = $('pedido-sobrescribir-check').checked;
+  let n = 0;
+  State.pedidoActual.forEach(it => {
+    if (it.seleccionado) {
+      if (sobrescribir || !it.cantidad) {
+        it.cantidad = v;
+        n++;
+      }
+    }
+  });
+  renderTablaPedido();
+  toast(`✓ Cantidad ${v} aplicada a ${n} items`, 'success');
+}
+
+function eliminarSeleccionadosPedido() {
+  const sel = State.pedidoActual.filter(i => i.seleccionado);
+  if (sel.length === 0) {
+    toast('No hay items seleccionados', 'warning');
+    return;
+  }
+  if (!confirm(`¿Eliminar ${sel.length} items seleccionados del pedido?`)) return;
+  State.pedidoActual = State.pedidoActual.filter(i => !i.seleccionado);
+  renderTablaPedido();
+  toast(`🗑 ${sel.length} items eliminados`, 'info');
 }
 
 function actualizarTotales() {
@@ -2478,13 +2660,18 @@ function generarCodigo() {
 // BORRADORES — estados: editando | pendiente | aprobado | rechazado
 // ═══════════════════════════════════════════════════════════════════
 function snapshotPedido(estado) {
+  // Limpiar flag UI 'seleccionado' antes de persistir
+  const itemsLimpios = State.pedidoActual.map(it => {
+    const { seleccionado, ...resto } = it;
+    return resto;
+  });
   return {
     id: State.borradorActualId || generarCodigo(),
     estado,
     proveedor: State.proveedorActual,
     operador: $('sel-operador').value,
     observaciones: $('inp-obs').value || '',
-    items: JSON.parse(JSON.stringify(State.pedidoActual)),
+    items: JSON.parse(JSON.stringify(itemsLimpios)),
     creado: new Date().toISOString(),
     modificado: new Date().toISOString(),
     comentarios: '',
@@ -2508,7 +2695,10 @@ function guardarComoBorrador(estadoOverride) {
       snap.proveedor = State.proveedorActual;
       snap.operador = $('sel-operador').value;
       snap.observaciones = $('inp-obs').value || '';
-      snap.items = JSON.parse(JSON.stringify(State.pedidoActual));
+      snap.items = JSON.parse(JSON.stringify(State.pedidoActual.map(it => {
+        const { seleccionado, ...resto } = it;
+        return resto;
+      })));
       snap.modificado = new Date().toISOString();
       borradores[idx] = snap;
     } else {
@@ -2635,17 +2825,27 @@ function renderHistorial() {
 function renderBorradorCard(b, acciones) {
   const card = document.createElement('div');
   const enModoShare = ShareMode.active && acciones && acciones.includes('continuar');
+  // Modo export aplica solo a la vista de Pendientes (acciones tienen 'revisar')
+  const enModoExport = ExportMode.active && acciones && acciones.includes('revisar');
   card.className = `borrador-card estado-${b.estado || 'editando'}`;
   if (enModoShare) {
     card.classList.add('modo-compartir');
     if (ShareMode.selectedIds.has(b.id)) card.classList.add('share-selected');
   }
+  if (enModoExport) {
+    card.classList.add('modo-compartir');
+    if (ExportMode.selectedIds.has(b.id)) card.classList.add('share-selected');
+  }
 
   const totalUnidades = (b.items || []).reduce((s, it) => s + (it.cantidad || 0), 0);
   const totalCosto = (b.items || []).reduce((s, it) => s + (it.cantidad || 0) * (it.precio || 0), 0);
 
-  const checkboxHTML = enModoShare ?
-    `<input type="checkbox" class="bc-share-check" ${ShareMode.selectedIds.has(b.id) ? 'checked' : ''}>` : '';
+  let checkboxHTML = '';
+  if (enModoShare) {
+    checkboxHTML = `<input type="checkbox" class="bc-share-check" ${ShareMode.selectedIds.has(b.id) ? 'checked' : ''}>`;
+  } else if (enModoExport) {
+    checkboxHTML = `<input type="checkbox" class="bc-share-check" ${ExportMode.selectedIds.has(b.id) ? 'checked' : ''}>`;
+  }
 
   card.innerHTML = `
     ${checkboxHTML}
@@ -2663,14 +2863,14 @@ function renderBorradorCard(b, acciones) {
       📦 ${(b.items || []).length} items • ${totalUnidades.toLocaleString('es-AR')} unidades • <strong style="color:var(--verde)">${fmtMoney(totalCosto)}</strong>
     </div>
     ${b.comentarios ? `<div class="hint-box warning" style="margin-top:8px">💬 ${escapeHtml(b.comentarios)}</div>` : ''}
-    ${enModoShare ? '' : '<div class="bc-acciones"></div>'}
+    ${(enModoShare || enModoExport) ? '' : '<div class="bc-acciones"></div>'}
   `;
 
-  // En modo compartir, click en cualquier parte del card toggle el checkbox
+  // En modo compartir
   if (enModoShare) {
     const cb = card.querySelector('.bc-share-check');
     const toggle = (e) => {
-      if (e.target.tagName === 'INPUT') return; // dejar que el click nativo del checkbox funcione
+      if (e.target.tagName === 'INPUT') return;
       e.preventDefault();
       cb.checked = !cb.checked;
       cb.dispatchEvent(new Event('change'));
@@ -2681,6 +2881,25 @@ function renderBorradorCard(b, acciones) {
       else ShareMode.selectedIds.delete(b.id);
       card.classList.toggle('share-selected', cb.checked);
       actualizarShareCount();
+    });
+    return card;
+  }
+
+  // En modo exportar
+  if (enModoExport) {
+    const cb = card.querySelector('.bc-share-check');
+    const toggle = (e) => {
+      if (e.target.tagName === 'INPUT') return;
+      e.preventDefault();
+      cb.checked = !cb.checked;
+      cb.dispatchEvent(new Event('change'));
+    };
+    card.addEventListener('click', toggle);
+    cb.addEventListener('change', () => {
+      if (cb.checked) ExportMode.selectedIds.add(b.id);
+      else ExportMode.selectedIds.delete(b.id);
+      card.classList.toggle('share-selected', cb.checked);
+      actualizarExportCount();
     });
     return card;
   }
@@ -3246,6 +3465,380 @@ function confirmarImportacion() {
   // Refrescar UI
   showPage('pendientes');
   updateBadges();
+}
+
+
+// ═══════════════════════════════════════════════════════════════════
+// EXPORTAR PENDIENTES (Excel + PDF valorizado/sin valorizar)
+// ═══════════════════════════════════════════════════════════════════
+const IVA_RATE = 0.21;
+
+const ExportMode = {
+  active: false,
+  selectedIds: new Set(),
+};
+
+function activarModoExportar() {
+  ExportMode.active = true;
+  ExportMode.selectedIds.clear();
+  $('export-bar').style.display = 'flex';
+  $('btn-modo-exportar').textContent = '✕ Cancelar';
+  $('btn-modo-exportar').classList.remove('btn-primary');
+  $('btn-modo-exportar').classList.add('btn-secondary');
+  renderPendientes();
+  actualizarExportCount();
+}
+
+function desactivarModoExportar() {
+  ExportMode.active = false;
+  ExportMode.selectedIds.clear();
+  $('export-bar').style.display = 'none';
+  $('btn-modo-exportar').textContent = '📤 Exportar pedidos';
+  $('btn-modo-exportar').classList.remove('btn-secondary');
+  $('btn-modo-exportar').classList.add('btn-primary');
+  renderPendientes();
+}
+
+function toggleModoExportar() {
+  if (ExportMode.active) desactivarModoExportar();
+  else activarModoExportar();
+}
+
+function actualizarExportCount() {
+  const n = ExportMode.selectedIds.size;
+  $('export-count').textContent = n === 0 ? 'Tocá los pedidos a exportar'
+    : n === 1 ? '1 seleccionado' : `${n} seleccionados`;
+}
+
+function exportMarcarTodos() {
+  const pendientes = lsGet(KEY_BORRADORES, []).filter(b => b.estado === 'pendiente');
+  pendientes.forEach(b => ExportMode.selectedIds.add(b.id));
+  renderPendientes();
+  actualizarExportCount();
+}
+
+function exportDesmarcarTodos() {
+  ExportMode.selectedIds.clear();
+  renderPendientes();
+  actualizarExportCount();
+}
+
+function getPedidosSeleccionadosExport() {
+  if (ExportMode.selectedIds.size === 0) {
+    toast('No hay pedidos seleccionados', 'warning');
+    return null;
+  }
+  const all = lsGet(KEY_BORRADORES, []);
+  const selected = all.filter(b => ExportMode.selectedIds.has(b.id));
+  if (selected.length === 0) {
+    toast('No se encontraron los pedidos seleccionados', 'error');
+    return null;
+  }
+  return selected;
+}
+
+// ─── EXCEL ────────────────────────────────────────────────────────
+function exportarExcel() {
+  if (typeof XLSX === 'undefined') {
+    toast('Falta la librería XLSX. Verificá tu conexión.', 'error');
+    return;
+  }
+  const pedidos = getPedidosSeleccionadosExport();
+  if (!pedidos) return;
+
+  // Construir AOA (array of arrays) con todo el contenido
+  const aoa = [];
+  let totalGeneralSubtotal = 0;
+  const merges = [];
+
+  pedidos.forEach((p, pi) => {
+    // Encabezado del pedido (fila merge)
+    const headerRow = aoa.length;
+    const titulo = `PEDIDO ${pi + 1}: ${p.id} — ${p.proveedor} — ${p.operador} — ${fmtFechaExcel(p.creado)}`;
+    aoa.push([titulo, '', '', '', '', '']);
+    merges.push({ s: { r: headerRow, c: 0 }, e: { r: headerRow, c: 5 } });
+
+    // Observaciones (opcional)
+    if (p.observaciones) {
+      const obsRow = aoa.length;
+      aoa.push([`Obs: ${p.observaciones}`, '', '', '', '', '']);
+      merges.push({ s: { r: obsRow, c: 0 }, e: { r: obsRow, c: 5 } });
+    }
+
+    // Headers de columnas
+    aoa.push(['Proveedor', 'Código', 'Cantidad', 'Descripción', 'Precio Unitario', 'Precio Total']);
+
+    // Items
+    let subtotal = 0;
+    (p.items || []).forEach(it => {
+      const cant = Number(it.cantidad) || 0;
+      const precio = Number(it.precio) || 0;
+      const total = cant * precio;
+      subtotal += total;
+      aoa.push([
+        p.proveedor,
+        it.codprov || it.numero || '',
+        cant,
+        it.descripcion || '',
+        precio,
+        total,
+      ]);
+    });
+
+    // Totales del pedido
+    const iva = subtotal * IVA_RATE;
+    const totalConIva = subtotal + iva;
+    totalGeneralSubtotal += subtotal;
+
+    aoa.push(['', '', '', '', 'SUBTOTAL:', subtotal]);
+    aoa.push(['', '', '', '', `IVA ${(IVA_RATE * 100).toFixed(0)}%:`, iva]);
+    aoa.push(['', '', '', '', 'TOTAL:', totalConIva]);
+
+    // Fila vacía separadora
+    aoa.push([]);
+    aoa.push([]);
+  });
+
+  // Total general al final
+  const totalGeneralIva = totalGeneralSubtotal * IVA_RATE;
+  const totalGeneralFinal = totalGeneralSubtotal + totalGeneralIva;
+
+  const totalHeaderRow = aoa.length;
+  aoa.push([`TOTAL GENERAL — ${pedidos.length} pedido(s)`, '', '', '', '', '']);
+  merges.push({ s: { r: totalHeaderRow, c: 0 }, e: { r: totalHeaderRow, c: 5 } });
+  aoa.push(['', '', '', '', 'SUBTOTAL GENERAL:', totalGeneralSubtotal]);
+  aoa.push(['', '', '', '', `IVA ${(IVA_RATE * 100).toFixed(0)}%:`, totalGeneralIva]);
+  aoa.push(['', '', '', '', 'TOTAL + IVA:', totalGeneralFinal]);
+
+  // Crear workbook
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!merges'] = merges;
+  // Anchos de columna (en caracteres aprox)
+  ws['!cols'] = [
+    { wch: 18 }, // Proveedor
+    { wch: 14 }, // Código
+    { wch: 10 }, // Cantidad
+    { wch: 50 }, // Descripción
+    { wch: 16 }, // Precio Unitario
+    { wch: 16 }, // Precio Total
+  ];
+
+  // Aplicar formato moneda a las columnas E y F (precio unit y total) en filas que sean numéricas
+  // Excel format: $#,##0.00
+  Object.keys(ws).forEach(addr => {
+    if (addr[0] === '!') return;
+    const cell = ws[addr];
+    const m = addr.match(/^([A-Z]+)(\d+)$/);
+    if (!m) return;
+    const col = m[1];
+    if ((col === 'E' || col === 'F') && typeof cell.v === 'number') {
+      cell.z = '"$"#,##0.00';
+      cell.t = 'n';
+    }
+    // Cantidad como entero
+    if (col === 'C' && typeof cell.v === 'number') {
+      cell.z = '#,##0';
+      cell.t = 'n';
+    }
+  });
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Pedidos');
+
+  // Nombre del archivo: pedidos_compras_YYYYMMDD.xlsx
+  const filename = `pedidos_compras_${fechaCompacta()}.xlsx`;
+  XLSX.writeFile(wb, filename);
+
+  toast(`✅ Excel descargado: ${pedidos.length} pedido(s)`, 'success', 5000);
+  log('info', 'Excel exportado:', filename, '—', pedidos.length, 'pedidos');
+}
+
+function fmtFechaExcel(iso) {
+  try {
+    const d = new Date(iso);
+    return d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  } catch { return iso; }
+}
+
+// ─── PDFs ──────────────────────────────────────────────────────────
+function exportarPDFsSeleccionados() {
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    toast('jsPDF no se cargó', 'error');
+    return;
+  }
+  const pedidos = getPedidosSeleccionadosExport();
+  if (!pedidos) return;
+
+  const valorizado = $('export-valorizado-check').checked;
+
+  // Generar todos los PDFs secuencialmente. El navegador maneja la cola de descargas.
+  pedidos.forEach(p => generarPDFExport(p, valorizado));
+
+  const tipo = valorizado ? 'valorizado' : 'sin valorizar';
+  toast(`📄 Generando ${pedidos.length} PDF(s) ${tipo}...`, 'info', 4000);
+  log('info', 'PDFs exportados:', pedidos.length, '—', tipo);
+}
+
+function generarPDFExport(borrador, valorizado) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+
+  const pageW = doc.internal.pageSize.getWidth();
+  const margin = 14;
+  let y = margin;
+
+  // Header MAXIFER
+  doc.setFillColor(192, 57, 43);
+  doc.rect(0, 0, pageW, 18, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(18);
+  const titulo = valorizado ? 'MAXIFER — ORDEN DE COMPRA' : 'MAXIFER — PEDIDO DE PRODUCTOS';
+  doc.text(titulo, margin, 12);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.text(borrador.id, pageW - margin, 12, { align: 'right' });
+
+  y = 26;
+  doc.setTextColor(0, 0, 0);
+  doc.setFontSize(10);
+
+  // Datos del pedido
+  const tel = VENDEDORES[borrador.operador] || '';
+  doc.setFont('helvetica', 'bold');
+  doc.text('Proveedor:', margin, y);
+  doc.setFont('helvetica', 'normal');
+  doc.text(borrador.proveedor || '—', margin + 28, y);
+
+  doc.setFont('helvetica', 'bold');
+  doc.text('Vendedor:', pageW / 2, y);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`${borrador.operador || '—'}${tel ? ' (' + tel + ')' : ''}`, pageW / 2 + 22, y);
+  y += 6;
+
+  doc.setFont('helvetica', 'bold');
+  doc.text('Fecha:', margin, y);
+  doc.setFont('helvetica', 'normal');
+  doc.text(fmtFecha(borrador.creado), margin + 28, y);
+  y += 6;
+
+  if (borrador.observaciones) {
+    doc.setFont('helvetica', 'bold');
+    doc.text('Obs:', margin, y);
+    doc.setFont('helvetica', 'normal');
+    const obsLines = doc.splitTextToSize(borrador.observaciones, pageW - margin * 2 - 18);
+    doc.text(obsLines, margin + 18, y);
+    y += obsLines.length * 5;
+  }
+
+  y += 4;
+
+  // Definir columnas según valorizado o no
+  let cols;
+  if (valorizado) {
+    cols = [
+      { w: 8, h: '#', align: 'right', getter: (it, idx) => String(idx + 1) },
+      { w: 24, h: 'Cód. Prov.', align: 'left', getter: (it) => String(it.codprov || '') },
+      { w: 16, h: 'Núm.', align: 'left', getter: (it) => String(it.numero || '') },
+      { w: 70, h: 'Descripción', align: 'left', isDesc: true },
+      { w: 14, h: 'Cant.', align: 'right', getter: (it) => String(it.cantidad || 0) },
+      { w: 22, h: 'Precio', align: 'right', getter: (it) => fmtMoneyPDF(it.precio) },
+      { w: 28, h: 'Subtotal', align: 'right', getter: (it) => fmtMoneyPDF((it.cantidad || 0) * (it.precio || 0)) },
+    ];
+  } else {
+    cols = [
+      { w: 10, h: '#', align: 'right', getter: (it, idx) => String(idx + 1) },
+      { w: 30, h: 'Cód. Prov.', align: 'left', getter: (it) => String(it.codprov || '') },
+      { w: 20, h: 'Núm.', align: 'left', getter: (it) => String(it.numero || '') },
+      { w: 110, h: 'Descripción', align: 'left', isDesc: true },
+      { w: 22, h: 'Cant.', align: 'right', getter: (it) => String(it.cantidad || 0) },
+    ];
+  }
+
+  function drawHeader() {
+    doc.setFillColor(45, 45, 45);
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.rect(margin, y, pageW - margin * 2, 7, 'F');
+    let x = margin + 1;
+    cols.forEach(c => {
+      doc.text(c.h, c.align === 'right' ? x + c.w - 2 : x + 1, y + 5, { align: c.align === 'right' ? 'right' : 'left' });
+      x += c.w;
+    });
+    y += 8;
+    doc.setTextColor(0, 0, 0);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+  }
+
+  drawHeader();
+
+  let totalUnidades = 0, totalCosto = 0;
+  (borrador.items || []).forEach((it, idx) => {
+    const subtotal = (it.cantidad || 0) * (it.precio || 0);
+    totalUnidades += (it.cantidad || 0);
+    totalCosto += subtotal;
+
+    // Calcular ancho de columna descripción
+    const descCol = cols.find(c => c.isDesc);
+    const descLines = doc.splitTextToSize(it.descripcion || '', descCol.w - 2);
+    const rowH = Math.max(5, descLines.length * 4) + 1;
+
+    if (y + rowH > 275) {
+      doc.addPage();
+      y = margin;
+      drawHeader();
+    }
+
+    let x = margin + 1;
+    cols.forEach(c => {
+      const align = c.align === 'right' ? 'right' : 'left';
+      const tx = align === 'right' ? x + c.w - 2 : x + 1;
+      const v = c.isDesc ? descLines : c.getter(it, idx);
+      doc.text(v, tx, y + 4, { align });
+      x += c.w;
+    });
+
+    doc.setDrawColor(220, 220, 220);
+    doc.line(margin, y + rowH, pageW - margin, y + rowH);
+    y += rowH;
+  });
+
+  // Totales
+  y += 6;
+  if (y > 270) { doc.addPage(); y = margin; }
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.text(`Items: ${(borrador.items || []).length}    Unidades: ${totalUnidades.toLocaleString('es-AR')}`, margin, y);
+
+  if (valorizado) {
+    y += 6;
+    doc.setFontSize(10);
+    doc.text(`SUBTOTAL: ${fmtMoneyPDF(totalCosto)}`, pageW - margin, y, { align: 'right' });
+    y += 5;
+    const iva = totalCosto * IVA_RATE;
+    doc.text(`IVA ${(IVA_RATE * 100).toFixed(0)}%: ${fmtMoneyPDF(iva)}`, pageW - margin, y, { align: 'right' });
+    y += 6;
+    doc.setFontSize(12);
+    doc.text(`TOTAL: ${fmtMoneyPDF(totalCosto + iva)}`, pageW - margin, y, { align: 'right' });
+  }
+
+  // Footer
+  const totalPages = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+    doc.setFontSize(8);
+    doc.setTextColor(128, 128, 128);
+    doc.text(`MAXIFER — fabricamaxifer.com — El Palomar, Bs. As.`, margin, 290);
+    doc.text(`Página ${i} de ${totalPages}`, pageW - margin, 290, { align: 'right' });
+  }
+
+  const provSafe = (borrador.proveedor || 'sin_prov').replace(/[^\w]/g, '_');
+  const sufijo = valorizado ? '' : '_SV';
+  const filename = `OC_${provSafe}_${borrador.id}${sufijo}.pdf`;
+  doc.save(filename);
+  log('info', 'PDF exportado:', filename, valorizado ? '(valorizado)' : '(sin valorizar)');
 }
 
 
