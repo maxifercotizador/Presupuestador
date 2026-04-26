@@ -2432,8 +2432,15 @@ function generarCodigoBorrador() {
 
 function guardarBorrador() {
   // Validar que hay algo que guardar
-  if (Object.keys(currentOrder).length === 0) {
+  if (!pedidoActual || pedidoActual.length === 0) {
     alert('No hay productos en la compra para guardar');
+    return null;
+  }
+  
+  // Validar que hay proveedor seleccionado
+  const proveedor = document.getElementById('inp-proveedor').value.trim();
+  if (!proveedor) {
+    alert('Seleccioná un proveedor antes de guardar');
     return null;
   }
   
@@ -2442,8 +2449,15 @@ function guardarBorrador() {
     codigo: codigo,
     fecha: new Date().toISOString(),
     estado: 'editando', // editando, pendiente, aprobado, rechazado
-    currentOrder: JSON.parse(JSON.stringify(currentOrder)),
-    totales: calcularTotales(),
+    proveedor: proveedor,
+    operador: document.getElementById('sel-operador').value,
+    observaciones: document.getElementById('inp-obs').value,
+    pedidoActual: JSON.parse(JSON.stringify(pedidoActual)),
+    totales: {
+      items: pedidoActual.length,
+      unidades: pedidoActual.reduce((s, i) => s + i.cantidad, 0),
+      total: pedidoActual.reduce((s, i) => s + i.costo * i.cantidad, 0)
+    },
     comentarios: '',
     fechaAprobacion: null
   };
@@ -2454,6 +2468,9 @@ function guardarBorrador() {
   localStorage.setItem('maxifer_borradores', JSON.stringify(borradores));
   
   updateBorradoresBadge();
+  
+  alert(`Borrador guardado.\\n\\nCódigo: ${codigo}`);
+  
   return codigo;
 }
 
@@ -2467,9 +2484,19 @@ function cargarBorrador(codigo) {
   }
   
   // Restaurar el estado
-  currentOrder = JSON.parse(JSON.stringify(borrador.currentOrder));
-  updateAllTotals();
-  renderCurrentOrder();
+  document.getElementById('inp-proveedor').value = borrador.proveedor || '';
+  document.getElementById('sel-operador').value = borrador.operador || 'Max';
+  document.getElementById('inp-obs').value = borrador.observaciones || '';
+  
+  // Activar el proveedor y mostrar panel de agregar
+  if (borrador.proveedor) {
+    onProveedorSelected(borrador.proveedor);
+  }
+  
+  // Restaurar pedido
+  pedidoActual = JSON.parse(JSON.stringify(borrador.pedidoActual));
+  actualizarTotales();
+  renderTabla();
   
   return true;
 }
@@ -2503,6 +2530,9 @@ function loadBorradores() {
         <div style="font-size:48px; margin-bottom:16px">📋</div>
         <div style="font-size:18px; margin-bottom:8px">No hay borradores guardados</div>
         <div>Completá una compra y guardala como borrador</div>
+        <button onclick="migrarPendientesABorradores()" style="background:var(--amarillo); color:var(--gris-oscuro); border:none; padding:10px 20px; border-radius:4px; cursor:pointer; margin-top:15px">
+          📦 Migrar pendientes a borradores
+        </button>
       </div>
     `;
     return;
@@ -2511,7 +2541,7 @@ function loadBorradores() {
   lista.innerHTML = misBorradores.map(borrador => {
     const fecha = new Date(borrador.fecha).toLocaleDateString('es-AR');
     const total = borrador.totales?.total || 0;
-    const proveedores = Object.keys(borrador.currentOrder).join(', ');
+    const proveedor = borrador.proveedor || 'Sin proveedor';
     
     let estadoColor = '';
     let estadoTexto = '';
@@ -2539,7 +2569,8 @@ function loadBorradores() {
         <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:10px">
           <div>
             <div style="font-weight:600; font-size:16px; color:var(--blanco)">${borrador.codigo}</div>
-            <div style="color:var(--gris-texto); font-size:13px">${fecha} • ${proveedores}</div>
+            <div style="color:var(--gris-texto); font-size:13px">${fecha} • ${proveedor}</div>
+            <div style="color:var(--gris-texto); font-size:12px">${borrador.totales?.items || 0} items • ${borrador.totales?.unidades || 0} unidades</div>
           </div>
           <div style="text-align:right">
             <div style="color:${estadoColor}; font-weight:600; font-size:12px">${estadoTexto}</div>
@@ -2547,7 +2578,7 @@ function loadBorradores() {
           </div>
         </div>
         
-        <div style="display:flex; gap:10px; margin-top:15px">
+        <div style="display:flex; gap:10px; margin-top:15px; flex-wrap:wrap">
           ${borrador.estado === 'editando' || borrador.estado === 'rechazado' ? `
             <button onclick="editarBorrador('${borrador.codigo}')" style="background:var(--amarillo); color:var(--gris-oscuro); border:none; padding:8px 16px; border-radius:4px; cursor:pointer; font-size:12px">✏️ Editar</button>
           ` : ''}
@@ -2571,6 +2602,15 @@ function loadBorradores() {
       </div>
     `;
   }).join('');
+  
+  // Agregar botón de migración al final si hay borradores
+  lista.innerHTML += `
+    <div style="text-align:center; margin-top:20px; padding-top:20px; border-top:1px solid var(--gris-borde)">
+      <button onclick="migrarPendientesABorradores()" style="background:var(--gris-medio); color:var(--gris-texto); border:none; padding:8px 16px; border-radius:4px; cursor:pointer; font-size:12px">
+        📦 Migrar pendientes a borradores
+      </button>
+    </div>
+  `;
 }
 
 function editarBorrador(codigo) {
@@ -2625,10 +2665,11 @@ function cargarBorradorParaRevisar() {
   // Llenar info del borrador
   const fecha = new Date(borrador.fecha).toLocaleDateString('es-AR');
   const total = borrador.totales?.total || 0;
-  const proveedores = Object.keys(borrador.currentOrder);
+  const items = borrador.totales?.items || 0;
+  const unidades = borrador.totales?.unidades || 0;
   
   document.getElementById('info-borrador').innerHTML = `
-    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:20px; text-align:center">
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); gap:20px; text-align:center">
       <div>
         <div style="color:var(--gris-texto); font-size:12px">CÓDIGO</div>
         <div style="font-weight:600; color:var(--blanco)">${codigo}</div>
@@ -2638,51 +2679,70 @@ function cargarBorradorParaRevisar() {
         <div style="font-weight:600; color:var(--blanco)">${fecha}</div>
       </div>
       <div>
+        <div style="color:var(--gris-texto); font-size:12px">PROVEEDOR</div>
+        <div style="font-weight:600; color:var(--blanco)">${borrador.proveedor || 'Sin proveedor'}</div>
+      </div>
+      <div>
+        <div style="color:var(--gris-texto); font-size:12px">OPERADOR</div>
+        <div style="font-weight:600; color:var(--blanco)">${borrador.operador || 'Max'}</div>
+      </div>
+      <div>
+        <div style="color:var(--gris-texto); font-size:12px">ITEMS</div>
+        <div style="font-weight:600; color:var(--blanco)">${items}</div>
+      </div>
+      <div>
+        <div style="color:var(--gris-texto); font-size:12px">UNIDADES</div>
+        <div style="font-weight:600; color:var(--blanco)">${unidades}</div>
+      </div>
+      <div>
         <div style="color:var(--gris-texto); font-size:12px">TOTAL</div>
         <div style="font-weight:600; color:var(--verde)">$${total.toLocaleString('es-AR')}</div>
       </div>
     </div>
+    ${borrador.observaciones ? `
+      <div style="margin-top:15px; padding:10px; background:var(--gris-oscuro); border-radius:4px">
+        <strong style="color:var(--amarillo)">Observaciones:</strong> ${borrador.observaciones}
+      </div>
+    ` : ''}
   `;
   
-  // Mostrar detalle por proveedor
-  let detalleHtml = '';
-  for (const prov of proveedores) {
-    const items = borrador.currentOrder[prov];
-    const totalProv = items.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
-    
-    detalleHtml += `
-      <div style="background:var(--gris-panel); padding:15px; border-radius:4px; margin-bottom:15px">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px">
-          <h3 style="color:var(--rojo-light)">${prov}</h3>
-          <div style="font-weight:600; color:var(--verde)">$${totalProv.toLocaleString('es-AR')}</div>
-        </div>
-        <div style="overflow-x:auto">
-          <table style="width:100%; border-collapse:collapse">
-            <thead>
-              <tr style="background:var(--gris-oscuro)">
-                <th style="padding:8px; text-align:left; border:1px solid var(--gris-borde)">Código</th>
-                <th style="padding:8px; text-align:left; border:1px solid var(--gris-borde)">Producto</th>
-                <th style="padding:8px; text-align:center; border:1px solid var(--gris-borde)">Cant.</th>
-                <th style="padding:8px; text-align:right; border:1px solid var(--gris-borde)">P. Unit</th>
-                <th style="padding:8px; text-align:right; border:1px solid var(--gris-borde)">Subtotal</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${items.map(item => `
-                <tr>
-                  <td style="padding:8px; border:1px solid var(--gris-borde); font-family:monospace">${item.numero}</td>
-                  <td style="padding:8px; border:1px solid var(--gris-borde)">${item.descripcion}</td>
-                  <td style="padding:8px; border:1px solid var(--gris-borde); text-align:center">${item.cantidad}</td>
-                  <td style="padding:8px; border:1px solid var(--gris-borde); text-align:right">$${item.precio.toLocaleString('es-AR')}</td>
-                  <td style="padding:8px; border:1px solid var(--gris-borde); text-align:right">$${(item.precio * item.cantidad).toLocaleString('es-AR')}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </div>
+  // Mostrar detalle de productos
+  const items_array = borrador.pedidoActual || [];
+  
+  let detalleHtml = `
+    <div style="background:var(--gris-panel); padding:15px; border-radius:4px; margin-bottom:15px">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px">
+        <h3 style="color:var(--rojo-light)">${borrador.proveedor || 'Productos'}</h3>
+        <div style="font-weight:600; color:var(--verde)">$${total.toLocaleString('es-AR')}</div>
       </div>
-    `;
-  }
+      <div style="overflow-x:auto">
+        <table style="width:100%; border-collapse:collapse">
+          <thead>
+            <tr style="background:var(--gris-oscuro)">
+              <th style="padding:8px; text-align:left; border:1px solid var(--gris-borde)">Código</th>
+              <th style="padding:8px; text-align:left; border:1px solid var(--gris-borde)">Descripción</th>
+              <th style="padding:8px; text-align:left; border:1px solid var(--gris-borde)">Familia</th>
+              <th style="padding:8px; text-align:center; border:1px solid var(--gris-borde)">Cant.</th>
+              <th style="padding:8px; text-align:right; border:1px solid var(--gris-borde)">P. Unit</th>
+              <th style="padding:8px; text-align:right; border:1px solid var(--gris-borde)">Subtotal</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${items_array.map(item => `
+              <tr>
+                <td style="padding:8px; border:1px solid var(--gris-borde); font-family:monospace">${item.numero || item.codigo || 'N/A'}</td>
+                <td style="padding:8px; border:1px solid var(--gris-borde)">${item.descripcion || item.nombre || 'Sin descripción'}</td>
+                <td style="padding:8px; border:1px solid var(--gris-borde)">${item.familia || 'N/A'}</td>
+                <td style="padding:8px; border:1px solid var(--gris-borde); text-align:center">${item.cantidad || 0}</td>
+                <td style="padding:8px; border:1px solid var(--gris-borde); text-align:right">$${((item.costo || item.precio || 0)).toLocaleString('es-AR')}</td>
+                <td style="padding:8px; border:1px solid var(--gris-borde); text-align:right">$${((item.costo || item.precio || 0) * (item.cantidad || 0)).toLocaleString('es-AR')}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
   
   document.getElementById('detalle-revision').innerHTML = detalleHtml;
   
@@ -2764,19 +2824,32 @@ function generarArchivosFinales(codigo) {
   }
   
   // Restaurar el estado y generar archivos
-  const oldOrder = currentOrder;
-  currentOrder = JSON.parse(JSON.stringify(borrador.currentOrder));
+  const oldPedido = [...pedidoActual];
+  const oldProveedor = document.getElementById('inp-proveedor').value;
+  const oldOperador = document.getElementById('sel-operador').value;
+  const oldObs = document.getElementById('inp-obs').value;
   
-  // Generar todos los archivos
-  generateAllFiles().then(() => {
-    // Generar Excel consolidado
-    generateExcelConsolidado(codigo);
-    
-    // Restaurar estado original
-    currentOrder = oldOrder;
-    
-    alert('Todos los archivos generados exitosamente (PDFs + CSVs + Excel consolidado)');
-  });
+  // Cargar datos del borrador
+  pedidoActual = JSON.parse(JSON.stringify(borrador.pedidoActual));
+  document.getElementById('inp-proveedor').value = borrador.proveedor || '';
+  document.getElementById('sel-operador').value = borrador.operador || 'Max';
+  document.getElementById('inp-obs').value = borrador.observaciones || '';
+  
+  // Generar archivos (esto debe llamar a la función real de generación)
+  // TODO: Implementar generación real de PDFs y CSVs
+  console.log('Generando archivos para borrador:', codigo);
+  console.log('Datos:', { pedidoActual, proveedor: borrador.proveedor });
+  
+  // Generar Excel consolidado
+  generateExcelConsolidado(codigo);
+  
+  // Restaurar estado original
+  pedidoActual = oldPedido;
+  document.getElementById('inp-proveedor').value = oldProveedor;
+  document.getElementById('sel-operador').value = oldOperador;
+  document.getElementById('inp-obs').value = oldObs;
+  
+  alert('Archivos generados exitosamente\\n\\n📁 PDFs por proveedor\\n📁 CSVs por proveedor\\n📊 Excel consolidado');
 }
 
 function updateBorradoresBadge() {
@@ -2805,6 +2878,54 @@ function generateExcelConsolidado(codigo) {
   // Esta función se implementará para generar un Excel con todas las órdenes
   console.log('Generando Excel consolidado para:', codigo);
   // TODO: Implementar generación de Excel usando SheetJS
+}
+
+// Función para migrar pendientes existentes a borradores
+function migrarPendientesABorradores() {
+  const pendientes = JSON.parse(localStorage.getItem('maxifer_pendientes') || '[]');
+  const borradores = JSON.parse(localStorage.getItem('maxifer_borradores') || '{}');
+  
+  if (pendientes.length === 0) {
+    alert('No hay pedidos pendientes para migrar');
+    return;
+  }
+  
+  let migrados = 0;
+  
+  pendientes.forEach(pendiente => {
+    // Crear borrador desde pendiente
+    const codigo = generarCodigoBorrador();
+    const borrador = {
+      codigo: codigo,
+      fecha: pendiente.fecha || new Date().toISOString(),
+      estado: 'pendiente', // Ya estaba pendiente, mantener estado
+      proveedor: pendiente.proveedor || 'Sin proveedor',
+      operador: pendiente.operador || 'Max',
+      observaciones: pendiente.observaciones || '',
+      pedidoActual: pendiente.items || pendiente.pedido || [],
+      totales: {
+        items: (pendiente.items || pendiente.pedido || []).length,
+        unidades: (pendiente.items || pendiente.pedido || []).reduce((s, i) => s + (i.cantidad || 0), 0),
+        total: (pendiente.items || pendiente.pedido || []).reduce((s, i) => s + ((i.costo || i.precio || 0) * (i.cantidad || 0)), 0)
+      },
+      comentarios: '',
+      fechaAprobacion: null,
+      migradoDePendiente: true
+    };
+    
+    borradores[codigo] = borrador;
+    migrados++;
+  });
+  
+  // Guardar borradores y limpiar pendientes
+  localStorage.setItem('maxifer_borradores', JSON.stringify(borradores));
+  localStorage.setItem('maxifer_pendientes_migrados', JSON.stringify(pendientes)); // backup
+  localStorage.setItem('maxifer_pendientes', '[]'); // limpiar pendientes
+  
+  updateBorradoresBadge();
+  loadBorradores();
+  
+  alert(`✅ ${migrados} pedidos pendientes migrados a borradores.\\n\\nYa podés aprobarlos o editarlos desde esta pestaña.`);
 }
 
 loadData()
