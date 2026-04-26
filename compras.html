@@ -1278,6 +1278,7 @@ const State = {
   busquedaTimer: null,
   micRecognition: null,
   micActivo: false,
+  micShouldKeepRunning: false,
   debugLogs: [],
 };
 
@@ -2524,50 +2525,128 @@ function toggleMic() {
     return;
   }
 
+  // Si ya está corriendo, el toque significa "detener definitivamente"
   if (State.micActivo) {
-    if (State.micRecognition) State.micRecognition.stop();
+    State.micShouldKeepRunning = false;
+    if (State.micRecognition) {
+      try { State.micRecognition.stop(); } catch(e){}
+    }
     return;
   }
+
+  // Marcar que queremos mantenerlo corriendo
+  State.micShouldKeepRunning = true;
+
+  // Iniciamos el reconocimiento (esto se reusará en cada restart)
+  startMicRecognition();
+}
+
+function startMicRecognition() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return;
 
   const rec = new SR();
   rec.lang = 'es-AR';
   rec.continuous = true;
   rec.interimResults = true;
 
-  let finalText = $('mic-transcript').textContent || '';
-  if (finalText === 'El texto aparecerá acá...') finalText = '';
+  // Texto acumulado entre restarts (se mantiene)
+  let baseText = $('mic-transcript').textContent || '';
+  if (baseText === 'El texto aparecerá acá...' || baseText === '(escuchando...)') baseText = '';
 
   rec.onstart = () => {
     State.micActivo = true;
     $('btn-mic').classList.add('recording');
-    $('mic-status').textContent = 'Escuchando... tocá para detener';
+    $('mic-status').textContent = 'Escuchando... tocá el micrófono para detener';
+    log('info', 'Mic: iniciado/reiniciado');
   };
+
   rec.onend = () => {
     State.micActivo = false;
-    $('btn-mic').classList.remove('recording');
-    $('mic-status').textContent = 'Detenido. Tocá "Procesar" para agregar al pedido.';
+    State.micRecognition = null;
+
+    // Si el usuario NO detuvo manualmente, reiniciamos automáticamente
+    if (State.micShouldKeepRunning) {
+      $('mic-status').textContent = 'Reconectando...';
+      // Pequeño delay para que el navegador libere el recurso del mic
+      setTimeout(() => {
+        if (State.micShouldKeepRunning) {
+          try {
+            startMicRecognition();
+          } catch (e) {
+            log('error', 'Mic: no se pudo reiniciar', e);
+            $('mic-status').textContent = 'Detenido. Tocá el micrófono o "Procesar texto".';
+            $('btn-mic').classList.remove('recording');
+            State.micShouldKeepRunning = false;
+          }
+        } else {
+          $('btn-mic').classList.remove('recording');
+          $('mic-status').textContent = 'Detenido. Tocá "Procesar texto" para agregar al pedido.';
+        }
+      }, 200);
+    } else {
+      $('btn-mic').classList.remove('recording');
+      $('mic-status').textContent = 'Detenido. Tocá "Procesar texto" para agregar al pedido.';
+    }
   };
+
   rec.onerror = (e) => {
     log('warn', 'Mic error:', e.error);
-    toast('Mic: ' + e.error, 'warning');
+    // Errores comunes y cómo manejarlos:
+    // - "no-speech": el navegador no detectó habla. Lo dejamos que reinicie solo en onend.
+    // - "aborted": cuando paramos manualmente. No mostrar toast.
+    // - "audio-capture": problema con el micrófono físico. Avisar.
+    // - "not-allowed": el usuario no dio permiso. Detener.
+    if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+      State.micShouldKeepRunning = false;
+      toast('Permiso de micrófono denegado. Habilitalo en el navegador.', 'error', 6000);
+    } else if (e.error === 'audio-capture') {
+      State.micShouldKeepRunning = false;
+      toast('No se pudo acceder al micrófono. Verificá tu hardware.', 'error', 5000);
+    } else if (e.error === 'no-speech') {
+      // Silencio detectado — onend se va a disparar y vamos a reiniciar.
+      // No mostrar toast (es esperable cuando hay pausas largas).
+      log('info', 'Mic: no-speech (silencio prolongado), reiniciará automáticamente');
+    } else if (e.error === 'aborted') {
+      // Usuario detuvo manualmente, no hacer nada
+    } else {
+      // Otros errores: avisar pero seguir intentando
+      toast('Mic: ' + e.error, 'warning');
+    }
   };
+
   rec.onresult = (event) => {
     let interim = '';
-    let final = finalText;
+    let final = baseText;
     for (let i = event.resultIndex; i < event.results.length; i++) {
       const tr = event.results[i][0].transcript;
       if (event.results[i].isFinal) final += tr + ' ';
       else interim += tr;
     }
-    finalText = final;
+    baseText = final;
     $('mic-transcript').textContent = (final + ' ' + interim).trim() || '(escuchando...)';
   };
 
   State.micRecognition = rec;
-  rec.start();
+  try {
+    rec.start();
+  } catch (e) {
+    log('error', 'Mic start failed:', e);
+    State.micShouldKeepRunning = false;
+    $('btn-mic').classList.remove('recording');
+    $('mic-status').textContent = 'No se pudo iniciar. Tocá de nuevo.';
+  }
 }
 
 function procesarTranscriptMic() {
+  // Si el mic sigue activo, detenerlo antes de procesar
+  if (State.micActivo) {
+    State.micShouldKeepRunning = false;
+    if (State.micRecognition) {
+      try { State.micRecognition.stop(); } catch(e){}
+    }
+  }
+
   if (!State.proveedorActual) {
     toast('Elegí un proveedor primero', 'warning');
     return;
