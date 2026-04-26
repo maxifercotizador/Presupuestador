@@ -849,7 +849,6 @@
 <nav class="tabs" role="tablist">
   <button class="tab active" data-page="nuevo" type="button">📋 Nuevo Pedido</button>
   <button class="tab" data-page="borradores" type="button">💾 Borradores <span class="tab-badge empty" id="badge-borradores">0</span></button>
-  <button class="tab" data-page="revisar" type="button">👁️ Revisar</button>
   <button class="tab" data-page="pendientes" type="button">⏳ Pendientes <span class="tab-badge empty" id="badge-pendientes">0</span></button>
   <button class="tab" data-page="historial" type="button">📚 Historial</button>
 </nav>
@@ -1099,44 +1098,6 @@ Ejemplo:
     <div id="borradores-list">
       <p style="text-align:center; color:var(--gris-texto); padding: 20px">Cargá la pestaña para ver borradores...</p>
     </div>
-  </div>
-</div>
-
-<!-- ═══════════════════════════════════════════════════════════ -->
-<!-- PAGE: REVISAR                                                -->
-<!-- ═══════════════════════════════════════════════════════════ -->
-<div class="page" id="page-revisar">
-  <div class="panel">
-    <h2>Revisar Borrador</h2>
-    <div class="form-row">
-      <div>
-        <label>Código del borrador</label>
-        <input type="text" id="codigo-revisar" placeholder="Ej: COMP-251226-001" autocomplete="off">
-      </div>
-      <div style="display:flex; align-items:flex-end">
-        <button type="button" class="btn btn-primary" id="btn-cargar-revisar">🔍 Cargar</button>
-      </div>
-    </div>
-
-    <div id="area-revision" style="display:none; margin-top:20px">
-      <div id="info-borrador" class="panel" style="background:var(--gris-medio)"></div>
-      <div id="detalle-revision" class="panel" style="background:var(--gris-oscuro); padding: 0"></div>
-
-      <div class="btn-row">
-        <button type="button" class="btn btn-warning" id="btn-rechazar">❌ Rechazar</button>
-        <button type="button" class="btn btn-success" id="btn-aprobar-rev">✅ Aprobar</button>
-      </div>
-
-      <div id="comentarios-rechazo" style="display:none; margin-top:15px">
-        <label>Motivo del rechazo</label>
-        <textarea id="comentarios-texto" placeholder="Explicá qué hay que modificar..."></textarea>
-        <div class="btn-row">
-          <button type="button" class="btn btn-danger" id="btn-confirmar-rechazo">Confirmar rechazo</button>
-        </div>
-      </div>
-    </div>
-
-    <div id="resultado-revision" style="display:none; text-align:center; margin-top:20px"></div>
   </div>
 </div>
 
@@ -1727,13 +1688,6 @@ function wireEvents() {
   $on('modal-importar', 'click', (e) => {
     if (e.target.id === 'modal-importar') cerrarModalImportar();
   });
-
-  // Revisar
-  $on('btn-cargar-revisar', 'click', cargarBorradorParaRevisar);
-  $on('codigo-revisar', 'keydown', (e) => { if (e.key === 'Enter') cargarBorradorParaRevisar(); });
-  $on('btn-rechazar', 'click', () => { $('comentarios-rechazo').style.display = 'block'; });
-  $on('btn-aprobar-rev', 'click', aprobarDesdeRevision);
-  $on('btn-confirmar-rechazo', 'click', confirmarRechazo);
 
   // Pendientes
   $on('btn-recargar-pendientes', 'click', renderPendientes);
@@ -3018,13 +2972,9 @@ function renderBorradorCard(b, acciones) {
         });
         break;
       case 'revisar':
-        btn.textContent = '👁️ Revisar';
+        btn.textContent = '✏️ Editar';
         btn.classList.add('btn-info');
-        btn.addEventListener('click', () => {
-          showPage('revisar');
-          $('codigo-revisar').value = b.id;
-          cargarBorradorParaRevisar();
-        });
+        btn.addEventListener('click', () => cargarBorradorEnEditor(b));
         break;
       case 'aprobar-rapido':
         btn.textContent = '✅ Aprobar y PDF';
@@ -3915,120 +3865,6 @@ function generarPDFExport(borrador, valorizado) {
   const filename = `OC_${provSafe}_${borrador.id}${sufijo}.pdf`;
   doc.save(filename);
   log('info', 'PDF exportado:', filename, valorizado ? '(valorizado)' : '(sin valorizar)');
-}
-
-
-// ═══════════════════════════════════════════════════════════════════
-// REVISIÓN
-// ═══════════════════════════════════════════════════════════════════
-function cargarBorradorParaRevisar() {
-  const codigo = ($('codigo-revisar').value || '').trim().toUpperCase();
-  if (!codigo) { toast('Ingresá un código', 'warning'); return; }
-
-  const borradores = lsGet(KEY_BORRADORES, []);
-  const historial = lsGet(KEY_HISTORIAL, []);
-  const b = borradores.find(x => x.id === codigo) || historial.find(x => x.id === codigo);
-
-  if (!b) {
-    toast(`No se encontró ${codigo}`, 'error');
-    $('area-revision').style.display = 'none';
-    return;
-  }
-
-  State.borradorActualId = b.id;
-  $('area-revision').style.display = 'block';
-  $('comentarios-rechazo').style.display = 'none';
-  $('resultado-revision').style.display = 'none';
-
-  const totalUnidades = (b.items || []).reduce((s, it) => s + (it.cantidad || 0), 0);
-  const totalCosto = (b.items || []).reduce((s, it) => s + (it.cantidad || 0) * (it.precio || 0), 0);
-
-  $('info-borrador').innerHTML = `
-    <div style="display:flex; justify-content: space-between; flex-wrap: wrap; gap: 10px">
-      <div>
-        <div style="font-family: 'Courier New', monospace; font-weight: 700; font-size: 16px">${escapeHtml(b.id)}</div>
-        <div style="font-size:12px; color: var(--gris-texto); margin-top: 4px">
-          <strong>${escapeHtml(b.proveedor)}</strong> • ${escapeHtml(b.operador)} • ${fmtFecha(b.creado)}
-        </div>
-        ${b.observaciones ? `<div style="margin-top:6px; font-style:italic">"${escapeHtml(b.observaciones)}"</div>` : ''}
-      </div>
-      <div style="text-align: right">
-        <span class="estado-pill ${b.estado}">${b.estado}</span>
-        <div style="margin-top:6px; font-size: 12px">
-          ${(b.items || []).length} items / ${totalUnidades.toLocaleString('es-AR')} unid.
-        </div>
-        <div style="font-weight:600; color: var(--verde); font-size: 16px; margin-top: 2px">
-          ${fmtMoney(totalCosto)}
-        </div>
-      </div>
-    </div>
-  `;
-
-  // Detalle de items
-  const det = $('detalle-revision');
-  det.innerHTML = '';
-  if (!b.items || b.items.length === 0) {
-    det.innerHTML = '<p style="padding: 20px; text-align: center; color: var(--gris-texto)">Sin items</p>';
-  } else {
-    b.items.forEach((it, idx) => {
-      const div = document.createElement('div');
-      div.className = 'detalle-item';
-      div.innerHTML = `
-        <div class="di-info">
-          <div class="di-codigo">#${idx + 1} • ${escapeHtml(it.codprov || it.numero)}</div>
-          <div class="di-desc">${escapeHtml(it.descripcion)} • ${fmtMoney(it.precio)} c/u</div>
-        </div>
-        <div class="di-cant">${it.cantidad} <span style="font-size:11px;color:var(--gris-texto)">×</span></div>
-      `;
-      det.appendChild(div);
-    });
-  }
-
-  // Si está aprobado o rechazado, ocultar botones de acción
-  const yaResuelto = b.estado === 'aprobado' || b.estado === 'rechazado';
-  $('btn-rechazar').style.display = yaResuelto ? 'none' : '';
-  $('btn-aprobar-rev').style.display = yaResuelto ? 'none' : '';
-  if (yaResuelto) {
-    $('resultado-revision').style.display = 'block';
-    $('resultado-revision').innerHTML = `
-      <div class="hint-box ${b.estado === 'aprobado' ? '' : 'warning'}" style="display:inline-block">
-        Este pedido ya está <strong>${b.estado}</strong>${b.aprobado_en ? ' — ' + fmtFecha(b.aprobado_en) : ''}
-      </div>
-    `;
-  }
-}
-
-function aprobarDesdeRevision() {
-  if (!State.borradorActualId) return;
-  const all = lsGet(KEY_BORRADORES, []);
-  const idx = all.findIndex(b => b.id === State.borradorActualId);
-  if (idx < 0) { toast('No encontrado', 'error'); return; }
-  const b = all[idx];
-  if (!confirm(`¿Aprobar ${b.id} y generar PDF?`)) return;
-  moverAHistorial(b);
-  generarPDF(b);
-  toast('✅ Aprobado', 'success');
-  cargarBorradorParaRevisar();
-}
-
-function confirmarRechazo() {
-  if (!State.borradorActualId) return;
-  const motivo = ($('comentarios-texto').value || '').trim();
-  if (!motivo) { toast('Escribí un motivo', 'warning'); return; }
-
-  const all = lsGet(KEY_BORRADORES, []);
-  const idx = all.findIndex(b => b.id === State.borradorActualId);
-  if (idx < 0) return;
-  all[idx].estado = 'rechazado';
-  all[idx].comentarios = motivo;
-  all[idx].modificado = new Date().toISOString();
-  lsSet(KEY_BORRADORES, all);
-
-  toast('Rechazado', 'warning');
-  $('comentarios-rechazo').style.display = 'none';
-  $('comentarios-texto').value = '';
-  cargarBorradorParaRevisar();
-  updateBadges();
 }
 
 
