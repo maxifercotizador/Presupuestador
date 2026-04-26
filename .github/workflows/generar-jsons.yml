@@ -1,0 +1,45 @@
+name: Generar JSONs desde Excels
+
+on:
+  push:
+    paths:
+      - 'Listas Maxifer.xlsx'
+      - 'Precio Surtidos.xlsx'
+      - 'build_data.py'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Instalar dependencias
+        run: |
+          pip install pandas openpyxl
+
+      - name: Generar JSONs
+        run: |
+          python build_data.py
+
+      - name: Commitear cambios si hubo
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add productos.json surtidos.json
+          if git diff --staged --quiet; then
+            echo "Sin cambios en los JSONs."
+          else
+            git commit -m "auto: regenerar productos.json y surtidos.json"
+            git push
+          fi
