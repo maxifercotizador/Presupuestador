@@ -1093,9 +1093,7 @@ Ejemplo:
     </div>
 
     <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; align-items:center">
-      <button class="btn btn-primary btn-sm" type="button" id="btn-modo-compartir">📤 Compartir borradores</button>
-      <button class="btn btn-info btn-sm" type="button" id="btn-recargar-borradores">🔄 Recargar</button>
-      <button class="btn btn-warning btn-sm" type="button" id="btn-debug-borradores">🔍 Debug</button>
+      <button class="btn btn-primary btn-sm" type="button" id="btn-modo-compartir">📤 Enviar borradores</button>
       <button class="btn btn-danger btn-sm" type="button" id="btn-limpiar-borradores">🗑️ Limpiar todo</button>
     </div>
     <div id="borradores-list">
@@ -1279,6 +1277,7 @@ const State = {
   micRecognition: null,
   micActivo: false,
   micShouldKeepRunning: false,
+  micFinalText: '', // texto consolidado a través de los restarts
   debugLogs: [],
 };
 
@@ -1694,7 +1693,10 @@ function wireEvents() {
   // Micrófono
   $on('btn-mic', 'click', toggleMic);
   $on('btn-mic-procesar', 'click', procesarTranscriptMic);
-  $on('btn-mic-limpiar', 'click', () => { $('mic-transcript').textContent = 'El texto aparecerá acá...'; });
+  $on('btn-mic-limpiar', 'click', () => {
+    $('mic-transcript').textContent = 'El texto aparecerá acá...';
+    State.micFinalText = '';
+  });
 
   // Acciones del pedido
   $on('btn-limpiar', 'click', limpiarPedido);
@@ -1708,8 +1710,6 @@ function wireEvents() {
   $on('btn-guardar-borrador', 'click', () => guardarComoBorrador());
 
   // Borradores
-  $on('btn-recargar-borradores', 'click', renderBorradores);
-  $on('btn-debug-borradores', 'click', debugBorradores);
   $on('btn-limpiar-borradores', 'click', limpiarTodosBorradores);
 
   // Compartir borradores
@@ -2537,6 +2537,15 @@ function toggleMic() {
   // Marcar que queremos mantenerlo corriendo
   State.micShouldKeepRunning = true;
 
+  // Inicializar buffer con lo que ya estaba en pantalla (si existe y no es placeholder)
+  const existing = $('mic-transcript').textContent || '';
+  if (existing === 'El texto aparecerá acá...' || existing === '(escuchando...)' || existing === 'Reconectando...') {
+    State.micFinalText = '';
+  } else {
+    // Asegurarse que el buffer termine con espacio para que lo nuevo se separe
+    State.micFinalText = existing.endsWith(' ') ? existing : existing + ' ';
+  }
+
   // Iniciamos el reconocimiento (esto se reusará en cada restart)
   startMicRecognition();
 }
@@ -2549,10 +2558,6 @@ function startMicRecognition() {
   rec.lang = 'es-AR';
   rec.continuous = true;
   rec.interimResults = true;
-
-  // Texto acumulado entre restarts (se mantiene)
-  let baseText = $('mic-transcript').textContent || '';
-  if (baseText === 'El texto aparecerá acá...' || baseText === '(escuchando...)') baseText = '';
 
   rec.onstart = () => {
     State.micActivo = true;
@@ -2592,11 +2597,6 @@ function startMicRecognition() {
 
   rec.onerror = (e) => {
     log('warn', 'Mic error:', e.error);
-    // Errores comunes y cómo manejarlos:
-    // - "no-speech": el navegador no detectó habla. Lo dejamos que reinicie solo en onend.
-    // - "aborted": cuando paramos manualmente. No mostrar toast.
-    // - "audio-capture": problema con el micrófono físico. Avisar.
-    // - "not-allowed": el usuario no dio permiso. Detener.
     if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
       State.micShouldKeepRunning = false;
       toast('Permiso de micrófono denegado. Habilitalo en el navegador.', 'error', 6000);
@@ -2604,27 +2604,35 @@ function startMicRecognition() {
       State.micShouldKeepRunning = false;
       toast('No se pudo acceder al micrófono. Verificá tu hardware.', 'error', 5000);
     } else if (e.error === 'no-speech') {
-      // Silencio detectado — onend se va a disparar y vamos a reiniciar.
-      // No mostrar toast (es esperable cuando hay pausas largas).
       log('info', 'Mic: no-speech (silencio prolongado), reiniciará automáticamente');
     } else if (e.error === 'aborted') {
-      // Usuario detuvo manualmente, no hacer nada
+      // Usuario detuvo manualmente
     } else {
-      // Otros errores: avisar pero seguir intentando
       toast('Mic: ' + e.error, 'warning');
     }
   };
 
   rec.onresult = (event) => {
+    // Acá está la clave del fix: solo procesamos los resultados nuevos de ESTA instancia.
+    // Cada nueva instancia empieza con resultIndex = 0 sobre sus propios results.
+    // El texto consolidado se guarda en State.micFinalText, NO en el DOM.
     let interim = '';
-    let final = baseText;
+    let nuevoFinal = '';
     for (let i = event.resultIndex; i < event.results.length; i++) {
       const tr = event.results[i][0].transcript;
-      if (event.results[i].isFinal) final += tr + ' ';
-      else interim += tr;
+      if (event.results[i].isFinal) {
+        nuevoFinal += tr + ' ';
+      } else {
+        interim += tr;
+      }
     }
-    baseText = final;
-    $('mic-transcript').textContent = (final + ' ' + interim).trim() || '(escuchando...)';
+    // Solo agregamos al buffer global lo que se marcó como FINAL en esta sesión
+    if (nuevoFinal) {
+      State.micFinalText += nuevoFinal;
+    }
+    // Mostramos: buffer consolidado + lo provisional de esta instancia
+    const display = (State.micFinalText + interim).trim();
+    $('mic-transcript').textContent = display || '(escuchando...)';
   };
 
   State.micRecognition = rec;
@@ -2713,8 +2721,9 @@ function procesarTranscriptMic() {
   showModo('masivo');
   parsearMasivo();
 
-  // Limpiar el transcript del mic
+  // Limpiar el transcript del mic y el buffer
   $('mic-transcript').textContent = 'El texto aparecerá acá...';
+  State.micFinalText = '';
 
   toast(`🎙️ ${codigos.length} código(s) enviados a Carga Masiva. Revisá y agregalos al pedido.`, 'success', 5000);
 }
@@ -2865,7 +2874,7 @@ function renderBorradores() {
 
   cont.innerHTML = '';
   borradores.forEach(b => {
-    const card = renderBorradorCard(b, ['continuar', 'enviar', 'aprobar-rapido', 'eliminar']);
+    const card = renderBorradorCard(b, ['continuar', 'enviar', 'eliminar']);
     cont.appendChild(card);
   });
 }
@@ -2994,7 +3003,7 @@ function renderBorradorCard(b, acciones) {
         btn.addEventListener('click', () => cargarBorradorEnEditor(b));
         break;
       case 'enviar':
-        btn.textContent = '📤 Enviar a aprobar';
+        btn.textContent = '📤 Enviar a pendiente';
         btn.classList.add('btn-primary');
         btn.addEventListener('click', () => {
           b.estado = 'pendiente';
@@ -3005,7 +3014,7 @@ function renderBorradorCard(b, acciones) {
           lsSet(KEY_BORRADORES, all);
           renderBorradores();
           updateBadges();
-          toast('Enviado a revisión', 'success');
+          toast('Enviado a pendientes', 'success');
         });
         break;
       case 'revisar':
@@ -3161,26 +3170,6 @@ function limpiarTodosBorradores() {
   toast('Todos los borradores eliminados', 'warning');
 }
 
-function debugBorradores() {
-  const b = lsGet(KEY_BORRADORES, []);
-  const p = lsGet(KEY_PENDIENTES, []);
-  const h = lsGet(KEY_HISTORIAL, []);
-  const c = lsGet(KEY_HIST_CANTIDADES, {});
-  const out = `LocalStorage debug:
-- Borradores: ${b.length}
-- Pendientes: ${p.length}
-- Historial: ${h.length}
-- Cantidades guardadas: ${Object.keys(c).length}
-
-Storage keys actuales:
-${Object.keys(localStorage).filter(k => k.startsWith(STORAGE_PREFIX)).join('\n')}
-
-Primer borrador (si hay):
-${b.length ? JSON.stringify(b[0], null, 2).slice(0, 500) : '—'}`;
-  alert(out);
-  log('info', out);
-}
-
 // ═══════════════════════════════════════════════════════════════════
 // COMPARTIR BORRADORES (vía texto comprimido + WhatsApp)
 // ═══════════════════════════════════════════════════════════════════
@@ -3207,7 +3196,7 @@ function desactivarModoCompartir() {
   ShareMode.active = false;
   ShareMode.selectedIds.clear();
   $('share-bar').style.display = 'none';
-  $('btn-modo-compartir').textContent = '📤 Compartir borradores';
+  $('btn-modo-compartir').textContent = '📤 Enviar borradores';
   $('btn-modo-compartir').classList.remove('btn-secondary');
   $('btn-modo-compartir').classList.add('btn-primary');
   renderBorradores();
