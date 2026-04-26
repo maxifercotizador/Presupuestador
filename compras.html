@@ -1503,6 +1503,34 @@ async function loadData(forceRefresh) {
 function init() {
   log('info', 'Iniciando app v' + APP_VERSION);
 
+  // ─── Migración: limpiar hist_cantidades viejo ──────────────────────
+  // Antes la clave era solo "numero" (ej: "1") pero el numero se repite
+  // entre proveedores. Ahora la clave es "proveedor:numero" (ej "FADER:1").
+  // Si encuentro datos viejos sin ":" en la key, los borro porque no
+  // sabemos a qué proveedor pertenecen.
+  try {
+    const histOld = lsGet(KEY_HIST_CANTIDADES, {});
+    const claves = Object.keys(histOld);
+    const tieneViejas = claves.some(k => !k.includes(':'));
+    if (tieneViejas) {
+      const histNuevo = {};
+      let migradas = 0;
+      let descartadas = 0;
+      for (const [k, v] of Object.entries(histOld)) {
+        if (k.includes(':')) {
+          histNuevo[k] = v;
+          migradas++;
+        } else {
+          descartadas++;
+        }
+      }
+      lsSet(KEY_HIST_CANTIDADES, histNuevo);
+      log('info', `Migración hist_cantidades: ${migradas} conservadas, ${descartadas} descartadas (sin proveedor)`);
+    }
+  } catch (e) {
+    log('warn', 'Migración hist_cantidades falló:', e);
+  }
+
   // ─── Migración: consolidar storage legacy ──────────────────────────
   // Antes había una clave aparte KEY_PENDIENTES que duplicaba pedidos.
   // Si quedan ahí, los traemos a KEY_BORRADORES con estado 'pendiente'
@@ -2197,16 +2225,26 @@ function seleccionarProducto(p) {
   $('sp-min').textContent = p.min || '—';
   $('sp-precio').textContent = fmtMoney(p.precio);
 
-  // Mostrar última cantidad pedida si hay historial
+  // Mostrar última cantidad pedida si hay historial (clave compuesta: prov:numero)
   const hist = lsGet(KEY_HIST_CANTIDADES, {});
-  const ultima = hist[p.numero];
-  if (ultima) {
+  const histK = (p.proveedor || '') + ':' + (p.numero || '');
+  const ultima = hist[histK];
+  // Prioridad: cm embebido (p.min) > última pedida > nada
+  // El cm embebido viene del catálogo y es la fuente principal.
+  // La última pedida es solo un fallback si el cm no existe.
+  if (p.min) {
+    $('hint-cant').textContent = ultima
+      ? `📊 Compra mínima: ${p.min} (última pedida: ${ultima})`
+      : `📊 Compra mínima: ${p.min}`;
+    $('ultimo-hint').style.display = 'block';
+    $('inp-cantidad').value = p.min;
+  } else if (ultima) {
     $('hint-cant').textContent = `📊 Última cantidad pedida: ${ultima}`;
     $('ultimo-hint').style.display = 'block';
     $('inp-cantidad').value = ultima;
   } else {
     $('ultimo-hint').style.display = 'none';
-    $('inp-cantidad').value = p.min || '';
+    $('inp-cantidad').value = '';
   }
 
   $('selected-product').style.display = 'block';
@@ -2254,9 +2292,10 @@ function agregarItem() {
     toast(`✓ Agregado: ${p.codprov || p.numero}`, 'success');
   }
 
-  // Guardar última cantidad en historial de cantidades
+  // Guardar última cantidad en historial de cantidades (clave compuesta prov:numero)
   const hist = lsGet(KEY_HIST_CANTIDADES, {});
-  hist[p.numero] = cant;
+  const histK = (p.proveedor || '') + ':' + (p.numero || '');
+  hist[histK] = cant;
   lsSet(KEY_HIST_CANTIDADES, hist);
 
   // Reset y refresh
@@ -2572,10 +2611,12 @@ function parsearMasivo() {
       prod = pool.find(p => normalizar(p.codprov).startsWith(cNorm));
     }
 
-    const ultimaCant = prod ? hist[prod.numero] : null;
+    const histK = prod ? ((prod.proveedor || '') + ':' + (prod.numero || '')) : null;
+    const ultimaCant = (prod && histK) ? hist[histK] : null;
     const minProducto = prod ? (Number(prod.min) || null) : null;
-    // Fallback de cantidad: la dictada > la última histórica > la compra mínima del producto > null
-    const cantFinal = cantidad ?? ultimaCant ?? minProducto ?? null;
+    // Fallback de cantidad: la dictada > la compra mínima del producto (cm embebido) > la última pedida > null
+    // El cm embebido del catálogo tiene prioridad sobre la última pedida porque es la fuente real.
+    const cantFinal = cantidad ?? minProducto ?? ultimaCant ?? null;
 
     return {
       codigoOriginal: codigo,
@@ -2734,7 +2775,7 @@ function agregarMasivoSeleccionados() {
   seleccionados.forEach(it => {
     if (!(it.cantidad > 0)) return;
     const p = it.producto;
-    const existente = State.pedidoActual.find(x => x.numero === p.numero);
+    const existente = State.pedidoActual.find(x => x.numero === p.numero && x.proveedor === p.proveedor);
     if (existente) {
       existente.cantidad += it.cantidad;
       sumados++;
@@ -2751,7 +2792,8 @@ function agregarMasivoSeleccionados() {
       });
       agregados++;
     }
-    hist[p.numero] = it.cantidad;
+    const histK = (p.proveedor || '') + ':' + (p.numero || '');
+    hist[histK] = it.cantidad;
   });
   lsSet(KEY_HIST_CANTIDADES, hist);
 
