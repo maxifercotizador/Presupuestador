@@ -405,9 +405,8 @@
     <div class="form-row cols-3">
       <div>
         <label>Proveedor</label>
-        <select id="inp-proveedor" onchange="onProveedorSelected(this.value)">
-          <option value="">Escribir o elegir proveedor...</option>
-        </select>
+        <input type="text" id="inp-proveedor" list="proveedores-list" placeholder="Escribir o elegir proveedor..." onchange="onProveedorSelected(this.value)" oninput="onProveedorSelected(this.value)">
+        <datalist id="proveedores-list"></datalist>
       </div>
       <div>
         <label>Operador</label>
@@ -754,15 +753,16 @@ function init() {
 }
 
 function initSelects() {
-  // Llenar select de proveedores
-  const selProv = document.getElementById('inp-proveedor');
-  selProv.innerHTML = '<option value="">Escribir o elegir proveedor...</option>';
-  PROVEEDORES.forEach(p => {
-    const o = document.createElement('option');
-    o.value = p;
-    o.textContent = p;
-    selProv.appendChild(o);
-  });
+  // Llenar datalist de proveedores
+  const datalist = document.getElementById('proveedores-list');
+  if (datalist) {
+    datalist.innerHTML = '';
+    PROVEEDORES.forEach(p => {
+      const option = document.createElement('option');
+      option.value = p;
+      datalist.appendChild(option);
+    });
+  }
 
   // Llenar select de familias
   const selFam = document.getElementById('sel-familia');
