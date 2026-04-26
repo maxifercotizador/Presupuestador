@@ -1315,7 +1315,7 @@ function renderProveedoresList(filtro) {
   const cont = $('lista-proveedores');
   if (!cont) return;
   const f = normalizar(filtro || '');
-  // Calcular cantidad de productos por proveedor (1 sola vez al iniciar — pero acá rapido)
+  // Calcular cantidad de productos por proveedor
   const stats = {};
   for (const p of State.DB) {
     if (!p.proveedor) continue;
@@ -1323,8 +1323,26 @@ function renderProveedoresList(filtro) {
   }
   const filtered = State.PROVEEDORES.filter(p => !f || normalizar(p).includes(f));
   cont.innerHTML = '';
+
+  // Header con contador
+  const header = document.createElement('div');
+  header.style.cssText = 'padding: 8px 18px; font-size: 11px; color: var(--gris-texto); font-family: "Barlow Condensed", sans-serif; letter-spacing: 1px; text-transform: uppercase; border-bottom: 1px solid var(--gris-borde); background: rgba(0,0,0,0.2)';
+  if (f) {
+    header.textContent = `${filtered.length} de ${State.PROVEEDORES.length} proveedores`;
+  } else {
+    header.textContent = `${State.PROVEEDORES.length} proveedores`;
+  }
+  cont.appendChild(header);
+
   if (filtered.length === 0) {
-    cont.innerHTML = '<div class="modal-empty">Sin resultados</div>';
+    const empty = document.createElement('div');
+    empty.className = 'modal-empty';
+    if (State.PROVEEDORES.length === 0) {
+      empty.innerHTML = '⚠️ No hay proveedores cargados<br><span style="font-size:11px">Verificá que productos.json esté disponible</span>';
+    } else {
+      empty.innerHTML = `Sin resultados para "${escapeHtml(filtro)}"<br><span style="font-size:11px">Probá con otra parte del nombre</span>`;
+    }
+    cont.appendChild(empty);
     return;
   }
   filtered.forEach(p => {
