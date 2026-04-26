@@ -2,8 +2,9 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MAXIFER — Compras v2.0</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#111111">
+<title>MAXIFER — Compras v3.0</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;900&family=Barlow:wght@300;400;500;600&display=swap');
@@ -32,13 +33,20 @@
     color: var(--blanco);
     min-height: 100vh;
     font-size: 14px;
+    -webkit-tap-highlight-color: transparent;
   }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: var(--gris-oscuro); }
+  ::-webkit-scrollbar-thumb { background: var(--gris-borde); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--rojo); }
 
   /* ── HEADER ── */
   header {
     background: #111;
     border-bottom: 3px solid var(--rojo);
-    padding: 0 24px;
+    padding: 0 16px;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -71,26 +79,30 @@
     display: flex;
     background: #111;
     border-bottom: 1px solid var(--gris-borde);
-    padding: 0 24px;
-    gap: 4px;
+    padding: 0 8px;
+    gap: 2px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
   }
+  .tabs::-webkit-scrollbar { display: none; }
   .tab {
     font-family: 'Barlow Condensed', sans-serif;
     font-weight: 600;
     font-size: 13px;
     letter-spacing: 1.5px;
     text-transform: uppercase;
-    padding: 12px 20px;
+    padding: 12px 16px;
     cursor: pointer;
     color: var(--gris-texto);
+    border: none;
     border-bottom: 3px solid transparent;
     transition: all 0.2s;
     background: none;
-    border-top: none;
-    border-left: none;
-    border-right: none;
     margin-bottom: -1px;
     position: relative;
+    white-space: nowrap;
+    flex-shrink: 0;
   }
   .tab:hover { color: var(--blanco); }
   .tab.active { color: var(--rojo-light); border-bottom-color: var(--rojo); }
@@ -98,1952 +110,2724 @@
     background: var(--rojo);
     color: white;
     font-size: 10px;
-    padding: 1px 5px;
-    border-radius: 10px;
-    margin-left: 6px;
-  }
-
-  /* ── CONTENIDO ── */
-  .container { padding: 24px; max-width: 1200px; margin: 0 auto; }
-  .page { display: none; }
-  .page.active { display: block; }
-  
-  .section-title {
-    font-family: 'Barlow Condensed', sans-serif;
     font-weight: 700;
-    font-size: 18px;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    color: var(--blanco);
-    margin-bottom: 16px;
-    padding-bottom: 8px;
-    border-bottom: 2px solid var(--gris-borde);
+    padding: 1px 6px;
+    border-radius: 8px;
+    margin-left: 4px;
+    min-width: 18px;
+    display: inline-block;
+    text-align: center;
   }
+  .tab-badge.empty { display: none; }
+
+  /* ── PAGE & PANELS ── */
+  .page { display: none; padding: 20px 16px; max-width: 1200px; margin: 0 auto; }
+  .page.active { display: block; }
 
   .panel {
     background: var(--gris-panel);
     border: 1px solid var(--gris-borde);
-    border-radius: 6px;
-    padding: 20px;
-    margin-bottom: 20px;
-  }
-
-  /* ── FORMULARIOS ── */
-  .form-row {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 16px;
+    border-radius: 4px;
+    padding: 16px;
     margin-bottom: 16px;
   }
-  .form-row.cols-2 { grid-template-columns: 1fr 1fr; }
-  .form-row.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .panel h2, .panel h3 {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--blanco);
+    margin-bottom: 12px;
+  }
+  .panel h2 { font-size: 18px; }
+  .panel h3 { font-size: 15px; color: var(--rojo-light); }
 
+  /* ── INPUTS ── */
   label {
     display: block;
-    font-size: 11px;
-    color: var(--gris-texto);
     font-family: 'Barlow Condensed', sans-serif;
     font-weight: 600;
+    font-size: 11px;
     letter-spacing: 1.5px;
     text-transform: uppercase;
-    margin-bottom: 6px;
+    color: var(--gris-texto);
+    margin-bottom: 4px;
   }
-
-  input, select, textarea {
+  input[type="text"], input[type="number"], select, textarea {
     width: 100%;
-    padding: 12px;
-    background: var(--gris-medio);
+    background: var(--gris-oscuro);
     border: 1px solid var(--gris-borde);
-    border-radius: 4px;
+    border-radius: 3px;
+    padding: 10px 12px;
     color: var(--blanco);
     font-family: 'Barlow', sans-serif;
     font-size: 14px;
+    transition: border 0.2s;
   }
   input:focus, select:focus, textarea:focus {
     outline: none;
     border-color: var(--rojo);
   }
+  textarea { resize: vertical; min-height: 80px; font-family: 'Courier New', monospace; }
 
-  /* ── BOTONES ── */
+  .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 12px; }
+  .form-row.three-cols { grid-template-columns: 2fr 1fr 1fr; }
+
+  /* ── BUTTONS ── */
   .btn {
-    padding: 12px 24px;
-    border: none;
-    border-radius: 4px;
     font-family: 'Barlow Condensed', sans-serif;
-    font-weight: 600;
+    font-weight: 700;
     font-size: 13px;
-    letter-spacing: 1px;
+    letter-spacing: 1.5px;
     text-transform: uppercase;
+    padding: 10px 18px;
+    border: none;
+    border-radius: 3px;
     cursor: pointer;
     transition: all 0.2s;
+    background: var(--gris-medio);
+    color: var(--blanco);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
   }
+  .btn:hover { transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+  .btn:active { transform: translateY(0); }
   .btn-primary { background: var(--rojo); color: white; }
-  .btn-secondary { background: var(--gris-medio); color: var(--gris-texto); }
+  .btn-primary:hover { background: var(--rojo-dark); }
   .btn-success { background: var(--verde); color: white; }
   .btn-warning { background: var(--amarillo); color: var(--gris-oscuro); }
-  .btn:hover { transform: translateY(-1px); }
+  .btn-secondary { background: var(--gris-medio); }
+  .btn-danger { background: var(--rojo-dark); color: white; }
+  .btn-info { background: var(--azul); color: white; }
+  .btn-sm { font-size: 11px; padding: 6px 12px; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
 
-  .btn-row {
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
-    justify-content: center;
-    margin-top: 20px;
-  }
+  .btn-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 
-  /* ── TABLAS ── */
-  .order-table {
-    width: 100%;
-    border-collapse: collapse;
-    background: var(--gris-panel);
-    border-radius: 4px;
-    overflow: hidden;
-    margin-top: 16px;
-  }
-  .order-table th {
-    background: var(--gris-oscuro);
-    padding: 12px;
-    text-align: left;
-    font-size: 11px;
-    font-family: 'Barlow Condensed', sans-serif;
-    font-weight: 600;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    color: var(--gris-texto);
-  }
-  .order-table td {
-    padding: 12px;
-    border-bottom: 1px solid var(--gris-borde);
-  }
-  .order-table tr:last-child td { border-bottom: none; }
-
-  /* ── ELEMENTOS ESPECÍFICOS ── */
-  .search-results {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    background: var(--gris-panel);
-    border: 1px solid var(--gris-borde);
-    border-top: none;
-    max-height: 300px;
-    overflow-y: auto;
-    z-index: 10;
-    display: none;
-  }
-  .search-results.visible { display: block; }
-
-  .search-item {
-    padding: 12px;
-    border-bottom: 1px solid var(--gris-borde);
-    cursor: pointer;
-    transition: background-color 0.15s;
-  }
-  .search-item:hover { background: var(--gris-medio); }
-
-  .toast {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    background: var(--verde);
-    color: white;
-    padding: 12px 20px;
-    border-radius: 4px;
-    font-weight: 600;
-    z-index: 1000;
-    animation: slideIn 0.3s ease;
-  }
-  .toast.error { background: var(--rojo); }
-  .toast.warn { background: var(--amarillo); color: var(--gris-oscuro); }
-
-  @keyframes slideIn {
-    from { transform: translateX(100%); opacity: 0; }
-    to { transform: translateX(0); opacity: 1; }
-  }
-
-  /* ── CARGA MASIVA ── */
+  /* ── MODOS (Manual / Micrófono / Masivo) ── */
   .modo-tabs {
     display: flex;
+    gap: 4px;
     margin-bottom: 16px;
+    border-bottom: 1px solid var(--gris-borde);
+    flex-wrap: wrap;
   }
   .modo-tab {
-    padding: 8px 16px;
-    background: var(--gris-medio);
-    color: var(--gris-texto);
-    border: none;
-    cursor: pointer;
-    font-size: 12px;
     font-family: 'Barlow Condensed', sans-serif;
     font-weight: 600;
+    font-size: 12px;
+    letter-spacing: 1.5px;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    padding: 10px 14px;
+    cursor: pointer;
+    color: var(--gris-texto);
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
   }
-  .modo-tab.active { background: var(--rojo); color: white; }
-  .modo-tab:first-child { border-radius: 4px 0 0 4px; }
-  .modo-tab:last-child { border-radius: 0 4px 4px 0; }
-
+  .modo-tab.active { color: var(--rojo-light); border-bottom-color: var(--rojo); }
   .modo-panel { display: none; }
   .modo-panel.active { display: block; }
 
-  .masiva-area {
-    min-height: 100px;
-    resize: vertical;
-    font-family: monospace;
-  }
-
-  .preview-masiva {
-    margin-top: 16px;
+  /* ── BÚSQUEDA ── */
+  .search-results {
+    background: var(--gris-oscuro);
+    border: 1px solid var(--gris-borde);
+    border-radius: 3px;
+    max-height: 280px;
+    overflow-y: auto;
+    margin-top: 6px;
     display: none;
   }
-  .preview-masiva.visible { display: block; }
+  .search-results.show { display: block; }
+  .search-item {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--gris-borde);
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .search-item:last-child { border-bottom: none; }
+  .search-item:hover, .search-item.highlighted { background: var(--rojo-dark); }
+  .search-item .si-desc { font-weight: 600; color: var(--blanco); margin-bottom: 2px; }
+  .search-item .si-meta { font-size: 12px; color: var(--gris-texto); }
+  .search-item .si-precio { color: var(--verde); font-weight: 600; }
+  .search-empty { padding: 20px; text-align: center; color: var(--gris-texto); font-style: italic; }
 
+  /* ── TABLA ── */
+  .tabla-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  th, td {
+    padding: 10px 8px;
+    text-align: left;
+    border-bottom: 1px solid var(--gris-borde);
+  }
+  th {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--gris-texto);
+    background: var(--gris-medio);
+    position: sticky;
+    top: 0;
+  }
+  td.num, th.num { text-align: right; }
+  td.center, th.center { text-align: center; }
+  tr.row-pedido:hover { background: rgba(255,255,255,0.03); }
+  .empty-row td { padding: 30px; text-align: center; color: var(--gris-texto); font-style: italic; }
+
+  /* Editable qty input dentro de tabla */
+  .qty-input {
+    width: 70px;
+    padding: 4px 6px;
+    font-size: 13px;
+    text-align: right;
+  }
+
+  /* ── TOTALES ── */
+  .totales {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 12px;
+    margin: 16px 0;
+  }
+  .totales > div {
+    background: var(--gris-medio);
+    padding: 12px;
+    border-radius: 3px;
+    text-align: center;
+  }
+  .totales label {
+    font-size: 10px;
+    margin-bottom: 4px;
+  }
+  .totales .val { font-size: 22px; font-weight: 600; font-family: 'Barlow Condensed', sans-serif; }
+
+  /* ── MASIVO ── */
+  .preview-masiva {
+    margin-top: 12px;
+    border: 1px solid var(--gris-borde);
+    border-radius: 3px;
+    background: var(--gris-oscuro);
+    max-height: 360px;
+    overflow-y: auto;
+  }
+  .preview-header {
+    padding: 10px 12px;
+    background: var(--gris-medio);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+  }
   .preview-item {
     display: grid;
     grid-template-columns: auto 1fr auto auto;
-    gap: 12px;
+    gap: 8px;
     align-items: center;
     padding: 8px 12px;
     border-bottom: 1px solid var(--gris-borde);
-    position: relative;
   }
-  .preview-item.has-checkbox {
-    grid-template-columns: auto auto 1fr auto auto;
+  .preview-item.no-encontrado { background: rgba(192, 57, 43, 0.08); }
+  .preview-item input[type="checkbox"] {
+    width: auto;
+    transform: scale(1.2);
   }
-  .preview-item:last-child { border-bottom: none; }
-
-  .pi-num {
-    font-family: monospace;
-    font-weight: 600;
-    color: var(--rojo-light);
+  .preview-item .pi-info { min-width: 0; }
+  .preview-item .pi-codigo { font-weight: 600; color: var(--blanco); font-size: 13px; }
+  .preview-item .pi-desc { font-size: 12px; color: var(--gris-texto); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .preview-item .pi-bad { color: var(--rojo-light); }
+  .preview-item .pi-hint { color: var(--verde); font-size: 11px; }
+  .preview-item input[type="number"] {
+    width: 70px;
+    padding: 4px 6px;
     font-size: 13px;
   }
-  .pi-desc {
-    color: var(--blanco);
-    font-size: 13px;
-  }
-  .pi-status {
-    font-size: 10px;
-    padding: 2px 6px;
-    border-radius: 2px;
-    font-family: 'Barlow Condensed', sans-serif;
-    font-weight: 600;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-  }
-  .pi-ok { background: rgba(39, 174, 96, 0.2); color: var(--verde); }
-  .pi-warn { background: rgba(243, 156, 18, 0.2); color: var(--amarillo); }
-  .pi-err { background: rgba(192, 57, 43, 0.2); color: var(--rojo-light); }
 
-  .cant-global-row, .seleccion-masiva-row {
+  .filtros-masivo {
     display: flex;
-    align-items: center;
-    gap: 10px;
-    margin: 12px 0;
-    padding: 10px;
-    background: var(--gris-oscuro);
-    border-radius: 3px;
-    border: 1px solid var(--gris-borde);
     flex-wrap: wrap;
+    gap: 6px;
+    margin: 8px 0;
   }
-
   .btn-filtro {
-    background: var(--gris-medio);
-    color: var(--gris-texto);
-    border: 1px solid var(--gris-borde);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px;
+    letter-spacing: 1px;
     padding: 4px 8px;
+    background: var(--gris-medio);
+    color: var(--blanco);
+    border: 1px solid var(--gris-borde);
     border-radius: 3px;
     cursor: pointer;
-    font-size: 11px;
-    transition: background-color 0.15s;
   }
-  .btn-filtro:hover {
-    background: var(--gris-borde);
+  .btn-filtro:hover { background: var(--gris-borde); }
+
+  /* ── BORRADORES / PENDIENTES list ── */
+  .borrador-card {
+    background: var(--gris-panel);
+    border: 1px solid var(--gris-borde);
+    border-left: 3px solid var(--gris-borde);
+    border-radius: 3px;
+    padding: 14px;
+    margin-bottom: 10px;
+    transition: border-color 0.2s;
+  }
+  .borrador-card.estado-editando { border-left-color: var(--azul); }
+  .borrador-card.estado-pendiente { border-left-color: var(--amarillo); }
+  .borrador-card.estado-aprobado { border-left-color: var(--verde); }
+  .borrador-card.estado-rechazado { border-left-color: var(--rojo); }
+  .bc-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; flex-wrap: wrap; }
+  .bc-codigo {
+    font-family: 'Courier New', monospace;
+    font-weight: 700;
+    font-size: 14px;
     color: var(--blanco);
   }
+  .bc-meta { font-size: 12px; color: var(--gris-texto); margin-top: 4px; }
+  .bc-stats { font-size: 12px; color: var(--blanco); margin-top: 6px; }
+  .bc-acciones { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+  .estado-pill {
+    display: inline-block;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 2px;
+  }
+  .estado-pill.editando { background: var(--azul); color: white; }
+  .estado-pill.pendiente { background: var(--amarillo); color: var(--gris-oscuro); }
+  .estado-pill.aprobado { background: var(--verde); color: white; }
+  .estado-pill.rechazado { background: var(--rojo); color: white; }
 
-  .item-checkbox {
-    width: 16px;
-    height: 16px;
+  /* ── TOAST ── */
+  .toast-container {
+    position: fixed;
+    top: 70px;
+    right: 16px;
+    left: 16px;
+    z-index: 9999;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-end;
+  }
+  .toast {
+    pointer-events: auto;
+    background: var(--gris-medio);
+    border-left: 3px solid var(--azul);
+    color: var(--blanco);
+    padding: 12px 16px;
+    border-radius: 3px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    font-size: 13px;
+    max-width: 380px;
+    animation: toast-in 0.25s ease-out;
+  }
+  .toast.success { border-left-color: var(--verde); }
+  .toast.warning { border-left-color: var(--amarillo); }
+  .toast.error { border-left-color: var(--rojo); }
+  .toast.info { border-left-color: var(--azul); }
+  @keyframes toast-in {
+    from { opacity: 0; transform: translateX(40px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  .toast.removing { animation: toast-out 0.25s ease-in forwards; }
+  @keyframes toast-out {
+    to { opacity: 0; transform: translateX(40px); }
   }
 
-  /* ── RESPONSIVE ── */
-  @media (max-width: 768px) {
-    .container { padding: 16px; }
-    .form-row.cols-2, .form-row.cols-3 { grid-template-columns: 1fr; }
-    .tabs { padding: 0 16px; overflow-x: auto; }
-    .tab { white-space: nowrap; }
+  /* ── LOADER ── */
+  .loader-overlay {
+    position: fixed;
+    inset: 0;
+    background: var(--gris-oscuro);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 9998;
+    gap: 16px;
+  }
+  .loader {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--gris-borde);
+    border-top-color: var(--rojo);
+    border-radius: 50%;
+    animation: spin 0.9s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loader-text {
+    font-family: 'Barlow Condensed', sans-serif;
+    letter-spacing: 2px;
+    color: var(--gris-texto);
+    text-transform: uppercase;
+  }
+
+  /* ── FATAL ERROR ── */
+  .fatal-error {
+    max-width: 500px;
+    margin: 60px auto;
+    padding: 24px;
+    background: var(--gris-panel);
+    border: 1px solid var(--rojo);
+    border-radius: 4px;
+    text-align: center;
+  }
+  .fatal-error h2 { color: var(--rojo-light); margin-bottom: 12px; font-family: 'Barlow Condensed', sans-serif; letter-spacing: 1px; }
+  .fatal-error p { margin-bottom: 8px; font-size: 13px; }
+  .fatal-error code { background: var(--gris-oscuro); padding: 2px 6px; border-radius: 2px; font-size: 12px; }
+
+  /* ── DEBUG PANEL ── */
+  .debug-panel {
+    position: fixed;
+    bottom: 16px;
+    right: 16px;
+    background: rgba(0,0,0,0.85);
+    border: 1px solid var(--rojo);
+    border-radius: 4px;
+    padding: 8px 12px;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    color: var(--gris-texto);
+    z-index: 9000;
+    cursor: pointer;
+    max-width: 280px;
+    user-select: none;
+  }
+  .debug-panel:hover { color: var(--blanco); }
+  .debug-panel-expanded {
+    max-width: 360px;
+    max-height: 50vh;
+    overflow-y: auto;
+    cursor: default;
+  }
+  .debug-panel-expanded pre {
+    font-size: 10px;
+    margin-top: 6px;
+    color: var(--blanco);
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+
+  /* ── HINT BOX ── */
+  .hint-box {
+    background: rgba(39, 174, 96, 0.08);
+    border-left: 3px solid var(--verde);
+    padding: 10px 12px;
+    border-radius: 0 3px 3px 0;
+    font-size: 12px;
+    color: var(--verde);
+    margin-top: 10px;
+  }
+  .hint-box.warning {
+    background: rgba(243, 156, 18, 0.08);
+    border-left-color: var(--amarillo);
+    color: var(--amarillo);
+  }
+  .hint-box.info {
+    background: rgba(52, 152, 219, 0.08);
+    border-left-color: var(--azul);
+    color: var(--azul);
+  }
+
+  /* ── PROVEEDOR DISPLAY ── */
+  .proveedor-actual {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--gris-medio);
+    padding: 10px 14px;
+    border-radius: 3px;
+    border-left: 3px solid var(--rojo);
+    flex-wrap: wrap;
+  }
+  .proveedor-actual .pa-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--gris-texto);
+  }
+  .proveedor-actual .pa-nombre {
+    font-weight: 700;
+    color: var(--blanco);
+    font-size: 16px;
+  }
+  .proveedor-actual .pa-stats {
+    font-size: 12px;
+    color: var(--gris-texto);
+  }
+  .proveedor-actual .pa-cambiar {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--rojo-light);
+    cursor: pointer;
+    text-decoration: underline;
+    background: none;
+    border: none;
+    font-family: 'Barlow', sans-serif;
+  }
+
+  /* ── MICRÓFONO ── */
+  .mic-control {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 24px;
+  }
+  .mic-btn {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    border: none;
+    background: var(--gris-medio);
+    color: var(--blanco);
+    font-size: 32px;
+    cursor: pointer;
+    transition: all 0.3s;
+  }
+  .mic-btn.recording {
+    background: var(--rojo);
+    animation: pulse 1.2s infinite;
+    box-shadow: 0 0 0 0 rgba(192, 57, 43, 0.6);
+  }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(192, 57, 43, 0.6); }
+    70% { box-shadow: 0 0 0 16px rgba(192, 57, 43, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(192, 57, 43, 0); }
+  }
+  .mic-status {
+    font-family: 'Barlow Condensed', sans-serif;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--gris-texto);
+    font-size: 13px;
+  }
+  .mic-transcript {
+    background: var(--gris-oscuro);
+    border: 1px solid var(--gris-borde);
+    border-radius: 3px;
+    padding: 12px;
+    min-height: 60px;
+    width: 100%;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+  }
+
+  /* ── DETALLE de revisión ── */
+  .detalle-item {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--gris-borde);
+    gap: 10px;
+    align-items: center;
+  }
+  .detalle-item:last-child { border-bottom: none; }
+  .detalle-item .di-info { min-width: 0; }
+  .detalle-item .di-codigo { font-weight: 600; }
+  .detalle-item .di-desc { font-size: 12px; color: var(--gris-texto); }
+  .detalle-item .di-cant { font-weight: 600; font-size: 14px; }
+
+  /* ── MOBILE ── */
+  @media (max-width: 600px) {
+    header { padding: 0 12px; }
+    .logo { font-size: 18px; letter-spacing: 1px; }
+    .header-badge { font-size: 10px; padding: 3px 8px; }
+    .tab { padding: 10px 12px; font-size: 12px; letter-spacing: 1px; }
+    .page { padding: 14px 10px; }
+    .panel { padding: 12px; }
+    .form-row, .form-row.three-cols { grid-template-columns: 1fr; }
+    th, td { padding: 8px 6px; font-size: 12px; }
+    .totales .val { font-size: 18px; }
+    .btn { font-size: 12px; padding: 8px 12px; }
+    .toast-container { right: 8px; left: 8px; top: 64px; }
+    .debug-panel { display: none; }
   }
 </style>
 </head>
 <body>
 
-<header>
-  <div class="logo">MAXI<span>FER</span> <span style="font-size:13px;color:var(--gris-texto);font-weight:400;letter-spacing:1px;">COMPRAS</span></div>
-  <div style="display:flex;align-items:center;gap:12px">
-    <div class="header-badge">v2.0</div>
-  </div>
-</header>
-
-<div class="tabs">
-  <button class="tab active" onclick="showPage('nuevo')">📋 Nuevo Pedido</button>
-  <button class="tab" onclick="showPage('borradores'); loadBorradores()" id="tab-borradores">💾 Mis Borradores <span class="tab-badge" id="badge-borradores">0</span></button>
-  <button class="tab" onclick="showPage('revisar')" id="tab-revisar">👁️ Revisar Borrador</button>
-  <button class="tab" onclick="showPage('pendientes')" id="tab-pendientes">⏳ Pendientes <span class="tab-badge" id="badge-pendientes">0</span></button>
-  <button class="tab" onclick="showPage('historial')">📚 Historial</button>
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- LOADER INICIAL                                               -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div id="loader" class="loader-overlay">
+  <div class="loader"></div>
+  <div class="loader-text" id="loader-text">Cargando productos...</div>
 </div>
 
-<div class="container">
-  
-<!-- ═══════════════════════════════════════
-     PÁGINA: NUEVO PEDIDO
-═══════════════════════════════════════ -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- HEADER & TABS                                                -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<header>
+  <div class="logo">MAXI<span>FER</span></div>
+  <div class="header-badge">COMPRAS</div>
+</header>
+
+<nav class="tabs" role="tablist">
+  <button class="tab active" data-page="nuevo" type="button">📋 Nuevo Pedido</button>
+  <button class="tab" data-page="borradores" type="button">💾 Borradores <span class="tab-badge empty" id="badge-borradores">0</span></button>
+  <button class="tab" data-page="revisar" type="button">👁️ Revisar</button>
+  <button class="tab" data-page="pendientes" type="button">⏳ Pendientes <span class="tab-badge empty" id="badge-pendientes">0</span></button>
+  <button class="tab" data-page="historial" type="button">📚 Historial</button>
+</nav>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-container" id="toast-container"></div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- PAGE: NUEVO PEDIDO                                           -->
+<!-- ═══════════════════════════════════════════════════════════ -->
 <div class="page active" id="page-nuevo">
-  
-  <!-- 1. SELECCIONAR PROVEEDOR -->
-  <div class="section-title">1. Seleccionar Proveedor</div>
+
+  <!-- Cabecera del pedido -->
   <div class="panel">
-    <div class="form-row cols-3">
+    <h2>Datos del Pedido</h2>
+    <div class="form-row three-cols">
       <div>
         <label>Proveedor</label>
-        <input type="text" id="inp-proveedor" list="proveedores-list" placeholder="Escribir o elegir proveedor..." onchange="onProveedorSelected(this.value)" oninput="onProveedorSelected(this.value)">
+        <input type="text" id="inp-proveedor" list="proveedores-list" placeholder="Escribir o elegir proveedor..." autocomplete="off">
         <datalist id="proveedores-list"></datalist>
       </div>
       <div>
-        <label>Operador</label>
+        <label>Operador / Vendedor</label>
         <select id="sel-operador">
-          <option value="Max">Max</option>
+          <option value="Maximiliano Gordillo">Maximiliano Gordillo</option>
           <option value="Micky">Micky</option>
-          <option value="Victor">Victor</option>
-          <option value="Alex Bravo">Alex Bravo</option>
+          <option value="Victor Gordillo">Victor Gordillo</option>
         </select>
       </div>
       <div>
-        <label>Observaciones (opcional)</label>
+        <label>Observaciones</label>
         <input type="text" id="inp-obs" placeholder="Notas del pedido...">
+      </div>
+    </div>
+    <div id="proveedor-info-wrap" style="display:none">
+      <div class="proveedor-actual">
+        <span class="pa-label">Proveedor activo:</span>
+        <span class="pa-nombre" id="pa-nombre">—</span>
+        <span class="pa-stats" id="pa-stats">—</span>
+        <button type="button" class="pa-cambiar" id="btn-cambiar-prov">Cambiar</button>
       </div>
     </div>
   </div>
 
-  <!-- 2. AGREGAR PRODUCTOS -->
+  <!-- Panel de agregar productos (oculto hasta elegir proveedor) -->
   <div id="panel-agregar" style="display:none">
-    <div class="section-title">2. Agregar Productos</div>
     <div class="panel">
-      
-      <!-- MODO TABS -->
+      <h2>Agregar Productos</h2>
       <div class="modo-tabs">
-        <button class="modo-tab active" onclick="showModo('manual')">✏️ Manual</button>
-        <button class="modo-tab" onclick="showModo('micro')">🎙️ Micrófono</button>
-        <button class="modo-tab" onclick="showModo('masivo')">📋 Carga Masiva</button>
+        <button class="modo-tab active" data-modo="manual" type="button">✏️ Manual</button>
+        <button class="modo-tab" data-modo="micro" type="button">🎙️ Micrófono</button>
+        <button class="modo-tab" data-modo="masivo" type="button">📋 Carga Masiva</button>
       </div>
 
-      <!-- MODO MANUAL -->
+      <!-- Modo Manual -->
       <div class="modo-panel active" id="modo-manual">
-        <div class="form-row cols-2">
-          <div style="position:relative">
-            <label>Código del producto</label>
-            <input type="text" id="inp-codigo" placeholder="Buscar por número..." oninput="onCodigoInput(this.value)">
+        <div class="form-row">
+          <div>
+            <label>Buscar producto (código, descripción, código proveedor)</label>
+            <input type="text" id="inp-codigo" placeholder="Ej: 1234, resorte, 8mm..." autocomplete="off">
             <div class="search-results" id="search-results"></div>
           </div>
-          <div>
-            <label>Familia (opcional)</label>
-            <select id="sel-familia" onchange="onCodigoInput(document.getElementById('inp-codigo').value)">
-              <option value="">— Todas —</option>
-            </select>
+          <div style="max-width: 220px">
+            <label>Filtrar por familia</label>
+            <select id="sel-familia"></select>
           </div>
         </div>
-        
-        <div id="selected-product" style="display:none" class="panel">
-          <div style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 1fr; gap:16px; align-items:end">
+
+        <div id="selected-product" style="display:none" class="panel" style="background:var(--gris-medio); margin-top:10px">
+          <div style="display:grid; grid-template-columns: 1fr auto auto; gap:12px; align-items:center; flex-wrap: wrap">
             <div>
-              <label>Producto seleccionado</label>
-              <div id="sp-desc" style="font-weight:600; color:var(--blanco); font-size:15px"></div>
-              <div style="font-size:12px; color:var(--gris-texto)">
-                <span id="sp-codprov"></span> • <span id="sp-num"></span>
+              <div id="sp-desc" style="font-weight:600; color:var(--blanco); font-size:15px">—</div>
+              <div style="font-size:12px; color:var(--gris-texto); margin-top:2px">
+                <span id="sp-codprov">—</span> • Núm: <span id="sp-num">—</span> • <span id="sp-fam">—</span>
               </div>
             </div>
-            <div>
-              <label>Cant. Mínima</label>
-              <div id="sp-min" style="font-weight:600"></div>
+            <div style="text-align:center">
+              <label>Mín</label>
+              <div id="sp-min" style="font-weight:600">—</div>
             </div>
-            <div>
-              <label>Precio de Costo</label>
-              <div id="sp-precio" style="color:var(--verde); font-weight:600"></div>
+            <div style="text-align:center">
+              <label>Precio</label>
+              <div id="sp-precio" style="color:var(--verde); font-weight:600">—</div>
             </div>
+          </div>
+          <div class="form-row" style="margin-top:12px; grid-template-columns: 1fr auto">
             <div>
               <label>Cantidad</label>
               <input type="number" id="inp-cantidad" placeholder="Cantidad" min="1">
             </div>
-            <div>
-              <button class="btn btn-primary" onclick="agregarItem()">Agregar</button>
+            <div style="display:flex; align-items:flex-end">
+              <button class="btn btn-primary" type="button" id="btn-agregar-item">Agregar al Pedido</button>
             </div>
           </div>
-          
-          <div id="ultimo-hint" style="display:none; margin-top:12px; padding:8px; background:rgba(39, 174, 96, 0.1); border-radius:4px">
-            <span style="color:var(--verde); font-size:12px" id="hint-cant"></span>
+          <div class="hint-box" id="ultimo-hint" style="display:none">
+            <span id="hint-cant"></span>
           </div>
         </div>
       </div>
 
-      <!-- MODO MICRÓFONO -->
+      <!-- Modo Micrófono -->
       <div class="modo-panel" id="modo-micro">
-        <div style="text-align:center; padding:40px; color:var(--gris-texto)">
-          <div style="font-size:48px; margin-bottom:16px">🎙️</div>
-          <div style="font-size:16px; margin-bottom:8px">Función en desarrollo</div>
-          <div>Pronto podrás dictar códigos por voz</div>
+        <div class="hint-box info">
+          Tocá el micrófono y dictá: "código 1234 cantidad 100" o "el producto X cantidad Y"
+        </div>
+        <div class="mic-control">
+          <button class="mic-btn" id="btn-mic" type="button" aria-label="Iniciar grabación">🎙️</button>
+          <div class="mic-status" id="mic-status">Tocá para iniciar</div>
+          <div class="mic-transcript" id="mic-transcript">El texto aparecerá acá...</div>
+          <div style="display:flex; gap:8px; flex-wrap: wrap; justify-content: center">
+            <button class="btn btn-secondary btn-sm" type="button" id="btn-mic-procesar">Procesar texto</button>
+            <button class="btn btn-secondary btn-sm" type="button" id="btn-mic-limpiar">Limpiar</button>
+          </div>
         </div>
       </div>
 
-      <!-- MODO CARGA MASIVA -->
+      <!-- Modo Masivo -->
       <div class="modo-panel" id="modo-masivo">
-        <div style="margin-bottom:14px">
-          <label>Filtrar por familia (opcional)</label>
-          <select id="masivo-familia" onchange="parsearMasivo(document.getElementById('masiva-textarea').value)">
-            <option value="">— Todas las familias del proveedor —</option>
-          </select>
+        <div class="hint-box info">
+          Pegá una lista de códigos (uno por línea o separados por espacios/comas). Detecta cantidad si está después del código (ej: <code>1234 50</code> o <code>1234x50</code>).
         </div>
-        <label>Pegá los códigos (uno por línea, separados por coma, espacio o guión)</label>
-        <textarea class="masiva-area" id="masiva-textarea"
-          placeholder="Ejemplos:&#10;850&#10;910, 120, 340&#10;850-910-120&#10;850 910 120"
-          oninput="parsearMasivo(this.value)"></textarea>
-
-        <!-- CONTROLES DE SELECCIÓN -->
-        <div class="seleccion-masiva-row" id="seleccion-masiva-row" style="display:none">
-          <div style="margin-bottom:12px">
-            <label style="font-size:13px; color:var(--gris-texto); display:block; margin-bottom:6px">SELECCIÓN MASIVA</label>
-            <div style="display:flex; gap:8px; flex-wrap:wrap">
-              <button class="btn-filtro" onclick="seleccionarTodos()">☑️ Todos</button>
-              <button class="btn-filtro" onclick="deseleccionarTodos()">☐ Ninguno</button>
-              <button class="btn-filtro" onclick="seleccionarConHistorial()">✅ Con historial</button>
-              <button class="btn-filtro" onclick="seleccionarSinHistorial()">⚠️ Sin historial</button>
-              <button class="btn-filtro" onclick="seleccionarConCantidad()">🔢 Con cantidad</button>
-              <button class="btn-filtro" onclick="seleccionarSinCantidad()">❌ Sin cantidad</button>
-            </div>
+        <div class="form-row">
+          <div>
+            <label>Filtrar productos por familia (al pegar)</label>
+            <select id="masivo-familia"></select>
           </div>
         </div>
+        <textarea id="masiva-textarea" placeholder="Pegá tus códigos acá... (uno por línea)
+Ejemplo:
+1234 50
+5678 100
+9012"></textarea>
 
-        <div class="cant-global-row" id="cant-global-row" style="display:none">
-          <label>Aplicar cantidad a seleccionados:</label>
-          <input type="number" id="cant-global" placeholder="Ej: 300" min="1" style="width:90px">
-          <button class="btn btn-secondary btn-sm" onclick="aplicarCantGlobalSeleccionados()">📝 Aplicar</button>
-          <label style="font-size:11px; margin-left:10px">
-            <input type="checkbox" id="sobrescribir-check" checked> Sobrescribir existentes
+        <div class="filtros-masivo" id="seleccion-masiva-row" style="display:none">
+          <button type="button" class="btn-filtro" data-filtro="todos">☑️ Todos</button>
+          <button type="button" class="btn-filtro" data-filtro="ninguno">☐ Ninguno</button>
+          <button type="button" class="btn-filtro" data-filtro="con-historial">✅ Con historial</button>
+          <button type="button" class="btn-filtro" data-filtro="sin-historial">⚠️ Sin historial</button>
+          <button type="button" class="btn-filtro" data-filtro="con-cantidad">🔢 Con cantidad</button>
+          <button type="button" class="btn-filtro" data-filtro="sin-cantidad">❌ Sin cantidad</button>
+          <button type="button" class="btn-filtro" data-filtro="encontrados">🟢 Encontrados</button>
+          <button type="button" class="btn-filtro" data-filtro="no-encontrados">🔴 No encontrados</button>
+        </div>
+
+        <div id="cant-global-row" style="display:none; gap:8px; align-items:center; margin: 10px 0; flex-wrap: wrap">
+          <label style="margin:0">Cantidad global:</label>
+          <input type="number" id="cant-global" placeholder="Ej: 300" min="1" style="width:100px">
+          <button class="btn btn-secondary btn-sm" type="button" id="btn-aplicar-global">Aplicar a seleccionados</button>
+          <label style="margin:0; display:flex; align-items:center; gap:4px; font-size:12px">
+            <input type="checkbox" id="sobrescribir-check" checked style="width:auto"> Sobrescribir
           </label>
         </div>
 
-        <div class="preview-masiva" id="preview-masiva">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-            <span style="font-size:12px;color:var(--gris-texto)" id="preview-count"></span>
-            <button class="btn btn-success btn-sm" onclick="agregarMasivoSeleccionados()">✅ Agregar seleccionados al pedido</button>
+        <div class="preview-masiva" id="preview-masiva" style="display:none">
+          <div class="preview-header">
+            <span style="font-size:12px; color:var(--gris-texto)" id="preview-count">0 items</span>
+            <button class="btn btn-success btn-sm" type="button" id="btn-agregar-masivo">✅ Agregar seleccionados</button>
           </div>
-          <div id="preview-lista" style="background:var(--gris-oscuro);border:1px solid var(--gris-borde);border-radius:3px"></div>
+          <div id="preview-lista"></div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- 3. TABLA DEL PEDIDO -->
+  <!-- Tabla del pedido -->
   <div id="panel-tabla" style="display:none">
-    <div class="section-title">3. Revisión del Pedido</div>
-    <div style="overflow-x:auto">
-      <table class="order-table">
-        <thead>
-          <tr>
-            <th>Código</th>
-            <th>Descripción</th>
-            <th>Familia</th>
-            <th style="text-align:center">Cantidad</th>
-            <th style="text-align:right">P. Unitario</th>
-            <th style="text-align:right">Subtotal</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody id="tabla-body"></tbody>
-      </table>
-    </div>
+    <div class="panel">
+      <h2>Items del Pedido</h2>
+      <div class="tabla-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Cód.</th>
+              <th>Núm.</th>
+              <th>Descripción</th>
+              <th class="num">Cant.</th>
+              <th class="num">Precio</th>
+              <th class="num">Subtotal</th>
+              <th class="center">×</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-body"></tbody>
+        </table>
+      </div>
 
-    <div style="margin-top:20px; text-align:center">
-      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:20px; margin-bottom:20px">
-        <div style="text-align:center">
-          <div style="color:var(--gris-texto); font-size:11px; font-family:'Barlow Condensed',sans-serif; font-weight:600; letter-spacing:1px; text-transform:uppercase">Items</div>
-          <div style="font-size:24px; font-weight:600; color:var(--blanco)" id="tot-items">0</div>
+      <div class="totales">
+        <div>
+          <label>Items</label>
+          <div class="val" id="tot-items">0</div>
         </div>
-        <div style="text-align:center">
-          <div style="color:var(--gris-texto); font-size:11px; font-family:'Barlow Condensed',sans-serif; font-weight:600; letter-spacing:1px; text-transform:uppercase">Unidades</div>
-          <div style="font-size:24px; font-weight:600; color:var(--blanco)" id="tot-unidades">0</div>
+        <div>
+          <label>Unidades</label>
+          <div class="val" id="tot-unidades">0</div>
         </div>
-        <div style="text-align:center">
-          <div style="color:var(--gris-texto); font-size:11px; font-family:'Barlow Condensed',sans-serif; font-weight:600; letter-spacing:1px; text-transform:uppercase">Costo Total</div>
-          <div style="font-size:24px; font-weight:600; color:var(--verde)" id="tot-costo">$0</div>
+        <div>
+          <label>Costo Total</label>
+          <div class="val" id="tot-costo" style="color:var(--verde)">$0</div>
         </div>
       </div>
 
       <div class="btn-row">
-        <button class="btn btn-secondary" onclick="limpiarPedido()">🗑 Limpiar</button>
-        <button class="btn btn-warning" onclick="guardarPendiente()">💾 Guardar Pendiente</button>
-        <button class="btn" onclick="guardarYVerBorrador()" style="background:var(--amarillo); color:var(--gris-oscuro)">📋 Guardar Borrador</button>
-        <button class="btn" onclick="enviarParaAprobacion()" style="background:var(--rojo-light); color:white">📤 Enviar para Aprobación</button>
-        <button class="btn btn-success" onclick="aprobarPedido()">✅ Aprobar y Generar</button>
+        <button class="btn btn-secondary" type="button" id="btn-limpiar">🗑 Limpiar</button>
+        <button class="btn btn-warning" type="button" id="btn-guardar-pendiente">💾 Guardar Pendiente</button>
+        <button class="btn btn-info" type="button" id="btn-guardar-borrador">📋 Guardar Borrador</button>
+        <button class="btn btn-primary" type="button" id="btn-enviar-aprobacion">📤 Enviar para Aprobación</button>
+        <button class="btn btn-success" type="button" id="btn-aprobar-generar">✅ Aprobar y Generar PDF</button>
       </div>
     </div>
   </div>
-
 </div>
 
-<!-- ═══════════════════════════════════════
-     PÁGINA: MIS BORRADORES
-═══════════════════════════════════════ -->
-<div class="page" id="page-borradores" style="display:none">
-  <div class="section-title">💾 Mis Borradores</div>
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- PAGE: BORRADORES                                             -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div class="page" id="page-borradores">
   <div class="panel">
-    <!-- Botones de debug al inicio -->
-    <div style="margin-bottom:15px; padding:10px; background:var(--gris-oscuro); border-radius:4px">
-      <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap">
-        <button onclick="loadBorradores()" style="background:var(--azul); color:white; border:none; padding:8px 16px; border-radius:4px; cursor:pointer; font-size:12px">🔄 Recargar borradores</button>
-        <button onclick="debugBorradores()" style="background:var(--amarillo); color:var(--gris-oscuro); border:none; padding:8px 16px; border-radius:4px; cursor:pointer; font-size:12px">🔍 Debug localStorage</button>
-        <button onclick="limpiarBorradores()" style="background:var(--rojo); color:white; border:none; padding:8px 16px; border-radius:4px; cursor:pointer; font-size:12px">🗑️ Limpiar todo</button>
-      </div>
+    <h2>Mis Borradores</h2>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px">
+      <button class="btn btn-info btn-sm" type="button" id="btn-recargar-borradores">🔄 Recargar</button>
+      <button class="btn btn-warning btn-sm" type="button" id="btn-debug-borradores">🔍 Debug</button>
+      <button class="btn btn-danger btn-sm" type="button" id="btn-limpiar-borradores">🗑️ Limpiar todo</button>
     </div>
-    
     <div id="borradores-list">
-      <div style="text-align:center; padding:40px; color:var(--gris-texto)">
-        <div style="font-size:48px; margin-bottom:16px">📋</div>
-        <div style="font-size:18px; margin-bottom:8px">Cargando borradores...</div>
-        <div>Si no aparece nada, usá el botón "Debug" arriba</div>
-      </div>
+      <p style="text-align:center; color:var(--gris-texto); padding: 20px">Cargá la pestaña para ver borradores...</p>
     </div>
   </div>
 </div>
 
-<!-- ═══════════════════════════════════════
-     PÁGINA: REVISAR BORRADOR
-═══════════════════════════════════════ -->
-<div class="page" id="page-revisar" style="display:none">
-  <div class="section-title">👁️ Revisar Borrador</div>
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- PAGE: REVISAR                                                -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div class="page" id="page-revisar">
   <div class="panel">
+    <h2>Revisar Borrador</h2>
     <div class="form-row">
       <div>
         <label>Código del borrador</label>
-        <div style="display:flex; gap:10px; align-items:center">
-          <input type="text" id="codigo-revisar" placeholder="Ej: COMP-241226-001" style="flex:1">
-          <button onclick="cargarBorradorParaRevisar()" class="btn btn-primary">🔍 Cargar</button>
+        <input type="text" id="codigo-revisar" placeholder="Ej: COMP-251226-001" autocomplete="off">
+      </div>
+      <div style="display:flex; align-items:flex-end">
+        <button type="button" class="btn btn-primary" id="btn-cargar-revisar">🔍 Cargar</button>
+      </div>
+    </div>
+
+    <div id="area-revision" style="display:none; margin-top:20px">
+      <div id="info-borrador" class="panel" style="background:var(--gris-medio)"></div>
+      <div id="detalle-revision" class="panel" style="background:var(--gris-oscuro); padding: 0"></div>
+
+      <div class="btn-row">
+        <button type="button" class="btn btn-warning" id="btn-rechazar">❌ Rechazar</button>
+        <button type="button" class="btn btn-success" id="btn-aprobar-rev">✅ Aprobar</button>
+      </div>
+
+      <div id="comentarios-rechazo" style="display:none; margin-top:15px">
+        <label>Motivo del rechazo</label>
+        <textarea id="comentarios-texto" placeholder="Explicá qué hay que modificar..."></textarea>
+        <div class="btn-row">
+          <button type="button" class="btn btn-danger" id="btn-confirmar-rechazo">Confirmar rechazo</button>
         </div>
       </div>
     </div>
-    
-    <!-- Área de revisión -->
-    <div id="area-revision" style="display:none; margin-top:20px">
-      <div class="section-title">📋 Revisión de la Compra</div>
-      
-      <!-- Info del borrador -->
-      <div id="info-borrador" style="background:var(--gris-panel); padding:15px; border-radius:4px; margin-bottom:20px">
-        <!-- Se llena dinámicamente -->
-      </div>
-      
-      <!-- Detalle de proveedores -->
-      <div id="detalle-revision">
-        <!-- Se llena dinámicamente -->
-      </div>
-      
-      <!-- Acciones de aprobación -->
-      <div class="btn-row" style="margin-top:20px">
-        <button id="btn-rechazar" onclick="rechazarBorrador()" class="btn" style="background:var(--amarillo); color:var(--gris-oscuro)">❌ Rechazar</button>
-        <button id="btn-aprobar" onclick="aprobarBorrador()" class="btn btn-success">✅ Aprobar</button>
-      </div>
-      
-      <!-- Campo para comentarios de rechazo -->
-      <div id="comentarios-rechazo" style="display:none; margin-top:15px">
-        <label>Comentarios (opcional)</label>
-        <textarea id="comentarios-texto" placeholder="Explicá qué hay que modificar..." style="height:80px; resize:vertical"></textarea>
-      </div>
-    </div>
-    
-    <!-- Estado después de aprobar/rechazar -->
-    <div id="resultado-revision" style="display:none; text-align:center; margin-top:20px">
-      <!-- Se llena dinámicamente -->
-    </div>
+
+    <div id="resultado-revision" style="display:none; text-align:center; margin-top:20px"></div>
   </div>
 </div>
 
-<!-- ═══════════════════════════════════════
-     PÁGINA: PENDIENTES  
-═══════════════════════════════════════ -->
-<div class="page" id="page-pendientes" style="display:none">
-  <div class="section-title">⏳ Pedidos Pendientes</div>
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- PAGE: PENDIENTES                                             -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div class="page" id="page-pendientes">
   <div class="panel">
-    <div style="text-align:center; padding:40px; color:var(--gris-texto)">
-      <div style="font-size:48px; margin-bottom:16px">⏳</div>
-      <div style="font-size:18px; margin-bottom:8px">Función en desarrollo</div>
-      <div>Los pedidos pendientes aparecerán aquí</div>
-      <button onclick="migrarPendientesABorradores()" style="background:var(--amarillo); color:var(--gris-oscuro); border:none; padding:10px 20px; border-radius:4px; cursor:pointer; margin-top:15px">
-        📦 Migrar pendientes a borradores
-      </button>
+    <h2>Pedidos Pendientes</h2>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px">
+      <button class="btn btn-info btn-sm" type="button" id="btn-recargar-pendientes">🔄 Recargar</button>
+      <button class="btn btn-warning btn-sm" type="button" id="btn-migrar-pendientes">↪️ Migrar a Borradores</button>
+    </div>
+    <div id="pendientes-list">
+      <p style="text-align:center; color:var(--gris-texto); padding: 20px">Cargando...</p>
     </div>
   </div>
 </div>
 
-<!-- ═══════════════════════════════════════
-     PÁGINA: HISTORIAL
-═══════════════════════════════════════ -->
-<div class="page" id="page-historial" style="display:none">
-  <div class="section-title">📚 Historial de Compras</div>
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- PAGE: HISTORIAL                                              -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div class="page" id="page-historial">
   <div class="panel">
-    <div style="text-align:center; padding:40px; color:var(--gris-texto)">
-      <div style="font-size:48px; margin-bottom:16px">📚</div>
-      <div style="font-size:18px; margin-bottom:8px">Función en desarrollo</div>
-      <div>El historial de compras aparecerá aquí</div>
+    <h2>Historial de Compras Aprobadas</h2>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px">
+      <button class="btn btn-info btn-sm" type="button" id="btn-recargar-historial">🔄 Recargar</button>
+      <button class="btn btn-warning btn-sm" type="button" id="btn-export-historial">⬇️ Exportar CSV</button>
+    </div>
+    <div id="historial-list">
+      <p style="text-align:center; color:var(--gris-texto); padding: 20px">Cargando...</p>
     </div>
   </div>
 </div>
 
+<!-- DEBUG PANEL (solo desktop) -->
+<div class="debug-panel" id="debug-panel" title="Click para expandir">
+  <span id="debug-summary">⚙️ DEBUG</span>
 </div>
 
 <script>
-// ═══════════════════════════════════════════════════════════
-// VARIABLES GLOBALES
-// ═══════════════════════════════════════════════════════════
-let DB = [];
-let PROVEEDORES = [];
-let FAMILIAS = [];
-let pedidoActual = [];
-let productoSeleccionado = null;
-let proveedorActual = '';
-let previaMasiva = [];
+'use strict';
 
-// ═══════════════════════════════════════════════════════════
-// CARGA DE DATOS
-// ═══════════════════════════════════════════════════════════
-async function loadData() {
+// ═══════════════════════════════════════════════════════════════════
+// MAXIFER COMPRAS v3.0 — Reescritura limpia
+// ═══════════════════════════════════════════════════════════════════
+
+// ─── Constantes ────────────────────────────────────────────────────
+const APP_VERSION = '3.0';
+const STORAGE_PREFIX = 'MAXIFER_COMPRAS_';
+const KEY_BORRADORES = STORAGE_PREFIX + 'borradores';
+const KEY_PENDIENTES = STORAGE_PREFIX + 'pendientes';
+const KEY_HISTORIAL = STORAGE_PREFIX + 'historial';
+const KEY_HIST_CANTIDADES = STORAGE_PREFIX + 'hist_cantidades'; // {numero: ultimaCantidad}
+const KEY_CONTADOR_DIA = STORAGE_PREFIX + 'contador_dia';      // {fecha: 'YYMMDD', n: 0}
+
+const PRODUCTOS_URL_RELATIVA = 'productos.json';
+// Fallback absoluto a GitHub Pages (por si la app se abre desde un origin raro)
+const PRODUCTOS_URL_FALLBACK = 'https://maxifercotizador.github.io/Presupuestador/productos.json';
+
+const VENDEDORES = {
+  'Maximiliano Gordillo': '11-5040-8378',
+  'Micky': '11-6486-5752',
+  'Victor Gordillo': '11-4936-7336',
+};
+
+// ─── Estado global ────────────────────────────────────────────────
+const State = {
+  DB: [],            // productos cargados
+  PROVEEDORES: [],
+  FAMILIAS: [],
+  proveedorActual: '',
+  productosDelProveedor: [],  // subset filtrado por proveedor activo
+  pedidoActual: [],  // [{numero, codprov, descripcion, cantidad, precio, familia, min}]
+  productoSeleccionado: null,
+  previaMasiva: [],  // [{codigo, cantidad, producto, encontrado, ultimaCant}]
+  borradorActualId: null, // id del borrador siendo editado/revisado
+  modoActual: 'manual',
+  paginaActual: 'nuevo',
+  busquedaTimer: null,
+  micRecognition: null,
+  micActivo: false,
+  debugLogs: [],
+};
+
+// ─── Logging defensivo ────────────────────────────────────────────
+function log(level, ...args) {
+  const entry = { t: new Date().toISOString(), level, msg: args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ') };
+  State.debugLogs.push(entry);
+  if (State.debugLogs.length > 100) State.debugLogs.shift();
+  if (level === 'error') console.error('[MAXIFER]', ...args);
+  else if (level === 'warn') console.warn('[MAXIFER]', ...args);
+  else console.log('[MAXIFER]', ...args);
+  updateDebugPanel();
+}
+
+window.addEventListener('error', (e) => {
+  log('error', 'Uncaught:', e.message, 'at', e.filename + ':' + e.lineno);
+  toast('Error: ' + e.message, 'error');
+});
+window.addEventListener('unhandledrejection', (e) => {
+  log('error', 'Unhandled promise:', e.reason);
+  toast('Error async: ' + (e.reason?.message || e.reason), 'error');
+});
+
+// ─── DOM helper seguro ────────────────────────────────────────────
+function $(id) {
+  const el = document.getElementById(id);
+  if (!el) log('warn', 'Element not found:', id);
+  return el;
+}
+function $on(id, ev, fn) {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener(ev, fn);
+  else log('warn', 'Cannot attach', ev, 'on missing #' + id);
+}
+
+// ─── Storage seguro ───────────────────────────────────────────────
+function lsGet(key, fallback) {
   try {
-    console.log('🔄 Cargando productos...');
-    const response = await fetch('productos.json', { cache: 'no-cache' });
-    if (!response.ok) throw new Error('HTTP ' + response.status);
-    
-    const data = await response.json();
-    DB = data.map(p => ({ ...p, id: p.numero }));
-    
-    console.log('✅ Productos cargados:', DB.length);
-    return DB;
-  } catch (error) {
-    console.error('❌ Error cargando productos:', error);
-    
-    // Mostrar error en la interfaz
-    document.body.innerHTML = `
-      <div style="padding:40px; text-align:center; color:var(--rojo)">
-        <h2>Error cargando datos</h2>
-        <p>No se pudo cargar productos.json: ${error.message}</p>
-        <p>Asegurate de que el archivo esté disponible.</p>
-      </div>
-    `;
-    throw error;
+    const v = localStorage.getItem(key);
+    if (v === null) return fallback;
+    return JSON.parse(v);
+  } catch (e) {
+    log('warn', 'lsGet failed for', key, e);
+    return fallback;
+  }
+}
+function lsSet(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+    return true;
+  } catch (e) {
+    log('error', 'lsSet failed for', key, e);
+    toast('No se pudo guardar (storage lleno?)', 'error');
+    return false;
   }
 }
 
+// ─── Normalización (accent-insensitive como tu consultor) ─────────
+function normalizar(s) {
+  if (!s) return '';
+  return String(s).toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ').trim();
+}
+
+// ─── Format ───────────────────────────────────────────────────────
+function fmtMoney(n) {
+  const num = Number(n) || 0;
+  return '$' + num.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function fmtFecha(iso) {
+  try {
+    return new Date(iso).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' });
+  } catch { return iso; }
+}
+function fechaCompacta() {
+  const d = new Date();
+  const yy = String(d.getFullYear()).slice(-2);
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return yy + mm + dd;
+}
+
+
+// ═══════════════════════════════════════════════════════════════════
+// CARGA DE DATOS
+// ═══════════════════════════════════════════════════════════════════
+async function loadData() {
+  const urls = [PRODUCTOS_URL_RELATIVA, PRODUCTOS_URL_FALLBACK];
+  let lastError = null;
+
+  for (const url of urls) {
+    try {
+      log('info', 'Cargando', url);
+      $('loader-text').textContent = 'Cargando ' + (url === PRODUCTOS_URL_RELATIVA ? 'productos...' : 'desde GitHub Pages...');
+      const response = await fetch(url, { cache: 'no-cache' });
+      if (!response.ok) throw new Error('HTTP ' + response.status);
+      const data = await response.json();
+      if (!Array.isArray(data)) throw new Error('JSON no es un array');
+      State.DB = data.map(p => ({ ...p, id: p.numero }));
+      log('info', '✅ Cargados', State.DB.length, 'productos desde', url);
+      return State.DB;
+    } catch (error) {
+      log('error', 'Falló carga desde', url, '—', error.message);
+      lastError = error;
+    }
+  }
+  throw lastError || new Error('No se pudo cargar productos.json');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// INICIALIZACIÓN
+// ═══════════════════════════════════════════════════════════════════
 function init() {
-  // Generar listas únicas
-  PROVEEDORES = [...new Set(DB.map(p => p.proveedor))].filter(Boolean).sort();
-  FAMILIAS = [...new Set(DB.map(p => p.familia))].filter(Boolean).sort();
-  
-  console.log(`✅ ${DB.length} productos procesados`);
-  console.log(`✅ ${PROVEEDORES.length} proveedores encontrados:`, PROVEEDORES);
-  console.log(`✅ ${FAMILIAS.length} familias encontradas`);
-  
-  initSelects();
-  updateBorradoresBadge();
-  actualizarBadge();
+  log('info', 'Iniciando app v' + APP_VERSION);
+
+  // Generar listas únicas (case-insensitive dedupe)
+  const provMap = new Map();
+  const famMap = new Map();
+  for (const p of State.DB) {
+    if (p.proveedor) {
+      const k = normalizar(p.proveedor);
+      if (!provMap.has(k)) provMap.set(k, p.proveedor);
+    }
+    if (p.familia) {
+      const k = normalizar(p.familia);
+      if (!famMap.has(k)) famMap.set(k, p.familia);
+    }
+  }
+  State.PROVEEDORES = [...provMap.values()].sort((a,b) => a.localeCompare(b, 'es'));
+  State.FAMILIAS = [...famMap.values()].sort((a,b) => a.localeCompare(b, 'es'));
+
+  log('info', State.PROVEEDORES.length, 'proveedores únicos');
+  log('info', State.FAMILIAS.length, 'familias únicas');
+
+  // Llenar UI
+  renderProveedoresList();
+  renderFamiliasSelect();
+  renderMasivoFamiliasSelect();
+
+  // Wire all event listeners
+  wireEvents();
+
+  // Refresh badges
+  updateBadges();
+
+  log('info', '✅ App lista');
 }
 
-function initSelects() {
-  // Llenar datalist de proveedores
-  const datalist = document.getElementById('proveedores-list');
-  if (datalist) {
-    datalist.innerHTML = '';
-    PROVEEDORES.forEach(p => {
-      const option = document.createElement('option');
-      option.value = p;
-      datalist.appendChild(option);
-    });
+function renderProveedoresList() {
+  const datalist = $('proveedores-list');
+  if (!datalist) return;
+  datalist.innerHTML = '';
+  for (const p of State.PROVEEDORES) {
+    const opt = document.createElement('option');
+    opt.value = p;
+    datalist.appendChild(opt);
   }
+}
 
-  // Llenar select de familias
-  const selFam = document.getElementById('sel-familia');
-  selFam.innerHTML = '<option value="">— Todas —</option>';
-  FAMILIAS.forEach(f => {
-    const o = document.createElement('option');
-    o.value = f;
-    o.textContent = f;
-    selFam.appendChild(o);
+function renderFamiliasSelect() {
+  const sel = $('sel-familia');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">— Todas las familias —</option>';
+  for (const f of State.FAMILIAS) {
+    const opt = document.createElement('option');
+    opt.value = f;
+    opt.textContent = f;
+    sel.appendChild(opt);
+  }
+}
+
+function renderMasivoFamiliasSelect() {
+  const sel = $('masivo-familia');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">— Sin filtro —</option>';
+  for (const f of State.FAMILIAS) {
+    const opt = document.createElement('option');
+    opt.value = f;
+    opt.textContent = f;
+    sel.appendChild(opt);
+  }
+}
+
+
+// ═══════════════════════════════════════════════════════════════════
+// EVENT WIRING (todo en un solo lugar — fácil de debuggear)
+// ═══════════════════════════════════════════════════════════════════
+function wireEvents() {
+  // Tabs principales
+  document.querySelectorAll('.tab').forEach(t => {
+    t.addEventListener('click', () => showPage(t.dataset.page));
+  });
+
+  // Modos en página Nuevo
+  document.querySelectorAll('.modo-tab').forEach(t => {
+    t.addEventListener('click', () => showModo(t.dataset.modo));
+  });
+
+  // Proveedor
+  $on('inp-proveedor', 'input', (e) => onProveedorInput(e.target.value));
+  $on('inp-proveedor', 'change', (e) => onProveedorInput(e.target.value));
+  $on('btn-cambiar-prov', 'click', cambiarProveedor);
+
+  // Búsqueda manual
+  $on('inp-codigo', 'input', (e) => {
+    clearTimeout(State.busquedaTimer);
+    State.busquedaTimer = setTimeout(() => buscarProductos(e.target.value), 180);
+  });
+  $on('inp-codigo', 'keydown', onSearchKeydown);
+  $on('sel-familia', 'change', () => buscarProductos($('inp-codigo')?.value || ''));
+  $on('btn-agregar-item', 'click', agregarItem);
+
+  // Masivo
+  $on('masiva-textarea', 'input', () => {
+    clearTimeout(State.busquedaTimer);
+    State.busquedaTimer = setTimeout(parsearMasivo, 250);
+  });
+  $on('masivo-familia', 'change', parsearMasivo);
+  document.querySelectorAll('.btn-filtro').forEach(b => {
+    b.addEventListener('click', () => aplicarFiltroMasivo(b.dataset.filtro));
+  });
+  $on('btn-aplicar-global', 'click', aplicarCantGlobal);
+  $on('btn-agregar-masivo', 'click', agregarMasivoSeleccionados);
+
+  // Micrófono
+  $on('btn-mic', 'click', toggleMic);
+  $on('btn-mic-procesar', 'click', procesarTranscriptMic);
+  $on('btn-mic-limpiar', 'click', () => { $('mic-transcript').textContent = 'El texto aparecerá acá...'; });
+
+  // Acciones del pedido
+  $on('btn-limpiar', 'click', limpiarPedido);
+  $on('btn-guardar-pendiente', 'click', () => guardarComoPendiente());
+  $on('btn-guardar-borrador', 'click', () => guardarComoBorrador());
+  $on('btn-enviar-aprobacion', 'click', enviarParaAprobacion);
+  $on('btn-aprobar-generar', 'click', aprobarYGenerar);
+
+  // Borradores
+  $on('btn-recargar-borradores', 'click', renderBorradores);
+  $on('btn-debug-borradores', 'click', debugBorradores);
+  $on('btn-limpiar-borradores', 'click', limpiarTodosBorradores);
+
+  // Revisar
+  $on('btn-cargar-revisar', 'click', cargarBorradorParaRevisar);
+  $on('codigo-revisar', 'keydown', (e) => { if (e.key === 'Enter') cargarBorradorParaRevisar(); });
+  $on('btn-rechazar', 'click', () => { $('comentarios-rechazo').style.display = 'block'; });
+  $on('btn-aprobar-rev', 'click', aprobarDesdeRevision);
+  $on('btn-confirmar-rechazo', 'click', confirmarRechazo);
+
+  // Pendientes
+  $on('btn-recargar-pendientes', 'click', renderPendientes);
+  $on('btn-migrar-pendientes', 'click', migrarPendientesABorradores);
+
+  // Historial
+  $on('btn-recargar-historial', 'click', renderHistorial);
+  $on('btn-export-historial', 'click', exportarHistorialCSV);
+
+  // Debug panel
+  $on('debug-panel', 'click', toggleDebugPanel);
+
+  // Cerrar resultados de búsqueda al click afuera
+  document.addEventListener('click', (e) => {
+    const sr = $('search-results');
+    const inp = $('inp-codigo');
+    if (sr && !sr.contains(e.target) && e.target !== inp) {
+      sr.classList.remove('show');
+    }
   });
 }
 
-// ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
 // NAVEGACIÓN
-// ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
 function showPage(pageId) {
-  // Ocultar todas las páginas
-  document.querySelectorAll('.page').forEach(page => {
-    page.classList.remove('active');
-    page.style.display = 'none';
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+
+  const page = $('page-' + pageId);
+  if (page) page.classList.add('active');
+
+  document.querySelectorAll('.tab').forEach(t => {
+    if (t.dataset.page === pageId) t.classList.add('active');
   });
-  
-  // Ocultar todos los tabs
-  document.querySelectorAll('.tab').forEach(tab => {
-    tab.classList.remove('active');
-  });
-  
-  // Mostrar página seleccionada
-  const page = document.getElementById('page-' + pageId);
-  if (page) {
-    page.classList.add('active');
-    page.style.display = 'block';
-  }
-  
-  // Activar tab correspondiente
-  const tab = document.querySelector(`[onclick*="'${pageId}'"]`);
-  if (tab) {
-    tab.classList.add('active');
-  }
+
+  State.paginaActual = pageId;
+
+  // Lazy-load de listas
+  if (pageId === 'borradores') renderBorradores();
+  if (pageId === 'pendientes') renderPendientes();
+  if (pageId === 'historial') renderHistorial();
 }
 
 function showModo(modoId) {
-  // Ocultar todos los modos
-  document.querySelectorAll('.modo-panel').forEach(panel => {
-    panel.classList.remove('active');
-    panel.style.display = 'none';
+  document.querySelectorAll('.modo-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.modo-tab').forEach(t => t.classList.remove('active'));
+
+  const panel = $('modo-' + modoId);
+  if (panel) panel.classList.add('active');
+
+  document.querySelectorAll('.modo-tab').forEach(t => {
+    if (t.dataset.modo === modoId) t.classList.add('active');
   });
-  
-  // Ocultar todos los tabs
-  document.querySelectorAll('.modo-tab').forEach(tab => {
-    tab.classList.remove('active');
-  });
-  
-  // Mostrar modo seleccionado
-  const panel = document.getElementById('modo-' + modoId);
-  if (panel) {
-    panel.classList.add('active');
-    panel.style.display = 'block';
+
+  State.modoActual = modoId;
+}
+
+
+// ═══════════════════════════════════════════════════════════════════
+// PROVEEDOR
+// ═══════════════════════════════════════════════════════════════════
+function onProveedorInput(value) {
+  const v = (value || '').trim();
+  if (!v) {
+    State.proveedorActual = '';
+    State.productosDelProveedor = [];
+    $('panel-agregar').style.display = 'none';
+    $('proveedor-info-wrap').style.display = 'none';
+    return;
   }
-  
-  // Activar tab correspondiente
-  const tab = document.querySelector(`[onclick*="'${modoId}'"]`);
-  if (tab) {
-    tab.classList.add('active');
+
+  // Match case-insensitive contra lista
+  const vNorm = normalizar(v);
+  const match = State.PROVEEDORES.find(p => normalizar(p) === vNorm);
+  if (!match) {
+    // No es un proveedor válido aún; ocultar panel
+    $('panel-agregar').style.display = 'none';
+    $('proveedor-info-wrap').style.display = 'none';
+    return;
+  }
+
+  State.proveedorActual = match;
+  State.productosDelProveedor = State.DB.filter(p => p.proveedor === match);
+  log('info', 'Proveedor seleccionado:', match, '— productos:', State.productosDelProveedor.length);
+
+  // Mostrar info del proveedor activo
+  $('pa-nombre').textContent = match;
+  $('pa-stats').textContent = `${State.productosDelProveedor.length} productos disponibles`;
+  $('proveedor-info-wrap').style.display = 'block';
+
+  // Mostrar panel de agregar
+  $('panel-agregar').style.display = 'block';
+
+  // Resetear búsqueda
+  if ($('inp-codigo')) $('inp-codigo').value = '';
+  if ($('search-results')) $('search-results').classList.remove('show');
+  $('selected-product').style.display = 'none';
+
+  // Si hay items en el pedido y el proveedor cambió, advertir
+  if (State.pedidoActual.length > 0) {
+    const algunoOtroProv = State.pedidoActual.some(it => it.proveedor && it.proveedor !== match);
+    if (algunoOtroProv) {
+      toast('Atención: hay items de otro proveedor en el pedido', 'warning');
+    }
   }
 }
 
-// ═══════════════════════════════════════════════════════════
-// SELECCIÓN DE PROVEEDOR
-// ═══════════════════════════════════════════════════════════
-function onProveedorSelected(prov) {
-  proveedorActual = prov;
-  
-  console.log('Proveedor seleccionado:', prov);
-  
-  // Mostrar/ocultar panel de agregar
-  const panel = document.getElementById('panel-agregar');
-  if (prov) {
-    panel.style.display = 'block';
-  } else {
-    panel.style.display = 'none';
+function cambiarProveedor() {
+  if (State.pedidoActual.length > 0) {
+    if (!confirm('Hay items en el pedido. ¿Querés cambiar de proveedor de todas formas?')) return;
   }
-  
-  // Limpiar selección actual
-  productoSeleccionado = null;
-  document.getElementById('selected-product').style.display = 'none';
-  document.getElementById('inp-codigo').value = '';
-  document.getElementById('inp-cantidad').value = '';
-  document.getElementById('search-results').classList.remove('visible');
-  
-  // Actualizar familias para este proveedor
-  const familiasProveedor = [...new Set(DB.filter(p => p.proveedor === prov).map(p => p.familia))].filter(Boolean).sort();
-  const selFam = document.getElementById('sel-familia');
-  selFam.innerHTML = '<option value="">— Todas —</option>';
-  familiasProveedor.forEach(f => {
-    const o = document.createElement('option');
-    o.value = f;
-    o.textContent = f;
-    selFam.appendChild(o);
-  });
-  
-  // Actualizar familias en carga masiva
-  const mf = document.getElementById('masivo-familia');
-  if (mf) {
-    mf.innerHTML = '<option value="">— Todas las familias del proveedor —</option>';
-    familiasProveedor.forEach(f => {
-      const o = document.createElement('option');
-      o.value = f;
-      o.textContent = f;
-      mf.appendChild(o);
+  $('inp-proveedor').value = '';
+  State.proveedorActual = '';
+  State.productosDelProveedor = [];
+  $('panel-agregar').style.display = 'none';
+  $('proveedor-info-wrap').style.display = 'none';
+  $('inp-proveedor').focus();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// BÚSQUEDA MANUAL
+// ═══════════════════════════════════════════════════════════════════
+function buscarProductos(query) {
+  const sr = $('search-results');
+  if (!sr) return;
+  const q = (query || '').trim();
+  const familia = $('sel-familia')?.value || '';
+
+  if (!State.proveedorActual) {
+    sr.innerHTML = '<div class="search-empty">Elegí primero un proveedor</div>';
+    sr.classList.add('show');
+    return;
+  }
+  if (!q && !familia) {
+    sr.classList.remove('show');
+    return;
+  }
+
+  const qNorm = normalizar(q);
+  let pool = State.productosDelProveedor;
+  if (familia) pool = pool.filter(p => p.familia === familia);
+
+  let results = pool;
+  if (qNorm) {
+    results = pool.filter(p => {
+      return normalizar(p.numero).includes(qNorm)
+        || normalizar(p.codprov).includes(qNorm)
+        || normalizar(p.descripcion).includes(qNorm);
     });
   }
-}
 
-// ═══════════════════════════════════════════════════════════
-// BÚSQUEDA DE PRODUCTOS
-// ═══════════════════════════════════════════════════════════
-function onCodigoInput(val) {
-  const familia = document.getElementById('sel-familia').value;
-  const sr = document.getElementById('search-results');
-  
-  productoSeleccionado = null;
-  document.getElementById('selected-product').style.display = 'none';
+  // Ordenar: matches que empiezan con query primero
+  if (qNorm) {
+    results.sort((a, b) => {
+      const aStart = normalizar(a.numero).startsWith(qNorm) || normalizar(a.codprov).startsWith(qNorm);
+      const bStart = normalizar(b.numero).startsWith(qNorm) || normalizar(b.codprov).startsWith(qNorm);
+      if (aStart && !bStart) return -1;
+      if (!aStart && bStart) return 1;
+      return 0;
+    });
+  }
 
-  if (!val || val.length < 1) {
-    sr.classList.remove('visible');
-    sr.innerHTML = '';
+  results = results.slice(0, 50); // límite
+
+  if (results.length === 0) {
+    sr.innerHTML = '<div class="search-empty">Sin resultados</div>';
+    sr.classList.add('show');
     return;
   }
 
-  let resultados = DB.filter(p =>
-    p.proveedor === proveedorActual &&
-    (String(p.numero).includes(val) || p.descripcion.toLowerCase().includes(val.toLowerCase()))
-  );
-  
-  if (familia) {
-    resultados = resultados.filter(p => p.familia === familia);
-  }
-  
-  resultados = resultados.slice(0, 10);
-
-  if (resultados.length === 0) {
-    sr.innerHTML = '<div style="padding:12px;color:var(--gris-texto);font-size:13px">Sin resultados</div>';
-    sr.classList.add('visible');
-    return;
-  }
-
-  sr.innerHTML = resultados.map(p => `
-    <div class="search-item" onclick="seleccionarProducto('${p.id}')">
-      <div style="font-weight:600; color:var(--rojo-light)">${p.numero}</div>
-      <div style="color:var(--blanco); margin:4px 0">${p.descripcion}</div>
-      <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--gris-texto)">
-        <span>${p.familia}</span>
-        <span style="color:var(--verde)">${p.costo > 0 ? '$' + p.costo.toLocaleString('es-AR', {minimumFractionDigits:2}) : '—'}</span>
+  sr.innerHTML = '';
+  results.forEach((p, idx) => {
+    const div = document.createElement('div');
+    div.className = 'search-item';
+    div.dataset.idx = idx;
+    div.innerHTML = `
+      <div class="si-desc">${escapeHtml(p.descripcion || '—')}</div>
+      <div class="si-meta">
+        <strong>${escapeHtml(p.codprov || '—')}</strong> • Núm: ${escapeHtml(p.numero || '—')} • ${escapeHtml(p.familia || '—')}
+        <span class="si-precio" style="float:right">${fmtMoney(p.precio)}</span>
       </div>
-    </div>
-  `).join('');
-  
-  sr.classList.add('visible');
+    `;
+    div.addEventListener('click', () => seleccionarProducto(p));
+    sr.appendChild(div);
+  });
+  sr.classList.add('show');
 }
 
-function seleccionarProducto(id) {
-  const p = DB.find(x => x.id === id);
-  if (!p) return;
-  
-  productoSeleccionado = p;
-  console.log('Producto seleccionado:', p);
-  
-  document.getElementById('inp-codigo').value = p.numero;
-  document.getElementById('search-results').classList.remove('visible');
+function onSearchKeydown(e) {
+  const sr = $('search-results');
+  if (!sr || !sr.classList.contains('show')) return;
+  const items = [...sr.querySelectorAll('.search-item')];
+  if (!items.length) return;
 
-  // Mostrar detalle del producto
-  document.getElementById('sp-desc').textContent = p.descripcion;
-  document.getElementById('sp-codprov').textContent = p.codigoProv || p.numero;
-  document.getElementById('sp-num').textContent = p.numero;
-  document.getElementById('sp-min').textContent = p.cantMin || '—';
-  document.getElementById('sp-precio').textContent = p.costo > 0 ? '$' + p.costo.toLocaleString('es-AR', {minimumFractionDigits:2}) : '— sin costo';
-  document.getElementById('selected-product').style.display = 'block';
+  let idx = items.findIndex(i => i.classList.contains('highlighted'));
 
-  // Buscar última cantidad del historial
-  const ultima = getUltimaCantidad(p.id);
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    if (idx < items.length - 1) idx++;
+    items.forEach(i => i.classList.remove('highlighted'));
+    items[idx].classList.add('highlighted');
+    items[idx].scrollIntoView({ block: 'nearest' });
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    if (idx > 0) idx--;
+    items.forEach(i => i.classList.remove('highlighted'));
+    items[idx].classList.add('highlighted');
+    items[idx].scrollIntoView({ block: 'nearest' });
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    if (idx >= 0) items[idx].click();
+    else if (items.length === 1) items[0].click();
+  } else if (e.key === 'Escape') {
+    sr.classList.remove('show');
+  }
+}
+
+function seleccionarProducto(p) {
+  State.productoSeleccionado = p;
+  $('search-results').classList.remove('show');
+  $('inp-codigo').value = p.codprov || p.numero || '';
+
+  $('sp-desc').textContent = p.descripcion || '—';
+  $('sp-codprov').textContent = 'Cód. Prov: ' + (p.codprov || '—');
+  $('sp-num').textContent = p.numero || '—';
+  $('sp-fam').textContent = p.familia || '—';
+  $('sp-min').textContent = p.min || '—';
+  $('sp-precio').textContent = fmtMoney(p.precio);
+
+  // Mostrar última cantidad pedida si hay historial
+  const hist = lsGet(KEY_HIST_CANTIDADES, {});
+  const ultima = hist[p.numero];
   if (ultima) {
-    document.getElementById('hint-cant').textContent = `${ultima.cant} uds • ${ultima.fecha} (historial)`;
-    document.getElementById('ultimo-hint').style.display = 'block';
+    $('hint-cant').textContent = `📊 Última cantidad pedida: ${ultima}`;
+    $('ultimo-hint').style.display = 'block';
+    $('inp-cantidad').value = ultima;
   } else {
-    document.getElementById('ultimo-hint').style.display = 'none';
+    $('ultimo-hint').style.display = 'none';
+    $('inp-cantidad').value = p.min || '';
   }
 
-  document.getElementById('inp-cantidad').focus();
+  $('selected-product').style.display = 'block';
+  $('inp-cantidad').focus();
+  $('inp-cantidad').select();
 }
 
-// ═══════════════════════════════════════════════════════════
-// GESTIÓN DEL PEDIDO
-// ═══════════════════════════════════════════════════════════
+function escapeHtml(s) {
+  if (s === null || s === undefined) return '';
+  return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+
+
+// ═══════════════════════════════════════════════════════════════════
+// PEDIDO — agregar / editar / eliminar items
+// ═══════════════════════════════════════════════════════════════════
 function agregarItem() {
-  if (!productoSeleccionado) {
-    toast('Seleccioná un producto primero', 'error');
+  if (!State.productoSeleccionado) {
+    toast('Seleccioná un producto primero', 'warning');
     return;
   }
-  
-  let cant = parseInt(document.getElementById('inp-cantidad').value);
-
+  const cantStr = $('inp-cantidad').value;
+  const cant = parseInt(cantStr, 10);
   if (!cant || cant <= 0) {
-    const ultima = getUltimaCantidad(productoSeleccionado.id);
-    if (ultima) {
-      cant = ultima.cant;
-    } else {
-      toast('Ingresá una cantidad válida', 'error');
-      return;
-    }
+    toast('Ingresá una cantidad válida', 'warning');
+    return;
   }
 
-  // Verificar si ya está en el pedido
-  const existe = pedidoActual.find(i => i.id === productoSeleccionado.id);
-  if (existe) {
-    existe.cantidad = cant;
-    toast('Cantidad actualizada');
+  const p = State.productoSeleccionado;
+  const existente = State.pedidoActual.find(it => it.numero === p.numero);
+  if (existente) {
+    existente.cantidad += cant;
+    toast(`Sumado ${cant} a item existente (${existente.cantidad} total)`, 'info');
   } else {
-    pedidoActual.push({ ...productoSeleccionado, cantidad: cant });
-    toast('Producto agregado ✓');
+    State.pedidoActual.push({
+      numero: p.numero,
+      codprov: p.codprov || '',
+      descripcion: p.descripcion || '',
+      familia: p.familia || '',
+      proveedor: p.proveedor || State.proveedorActual,
+      cantidad: cant,
+      precio: Number(p.precio) || 0,
+      min: p.min || null,
+    });
+    toast(`✓ Agregado: ${p.codprov || p.numero}`, 'success');
   }
 
-  // Guardar en historial
-  saveToHistorial(productoSeleccionado.id, cant);
+  // Guardar última cantidad en historial de cantidades
+  const hist = lsGet(KEY_HIST_CANTIDADES, {});
+  hist[p.numero] = cant;
+  lsSet(KEY_HIST_CANTIDADES, hist);
 
-  // Reset
-  limpiarSeleccion();
-  renderTabla();
+  // Reset y refresh
+  State.productoSeleccionado = null;
+  $('selected-product').style.display = 'none';
+  $('inp-codigo').value = '';
+  $('inp-codigo').focus();
+  renderTablaPedido();
 }
 
-function eliminarItem(id) {
-  pedidoActual = pedidoActual.filter(i => i.id !== id);
-  renderTabla();
-  toast('Producto eliminado');
+function eliminarItem(idx) {
+  State.pedidoActual.splice(idx, 1);
+  renderTablaPedido();
 }
 
-function actualizarCantidad(id, val) {
-  const item = pedidoActual.find(i => i.id === id);
-  if (item) {
-    item.cantidad = parseInt(val) || 0;
-    actualizarTotales();
-    
-    if (item.cantidad > 0) {
-      saveToHistorial(id, item.cantidad);
-    }
+function actualizarCantidadItem(idx, nuevaCant) {
+  const c = parseInt(nuevaCant, 10);
+  if (!c || c <= 0) {
+    eliminarItem(idx);
+    return;
   }
-}
-
-function limpiarSeleccion() {
-  document.getElementById('inp-codigo').value = '';
-  document.getElementById('inp-cantidad').value = '';
-  productoSeleccionado = null;
-  document.getElementById('selected-product').style.display = 'none';
-  document.getElementById('search-results').classList.remove('visible');
-  document.getElementById('ultimo-hint').style.display = 'none';
+  State.pedidoActual[idx].cantidad = c;
+  renderTablaPedido();
 }
 
 function limpiarPedido() {
-  if (pedidoActual.length > 0 && !confirm('¿Estás seguro de limpiar todo el pedido?')) {
+  if (State.pedidoActual.length === 0) {
+    toast('El pedido ya está vacío', 'info');
     return;
   }
-  
-  pedidoActual = [];
-  renderTabla();
-  toast('Pedido limpiado');
+  if (!confirm(`¿Vaciar pedido de ${State.pedidoActual.length} items?`)) return;
+  State.pedidoActual = [];
+  State.borradorActualId = null;
+  renderTablaPedido();
+  toast('Pedido vacío', 'info');
 }
 
-// ═══════════════════════════════════════════════════════════
-// RENDERIZADO DE TABLA
-// ═══════════════════════════════════════════════════════════
-function renderTabla() {
-  const tbody = document.getElementById('tabla-body');
-  const panelTabla = document.getElementById('panel-tabla');
+function renderTablaPedido() {
+  const tbody = $('tabla-body');
+  if (!tbody) return;
 
-  if (pedidoActual.length === 0) {
-    panelTabla.style.display = 'none';
+  // Mostrar/ocultar panel-tabla
+  $('panel-tabla').style.display = State.pedidoActual.length > 0 ? 'block' : 'none';
+
+  if (State.pedidoActual.length === 0) {
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="8">No hay items en el pedido</td></tr>';
+    actualizarTotales();
     return;
   }
 
-  panelTabla.style.display = 'block';
-  
-  tbody.innerHTML = pedidoActual.map(item => `
-    <tr>
-      <td>
-        <div style="font-family:monospace; font-weight:600; color:var(--rojo-light)">${item.numero}</div>
-        <div style="font-size:11px; color:var(--gris-texto)">${item.codigoProv || item.numero}</div>
-      </td>
-      <td>
-        <div style="font-weight:500">${item.descripcion}</div>
-      </td>
-      <td>
-        <span style="background:var(--gris-medio); padding:2px 6px; border-radius:2px; font-size:11px">${item.familia}</span>
-      </td>
-      <td style="text-align:center">
-        <input type="number" value="${item.cantidad}" min="1" style="width:80px; text-align:center; padding:6px"
-          onchange="actualizarCantidad('${item.id}', this.value)">
-      </td>
-      <td style="text-align:right; font-family:monospace">
-        ${item.costo > 0 ? '$' + item.costo.toLocaleString('es-AR', {minimumFractionDigits:2}) : '—'}
-      </td>
-      <td style="text-align:right; font-family:monospace; font-weight:600; color:var(--verde)" id="tot-${item.id}">
-        $${(item.costo * item.cantidad).toLocaleString('es-AR', {minimumFractionDigits:2})}
-      </td>
-      <td style="text-align:center">
-        <button onclick="eliminarItem('${item.id}')" style="background:var(--rojo); color:white; border:none; padding:4px 8px; border-radius:2px; cursor:pointer">✕</button>
-      </td>
-    </tr>
-  `).join('');
+  tbody.innerHTML = '';
+  State.pedidoActual.forEach((it, idx) => {
+    const tr = document.createElement('tr');
+    tr.className = 'row-pedido';
+    const subtotal = (Number(it.cantidad) || 0) * (Number(it.precio) || 0);
+    tr.innerHTML = `
+      <td>${idx + 1}</td>
+      <td>${escapeHtml(it.codprov || '—')}</td>
+      <td>${escapeHtml(it.numero || '—')}</td>
+      <td>${escapeHtml(it.descripcion || '—')}</td>
+      <td class="num"><input type="number" class="qty-input" data-idx="${idx}" value="${it.cantidad}" min="1"></td>
+      <td class="num">${fmtMoney(it.precio)}</td>
+      <td class="num">${fmtMoney(subtotal)}</td>
+      <td class="center"><button class="btn btn-sm btn-danger" data-eliminar="${idx}" type="button">×</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  tbody.querySelectorAll('input.qty-input').forEach(inp => {
+    inp.addEventListener('change', e => actualizarCantidadItem(parseInt(e.target.dataset.idx, 10), e.target.value));
+  });
+  tbody.querySelectorAll('button[data-eliminar]').forEach(btn => {
+    btn.addEventListener('click', e => eliminarItem(parseInt(e.currentTarget.dataset.eliminar, 10)));
+  });
 
   actualizarTotales();
 }
 
 function actualizarTotales() {
-  const items = pedidoActual.length;
-  const unidades = pedidoActual.reduce((s, i) => s + i.cantidad, 0);
-  const costo = pedidoActual.reduce((s, i) => s + i.costo * i.cantidad, 0);
-
-  document.getElementById('tot-items').textContent = items;
-  document.getElementById('tot-unidades').textContent = unidades.toLocaleString('es-AR');
-  document.getElementById('tot-costo').textContent = '$' + costo.toLocaleString('es-AR', {minimumFractionDigits:2});
-
-  // Actualizar subtotales individuales
-  pedidoActual.forEach(item => {
-    const el = document.getElementById('tot-' + item.id);
-    if (el) {
-      el.textContent = '$' + (item.costo * item.cantidad).toLocaleString('es-AR', {minimumFractionDigits:2});
-    }
-  });
+  const items = State.pedidoActual.length;
+  const unidades = State.pedidoActual.reduce((s, it) => s + (Number(it.cantidad) || 0), 0);
+  const costo = State.pedidoActual.reduce((s, it) => s + (Number(it.cantidad) || 0) * (Number(it.precio) || 0), 0);
+  if ($('tot-items')) $('tot-items').textContent = items;
+  if ($('tot-unidades')) $('tot-unidades').textContent = unidades.toLocaleString('es-AR');
+  if ($('tot-costo')) $('tot-costo').textContent = fmtMoney(costo);
 }
 
-// ═══════════════════════════════════════════════════════════
-// HISTORIAL LOCAL
-// ═══════════════════════════════════════════════════════════
-function saveToHistorial(productId, cantidad) {
-  const historial = JSON.parse(localStorage.getItem('maxifer_historial') || '{}');
-  historial[productId] = {
-    cant: cantidad,
-    fecha: new Date().toLocaleDateString('es-AR'),
-    fuente: 'app'
-  };
-  localStorage.setItem('maxifer_historial', JSON.stringify(historial));
-}
 
-function getUltimaCantidad(productId) {
-  const historial = JSON.parse(localStorage.getItem('maxifer_historial') || '{}');
-  return historial[productId] || null;
-}
-
-// ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
 // CARGA MASIVA
-// ═══════════════════════════════════════════════════════════
-function parsearMasivo(texto) {
-  if (!texto.trim()) {
-    document.getElementById('preview-masiva').classList.remove('visible');
-    document.getElementById('cant-global-row').style.display = 'none';
-    document.getElementById('seleccion-masiva-row').style.display = 'none';
-    previaMasiva = [];
+// ═══════════════════════════════════════════════════════════════════
+function parsearMasivo() {
+  const ta = $('masiva-textarea');
+  if (!ta) return;
+  const text = ta.value || '';
+  const familia = $('masivo-familia')?.value || '';
+
+  if (!State.proveedorActual) {
+    $('preview-masiva').style.display = 'none';
+    $('seleccion-masiva-row').style.display = 'none';
+    $('cant-global-row').style.display = 'none';
     return;
   }
 
-  // Separar por salto de línea, coma, guión o espacio
-  const tokens = texto
-    .split(/[\n,\-\s]+/)
-    .map(t => t.trim())
-    .filter(t => t.length > 0);
+  // Parser: split por líneas. Cada línea puede ser "codigo cantidad" o solo "codigo"
+  // Acepta separadores: espacio, tab, ; , x (entre código y cantidad)
+  const lineas = text.split(/[\r\n]+/).map(l => l.trim()).filter(Boolean);
 
-  previaMasiva = [];
-  for (const token of tokens) {
-    // Buscar el número directamente
-    const num = token.replace(/\D/g, ''); // Extraer solo números
-    if (!num) continue;
-
-    const masivoFam = document.getElementById('masivo-familia').value;
-    const candidatos = DB.filter(p =>
-      p.proveedor === proveedorActual &&
-      String(p.numero) === num &&
-      (!masivoFam || p.familia === masivoFam)
-    );
-
-    if (candidatos.length === 0) {
-      previaMasiva.push({ numero: num, prod: null, cantidad: 0, estado: 'error' });
-    } else {
-      const prod = candidatos[0];
-      const ultimaCant = getUltimaCantidad(prod.id);
-      
-      // Pre-llenar automáticamente con cantidad del historial
-      let cantidadInicial = 0;
-      let estado = 'warn';
-      
-      if (ultimaCant) {
-        cantidadInicial = ultimaCant.cant;
-        estado = 'ok';
-      }
-      
-      previaMasiva.push({
-        numero: num,
-        prod,
-        cantidad: cantidadInicial, // Pre-llenado automático
-        estado: estado,
-        seleccionado: true // Por defecto seleccionado
-      });
-    }
+  if (lineas.length === 0) {
+    State.previaMasiva = [];
+    $('preview-masiva').style.display = 'none';
+    $('seleccion-masiva-row').style.display = 'none';
+    $('cant-global-row').style.display = 'none';
+    return;
   }
 
-  // Deduplicar por número
-  const vistos = new Set();
-  previaMasiva = previaMasiva.filter(item => {
-    if (vistos.has(item.numero)) return false;
-    vistos.add(item.numero);
-    return true;
+  const hist = lsGet(KEY_HIST_CANTIDADES, {});
+  let pool = State.productosDelProveedor;
+  if (familia) pool = pool.filter(p => p.familia === familia);
+
+  State.previaMasiva = lineas.map(linea => {
+    // Separar código de cantidad. Soporta: "1234 50", "1234x50", "1234,50", "1234;50"
+    const m = linea.match(/^([^\s,;x]+(?:\s+[^\s,;x]+)*?)[\s,;x]+(\d+)\s*$/i);
+    let codigo, cantidad;
+    if (m) {
+      codigo = m[1].trim();
+      cantidad = parseInt(m[2], 10);
+    } else {
+      codigo = linea.trim();
+      cantidad = null;
+    }
+
+    const cNorm = normalizar(codigo);
+    // Buscar en pool: match exacto en numero o codprov primero, luego parcial
+    let prod = pool.find(p => normalizar(p.numero) === cNorm || normalizar(p.codprov) === cNorm);
+    if (!prod) {
+      prod = pool.find(p => normalizar(p.codprov).startsWith(cNorm));
+    }
+
+    const ultimaCant = prod ? hist[prod.numero] : null;
+
+    return {
+      codigoOriginal: codigo,
+      codigo,
+      cantidad: cantidad ?? (ultimaCant || null),
+      cantidadManual: cantidad !== null,
+      ultimaCant,
+      producto: prod || null,
+      encontrado: !!prod,
+      seleccionado: !!prod,
+    };
   });
 
   renderPreviewMasivo();
 }
 
 function renderPreviewMasivo() {
-  const container = document.getElementById('preview-lista');
-  const preview = document.getElementById('preview-masiva');
-  const countEl = document.getElementById('preview-count');
-  const cantRow = document.getElementById('cant-global-row');
-  const seleccionRow = document.getElementById('seleccion-masiva-row');
+  const wrap = $('preview-masiva');
+  const lista = $('preview-lista');
+  const counter = $('preview-count');
+  if (!wrap || !lista) return;
 
-  if (!previaMasiva.length) {
-    preview.classList.remove('visible');
-    cantRow.style.display = 'none';
-    seleccionRow.style.display = 'none';
+  if (State.previaMasiva.length === 0) {
+    wrap.style.display = 'none';
     return;
   }
 
-  preview.classList.add('visible');
-  cantRow.style.display = 'flex';
-  seleccionRow.style.display = 'block';
+  wrap.style.display = 'block';
+  $('seleccion-masiva-row').style.display = 'flex';
+  $('cant-global-row').style.display = 'flex';
 
-  const ok = previaMasiva.filter(i => i.estado !== 'error').length;
-  const err = previaMasiva.filter(i => i.estado === 'error').length;
-  const conCantidad = previaMasiva.filter(i => i.cantidad > 0).length;
-  const seleccionados = previaMasiva.filter(i => i.seleccionado && i.estado !== 'error').length;
-  
-  countEl.textContent = `${ok} encontrados${err ? ' · ' + err + ' no encontrados' : ''} · ${conCantidad} con cantidad · ${seleccionados} seleccionados`;
+  const total = State.previaMasiva.length;
+  const found = State.previaMasiva.filter(p => p.encontrado).length;
+  const sel = State.previaMasiva.filter(p => p.seleccionado).length;
+  counter.textContent = `${sel} seleccionados / ${found} encontrados / ${total} total`;
 
-  container.innerHTML = previaMasiva.map((item, idx) => {
-    if (item.estado === 'error') {
-      return `<div class="preview-item">
-        <div class="pi-num" style="color:var(--rojo)">${item.numero}</div>
-        <div class="pi-desc" style="color:var(--gris-texto)">No encontrado en ${proveedorActual}</div>
-        <span class="pi-status pi-err">ERROR</span>
-      </div>`;
+  lista.innerHTML = '';
+  State.previaMasiva.forEach((it, idx) => {
+    const div = document.createElement('div');
+    div.className = 'preview-item' + (it.encontrado ? '' : ' no-encontrado');
+
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = it.seleccionado;
+    cb.disabled = !it.encontrado;
+    cb.addEventListener('change', e => {
+      it.seleccionado = e.target.checked;
+      renderPreviewMasivo();
+    });
+
+    const info = document.createElement('div');
+    info.className = 'pi-info';
+    if (it.encontrado) {
+      const p = it.producto;
+      info.innerHTML = `
+        <div class="pi-codigo">${escapeHtml(p.codprov || p.numero)} <span style="font-weight:400;color:var(--gris-texto);font-size:11px">[${escapeHtml(p.numero)}]</span></div>
+        <div class="pi-desc">${escapeHtml(p.descripcion || '—')} • ${fmtMoney(p.precio)}</div>
+        ${it.ultimaCant ? `<div class="pi-hint">📊 Última: ${it.ultimaCant}</div>` : ''}
+      `;
+    } else {
+      info.innerHTML = `
+        <div class="pi-codigo pi-bad">⚠️ ${escapeHtml(it.codigoOriginal)}</div>
+        <div class="pi-desc pi-bad">No encontrado en este proveedor</div>
+      `;
     }
-    
-    const cantidadStyle = item.cantidad > 0 && item.estado === 'ok' ? 
-      'background: rgba(39, 174, 96, 0.1); border-color: var(--verde);' : '';
-    
-    return `<div class="preview-item has-checkbox">
-      <input type="checkbox" class="item-checkbox" ${item.seleccionado ? 'checked' : ''} 
-        onchange="previaMasiva[${idx}].seleccionado = this.checked; actualizarContadorSeleccionados()">
-      <div class="pi-num">${item.numero}</div>
-      <div class="pi-desc">${item.prod.descripcion}</div>
-      <input type="number" class="pi-cant" 
-        style="min-height:unset;padding:4px 6px;width:70px;${cantidadStyle}"
-        value="${item.cantidad || ''}" min="1" placeholder="Cant."
-        onchange="previaMasiva[${idx}].cantidad=parseInt(this.value)||0">
-      <span class="pi-status ${item.estado === 'ok' ? 'pi-ok' : 'pi-warn'}">${
-        item.estado === 'ok' ? 
-        (item.cantidad > 0 ? `✓ HIST (${item.cantidad})` : '✓ HIST') : 
-        '⚠ SIN HIST'
-      }</span>
-    </div>`;
-  }).join('');
-}
 
-function actualizarContadorSeleccionados() {
-  const countEl = document.getElementById('preview-count');
-  const ok = previaMasiva.filter(i => i.estado !== 'error').length;
-  const err = previaMasiva.filter(i => i.estado === 'error').length;
-  const conCantidad = previaMasiva.filter(i => i.cantidad > 0).length;
-  const seleccionados = previaMasiva.filter(i => i.seleccionado && i.estado !== 'error').length;
-  
-  countEl.textContent = `${ok} encontrados${err ? ' · ' + err + ' no encontrados' : ''} · ${conCantidad} con cantidad · ${seleccionados} seleccionados`;
-}
+    const cantInp = document.createElement('input');
+    cantInp.type = 'number';
+    cantInp.min = '1';
+    cantInp.value = it.cantidad ?? '';
+    cantInp.placeholder = 'Cant.';
+    cantInp.disabled = !it.encontrado;
+    cantInp.addEventListener('input', e => {
+      const v = parseInt(e.target.value, 10);
+      it.cantidad = v > 0 ? v : null;
+      it.cantidadManual = true;
+      renderPreviewMasivo();
+    });
 
-// Funciones de selección masiva
-function seleccionarTodos() {
-  previaMasiva.forEach((item, idx) => {
-    if (item.estado !== 'error') {
-      item.seleccionado = true;
-      const checkbox = document.querySelectorAll('.item-checkbox')[idx];
-      if (checkbox) checkbox.checked = true;
-    }
+    const idxLabel = document.createElement('div');
+    idxLabel.style.cssText = 'font-size:11px; color:var(--gris-texto); width: 24px; text-align:right';
+    idxLabel.textContent = '#' + (idx + 1);
+
+    div.appendChild(cb);
+    div.appendChild(info);
+    div.appendChild(cantInp);
+    div.appendChild(idxLabel);
+    lista.appendChild(div);
   });
-  actualizarContadorSeleccionados();
 }
 
-function deseleccionarTodos() {
-  previaMasiva.forEach((item, idx) => {
-    item.seleccionado = false;
-    const checkbox = document.querySelectorAll('.item-checkbox')[idx];
-    if (checkbox) checkbox.checked = false;
-  });
-  actualizarContadorSeleccionados();
+function aplicarFiltroMasivo(filtro) {
+  const items = State.previaMasiva;
+  switch (filtro) {
+    case 'todos':
+      items.forEach(i => { if (i.encontrado) i.seleccionado = true; });
+      break;
+    case 'ninguno':
+      items.forEach(i => i.seleccionado = false);
+      break;
+    case 'con-historial':
+      items.forEach(i => i.seleccionado = !!i.ultimaCant);
+      break;
+    case 'sin-historial':
+      items.forEach(i => i.seleccionado = i.encontrado && !i.ultimaCant);
+      break;
+    case 'con-cantidad':
+      items.forEach(i => i.seleccionado = i.encontrado && i.cantidad > 0);
+      break;
+    case 'sin-cantidad':
+      items.forEach(i => i.seleccionado = i.encontrado && !(i.cantidad > 0));
+      break;
+    case 'encontrados':
+      items.forEach(i => i.seleccionado = i.encontrado);
+      break;
+    case 'no-encontrados':
+      items.forEach(i => i.seleccionado = !i.encontrado);
+      break;
+  }
+  renderPreviewMasivo();
 }
 
-function seleccionarConHistorial() {
-  previaMasiva.forEach((item, idx) => {
-    if (item.estado === 'ok') {
-      item.seleccionado = true;
-      const checkbox = document.querySelectorAll('.item-checkbox')[idx];
-      if (checkbox) checkbox.checked = true;
-    }
-  });
-  actualizarContadorSeleccionados();
-}
-
-function seleccionarSinHistorial() {
-  previaMasiva.forEach((item, idx) => {
-    if (item.estado === 'warn') {
-      item.seleccionado = true;
-      const checkbox = document.querySelectorAll('.item-checkbox')[idx];
-      if (checkbox) checkbox.checked = true;
-    }
-  });
-  actualizarContadorSeleccionados();
-}
-
-function seleccionarConCantidad() {
-  previaMasiva.forEach((item, idx) => {
-    if (item.estado !== 'error' && item.cantidad > 0) {
-      item.seleccionado = true;
-      const checkbox = document.querySelectorAll('.item-checkbox')[idx];
-      if (checkbox) checkbox.checked = true;
-    }
-  });
-  actualizarContadorSeleccionados();
-}
-
-function seleccionarSinCantidad() {
-  previaMasiva.forEach((item, idx) => {
-    if (item.estado !== 'error' && (!item.cantidad || item.cantidad === 0)) {
-      item.seleccionado = true;
-      const checkbox = document.querySelectorAll('.item-checkbox')[idx];
-      if (checkbox) checkbox.checked = true;
-    }
-  });
-  actualizarContadorSeleccionados();
-}
-
-function aplicarCantGlobalSeleccionados() {
-  const cant = parseInt(document.getElementById('cant-global').value);
-  const sobrescribir = document.getElementById('sobrescribir-check').checked;
-  
-  if (!cant || cant <= 0) {
-    toast('Ingresá una cantidad válida', 'error');
+function aplicarCantGlobal() {
+  const v = parseInt($('cant-global').value, 10);
+  if (!v || v <= 0) {
+    toast('Ingresá una cantidad válida', 'warning');
     return;
   }
-  
-  let aplicados = 0;
-  previaMasiva.forEach((item, idx) => {
-    if (item.seleccionado && item.estado !== 'error') {
-      if (!item.cantidad || item.cantidad === 0 || sobrescribir) {
-        item.cantidad = cant;
-        aplicados++;
-        
-        const cantInput = document.querySelectorAll('.pi-cant')[idx];
-        if (cantInput) cantInput.value = cant;
+  const sobrescribir = $('sobrescribir-check').checked;
+  let n = 0;
+  State.previaMasiva.forEach(it => {
+    if (it.seleccionado && it.encontrado) {
+      if (sobrescribir || !it.cantidad) {
+        it.cantidad = v;
+        n++;
       }
     }
   });
-  
-  if (aplicados > 0) {
-    toast(`Cantidad ${cant} aplicada a ${aplicados} productos`);
-  } else {
-    toast('No se aplicó cantidad a ningún producto', 'warn');
-  }
+  renderPreviewMasivo();
+  toast(`Aplicado a ${n} items`, 'success');
 }
 
 function agregarMasivoSeleccionados() {
-  const seleccionados = previaMasiva.filter(item => 
-    item.seleccionado && 
-    item.estado !== 'error' && 
-    item.cantidad > 0
-  );
-  
+  const seleccionados = State.previaMasiva.filter(it => it.seleccionado && it.encontrado);
   if (seleccionados.length === 0) {
-    toast('No hay productos seleccionados con cantidad válida', 'error');
+    toast('No hay items seleccionados', 'warning');
     return;
   }
-  
-  let agregados = 0;
-  let actualizados = 0;
-  
-  seleccionados.forEach(item => {
-    const existe = pedidoActual.find(p => p.id === item.prod.id);
-    if (existe) {
-      existe.cantidad = item.cantidad;
-      actualizados++;
+  const sinCantidad = seleccionados.filter(it => !(it.cantidad > 0));
+  if (sinCantidad.length > 0) {
+    if (!confirm(`Hay ${sinCantidad.length} items sin cantidad. Se ignorarán. ¿Continuar?`)) return;
+  }
+
+  const hist = lsGet(KEY_HIST_CANTIDADES, {});
+  let agregados = 0, sumados = 0;
+  seleccionados.forEach(it => {
+    if (!(it.cantidad > 0)) return;
+    const p = it.producto;
+    const existente = State.pedidoActual.find(x => x.numero === p.numero);
+    if (existente) {
+      existente.cantidad += it.cantidad;
+      sumados++;
     } else {
-      pedidoActual.push({ ...item.prod, cantidad: item.cantidad });
+      State.pedidoActual.push({
+        numero: p.numero,
+        codprov: p.codprov || '',
+        descripcion: p.descripcion || '',
+        familia: p.familia || '',
+        proveedor: p.proveedor || State.proveedorActual,
+        cantidad: it.cantidad,
+        precio: Number(p.precio) || 0,
+        min: p.min || null,
+      });
       agregados++;
     }
-    
-    // Guardar en historial
-    saveToHistorial(item.prod.id, item.cantidad);
+    hist[p.numero] = it.cantidad;
   });
-  
-  // Limpiar preview
-  document.getElementById('masiva-textarea').value = '';
-  previaMasiva = [];
-  document.getElementById('preview-masiva').classList.remove('visible');
-  document.getElementById('cant-global-row').style.display = 'none';
-  document.getElementById('seleccion-masiva-row').style.display = 'none';
-  
-  renderTabla();
-  
-  const mensaje = [];
-  if (agregados > 0) mensaje.push(`${agregados} productos agregados`);
-  if (actualizados > 0) mensaje.push(`${actualizados} cantidades actualizadas`);
-  
-  toast(mensaje.join(' · ') + ' ✓');
+  lsSet(KEY_HIST_CANTIDADES, hist);
+
+  toast(`✓ ${agregados} agregados, ${sumados} sumados a existentes`, 'success');
+
+  // Limpiar masivo
+  $('masiva-textarea').value = '';
+  State.previaMasiva = [];
+  renderPreviewMasivo();
+  $('preview-masiva').style.display = 'none';
+  $('seleccion-masiva-row').style.display = 'none';
+  $('cant-global-row').style.display = 'none';
+
+  renderTablaPedido();
 }
 
-// ═══════════════════════════════════════════════════════════
-// SISTEMA DE BORRADORES
-// ═══════════════════════════════════════════════════════════
-function generarCodigoBorrador() {
-  const fecha = new Date();
-  const dia = fecha.getDate().toString().padStart(2, '0');
-  const mes = (fecha.getMonth() + 1).toString().padStart(2, '0');
-  const año = fecha.getFullYear().toString().slice(-2);
-  const timestamp = Date.now().toString().slice(-3);
-  return `COMP-${año}${mes}${dia}-${timestamp}`;
-}
 
-function guardarBorrador() {
-  if (!pedidoActual || pedidoActual.length === 0) {
-    toast('No hay productos en la compra para guardar', 'error');
-    return null;
+// ═══════════════════════════════════════════════════════════════════
+// MICRÓFONO (Web Speech API)
+// ═══════════════════════════════════════════════════════════════════
+function toggleMic() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    toast('Tu navegador no soporta reconocimiento de voz. Usá Chrome o Safari.', 'error');
+    return;
   }
-  
-  const proveedor = document.getElementById('inp-proveedor').value.trim();
-  if (!proveedor) {
-    toast('Seleccioná un proveedor antes de guardar', 'error');
-    return null;
+
+  if (State.micActivo) {
+    if (State.micRecognition) State.micRecognition.stop();
+    return;
   }
-  
-  const codigo = generarCodigoBorrador();
-  const borrador = {
-    codigo: codigo,
-    fecha: new Date().toISOString(),
-    estado: 'editando',
-    proveedor: proveedor,
-    operador: document.getElementById('sel-operador').value,
-    observaciones: document.getElementById('inp-obs').value,
-    pedidoActual: JSON.parse(JSON.stringify(pedidoActual)),
-    totales: {
-      items: pedidoActual.length,
-      unidades: pedidoActual.reduce((s, i) => s + i.cantidad, 0),
-      total: pedidoActual.reduce((s, i) => s + i.costo * i.cantidad, 0)
-    },
-    comentarios: '',
-    fechaAprobacion: null
+
+  const rec = new SR();
+  rec.lang = 'es-AR';
+  rec.continuous = true;
+  rec.interimResults = true;
+
+  let finalText = $('mic-transcript').textContent || '';
+  if (finalText === 'El texto aparecerá acá...') finalText = '';
+
+  rec.onstart = () => {
+    State.micActivo = true;
+    $('btn-mic').classList.add('recording');
+    $('mic-status').textContent = 'Escuchando... tocá para detener';
   };
-  
-  const borradores = JSON.parse(localStorage.getItem('maxifer_borradores') || '{}');
-  borradores[codigo] = borrador;
-  localStorage.setItem('maxifer_borradores', JSON.stringify(borradores));
-  
-  updateBorradoresBadge();
-  
-  console.log('✅ Borrador guardado:', codigo);
-  toast(`Borrador guardado: ${codigo}`);
-  
-  return codigo;
+  rec.onend = () => {
+    State.micActivo = false;
+    $('btn-mic').classList.remove('recording');
+    $('mic-status').textContent = 'Detenido. Tocá "Procesar" para agregar al pedido.';
+  };
+  rec.onerror = (e) => {
+    log('warn', 'Mic error:', e.error);
+    toast('Mic: ' + e.error, 'warning');
+  };
+  rec.onresult = (event) => {
+    let interim = '';
+    let final = finalText;
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      const tr = event.results[i][0].transcript;
+      if (event.results[i].isFinal) final += tr + ' ';
+      else interim += tr;
+    }
+    finalText = final;
+    $('mic-transcript').textContent = (final + ' ' + interim).trim() || '(escuchando...)';
+  };
+
+  State.micRecognition = rec;
+  rec.start();
 }
 
-function guardarYVerBorrador() {
-  const codigo = guardarBorrador();
-  if (codigo) {
-    showPage('borradores');
+function procesarTranscriptMic() {
+  if (!State.proveedorActual) {
+    toast('Elegí un proveedor primero', 'warning');
+    return;
+  }
+  const txt = ($('mic-transcript').textContent || '').toLowerCase().trim();
+  if (!txt || txt === 'el texto aparecerá acá...') {
+    toast('No hay texto para procesar', 'warning');
+    return;
+  }
+
+  // Heurística: buscar patrones "código X cantidad Y", "X por Y", "X cantidad Y", etc.
+  // También intentar matchear contra descripciones.
+  const segmentos = txt.split(/[,;.]|\sy\s| coma /).map(s => s.trim()).filter(Boolean);
+
+  const hist = lsGet(KEY_HIST_CANTIDADES, {});
+  let agregados = 0, fallos = [];
+
+  for (const seg of segmentos) {
+    // Patrón 1: "codigo X cantidad Y" o "X cantidad Y" o "X por Y"
+    let m = seg.match(/(?:c[oó]digo\s+)?([\w\d\-]+)\s+(?:cantidad\s+|por\s+|x\s+)?(\d+)/i);
+    if (!m) {
+      // Patrón 2: solo número + cantidad implícita 1 — no, muy ambiguo. Saltar.
+      fallos.push(seg);
+      continue;
+    }
+    const codigo = m[1].trim();
+    const cant = parseInt(m[2], 10);
+    if (!cant || cant <= 0) { fallos.push(seg); continue; }
+
+    const cNorm = normalizar(codigo);
+    let prod = State.productosDelProveedor.find(p =>
+      normalizar(p.numero) === cNorm || normalizar(p.codprov) === cNorm
+    );
+    if (!prod) {
+      // intentar match por descripción
+      prod = State.productosDelProveedor.find(p => normalizar(p.descripcion).includes(cNorm));
+    }
+
+    if (!prod) {
+      fallos.push(`${codigo} (no encontrado)`);
+      continue;
+    }
+
+    const existente = State.pedidoActual.find(x => x.numero === prod.numero);
+    if (existente) {
+      existente.cantidad += cant;
+    } else {
+      State.pedidoActual.push({
+        numero: prod.numero,
+        codprov: prod.codprov || '',
+        descripcion: prod.descripcion || '',
+        familia: prod.familia || '',
+        proveedor: prod.proveedor || State.proveedorActual,
+        cantidad: cant,
+        precio: Number(prod.precio) || 0,
+        min: prod.min || null,
+      });
+    }
+    hist[prod.numero] = cant;
+    agregados++;
+  }
+
+  lsSet(KEY_HIST_CANTIDADES, hist);
+
+  let msg = `✓ ${agregados} items agregados`;
+  if (fallos.length) msg += ` • ${fallos.length} no procesados`;
+  toast(msg, agregados > 0 ? 'success' : 'warning');
+  if (fallos.length) log('warn', 'Mic fallos:', fallos);
+
+  renderTablaPedido();
+}
+
+
+// ═══════════════════════════════════════════════════════════════════
+// CÓDIGOS COMP-YYMMDD-XXX (contador atómico por día)
+// ═══════════════════════════════════════════════════════════════════
+function generarCodigo() {
+  const fecha = fechaCompacta();
+  let contador = lsGet(KEY_CONTADOR_DIA, { fecha: '', n: 0 });
+  if (contador.fecha !== fecha) {
+    contador = { fecha, n: 0 };
+  }
+  contador.n += 1;
+  lsSet(KEY_CONTADOR_DIA, contador);
+  return `COMP-${fecha}-${String(contador.n).padStart(3, '0')}`;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// BORRADORES — estados: editando | pendiente | aprobado | rechazado
+// ═══════════════════════════════════════════════════════════════════
+function snapshotPedido(estado) {
+  return {
+    id: State.borradorActualId || generarCodigo(),
+    estado,
+    proveedor: State.proveedorActual,
+    operador: $('sel-operador').value,
+    observaciones: $('inp-obs').value || '',
+    items: JSON.parse(JSON.stringify(State.pedidoActual)),
+    creado: new Date().toISOString(),
+    modificado: new Date().toISOString(),
+    comentarios: '',
+  };
+}
+
+function guardarComoBorrador(estadoOverride) {
+  if (!State.proveedorActual) { toast('Elegí un proveedor', 'warning'); return null; }
+  if (State.pedidoActual.length === 0) { toast('El pedido está vacío', 'warning'); return null; }
+
+  const borradores = lsGet(KEY_BORRADORES, []);
+  const estado = estadoOverride || 'editando';
+
+  let snap;
+  if (State.borradorActualId) {
+    // actualizar existente
+    const idx = borradores.findIndex(b => b.id === State.borradorActualId);
+    if (idx >= 0) {
+      snap = borradores[idx];
+      snap.estado = estado;
+      snap.proveedor = State.proveedorActual;
+      snap.operador = $('sel-operador').value;
+      snap.observaciones = $('inp-obs').value || '';
+      snap.items = JSON.parse(JSON.stringify(State.pedidoActual));
+      snap.modificado = new Date().toISOString();
+      borradores[idx] = snap;
+    } else {
+      snap = snapshotPedido(estado);
+      borradores.push(snap);
+    }
+  } else {
+    snap = snapshotPedido(estado);
+    State.borradorActualId = snap.id;
+    borradores.push(snap);
+  }
+
+  lsSet(KEY_BORRADORES, borradores);
+  updateBadges();
+  toast(`💾 Borrador guardado: ${snap.id}`, 'success');
+  return snap;
+}
+
+function guardarComoPendiente() {
+  const snap = guardarComoBorrador('pendiente');
+  if (snap) {
+    // También copiar a pendientes para retro-compat
+    const pendientes = lsGet(KEY_PENDIENTES, []);
+    if (!pendientes.find(p => p.id === snap.id)) {
+      pendientes.push(snap);
+      lsSet(KEY_PENDIENTES, pendientes);
+    }
+    updateBadges();
   }
 }
 
 function enviarParaAprobacion() {
-  const codigo = guardarBorrador();
-  if (!codigo) return;
-  
-  const borradores = JSON.parse(localStorage.getItem('maxifer_borradores') || '{}');
-  borradores[codigo].estado = 'pendiente';
-  localStorage.setItem('maxifer_borradores', JSON.stringify(borradores));
-  
-  toast(`Compra enviada para aprobación: ${codigo}`, 'success');
-  updateBorradoresBadge();
-  showPage('borradores');
-}
-
-function loadBorradores() {
-  console.log('🔍 loadBorradores() iniciando...');
-  
-  try {
-    const lista = document.getElementById('borradores-list');
-    if (!lista) {
-      console.error('❌ Elemento borradores-list no encontrado');
-      return;
-    }
-    
-    const rawData = localStorage.getItem('maxifer_borradores');
-    console.log('Raw data:', rawData);
-    
-    if (!rawData || rawData === '{}') {
-      console.log('📭 No hay borradores');
-      lista.innerHTML = `
-        <div style="text-align:center; padding:40px; color:var(--gris-texto)">
-          <div style="font-size:48px; margin-bottom:16px">📋</div>
-          <div style="font-size:18px; margin-bottom:8px">No hay borradores guardados</div>
-          <div>Completá una compra y guardala como borrador</div>
-          <button onclick="migrarPendientesABorradores()" style="background:var(--amarillo); color:var(--gris-oscuro); border:none; padding:10px 20px; border-radius:4px; cursor:pointer; margin-top:15px">
-            📦 Migrar pendientes a borradores
-          </button>
-        </div>
-      `;
-      return;
-    }
-    
-    const borradores = JSON.parse(rawData);
-    const borradoresList = Object.values(borradores).sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
-    console.log('Borradores encontrados:', borradoresList.length);
-    
-    if (borradoresList.length === 0) {
-      lista.innerHTML = `
-        <div style="text-align:center; padding:40px; color:var(--gris-texto)">
-          <div style="font-size:48px; margin-bottom:16px">📋</div>
-          <div style="font-size:18px; margin-bottom:8px">No hay borradores válidos</div>
-        </div>
-      `;
-      return;
-    }
-    
-    // Renderizar cada borrador
-    let html = '';
-    borradoresList.forEach(borrador => {
-      const fecha = new Date(borrador.fecha).toLocaleDateString('es-AR');
-      const total = (borrador.totales && borrador.totales.total) ? borrador.totales.total : 0;
-      const proveedor = borrador.proveedor || 'Sin proveedor';
-      const items = (borrador.totales && borrador.totales.items) ? borrador.totales.items : 0;
-      
-      let estadoColor = 'orange';
-      let estadoTexto = '⏳ Pendiente';
-      if (borrador.estado === 'editando') {
-        estadoColor = 'var(--amarillo)';
-        estadoTexto = '✏️ En edición';
-      } else if (borrador.estado === 'aprobado') {
-        estadoColor = 'var(--verde)';
-        estadoTexto = '✅ Aprobado';
-      } else if (borrador.estado === 'rechazado') {
-        estadoColor = 'var(--rojo)';
-        estadoTexto = '❌ Rechazado';
-      }
-      
-      html += `
-        <div style="background:var(--gris-panel); padding:15px; border-radius:4px; margin-bottom:15px; border-left:4px solid ${estadoColor}">
-          <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:10px">
-            <div>
-              <div style="font-weight:600; font-size:16px; color:var(--blanco)">${borrador.codigo}</div>
-              <div style="color:var(--gris-texto); font-size:13px">${fecha} • ${proveedor}</div>
-              <div style="color:var(--gris-texto); font-size:12px">${items} items</div>
-            </div>
-            <div style="text-align:right">
-              <div style="color:${estadoColor}; font-weight:600; font-size:12px">${estadoTexto}</div>
-              <div style="color:var(--blanco); font-weight:600">$${total.toLocaleString('es-AR')}</div>
-            </div>
-          </div>
-          
-          <div style="display:flex; gap:8px; margin-top:15px; flex-wrap:wrap">
-            ${borrador.estado === 'editando' || borrador.estado === 'rechazado' ? `
-              <button onclick="editarBorrador('${borrador.codigo}')" style="background:var(--amarillo); color:var(--gris-oscuro); border:none; padding:6px 12px; border-radius:3px; cursor:pointer; font-size:11px">✏️ Editar</button>
-            ` : ''}
-            ${borrador.estado === 'editando' ? `
-              <button onclick="enviarBorradorAprobacion('${borrador.codigo}')" style="background:var(--rojo); color:white; border:none; padding:6px 12px; border-radius:3px; cursor:pointer; font-size:11px">📤 Enviar</button>
-            ` : ''}
-            ${borrador.estado === 'aprobado' ? `
-              <button onclick="generarArchivosFinales('${borrador.codigo}')" style="background:var(--verde); color:white; border:none; padding:6px 12px; border-radius:3px; cursor:pointer; font-size:11px">📥 Generar</button>
-            ` : ''}
-            <button onclick="eliminarBorrador('${borrador.codigo}')" style="background:var(--rojo); color:white; border:none; padding:6px 12px; border-radius:3px; cursor:pointer; font-size:11px">🗑️ Eliminar</button>
-          </div>
-        </div>
-      `;
-    });
-    
-    lista.innerHTML = html;
-    console.log('✅ Borradores renderizados exitosamente');
-    
-  } catch (error) {
-    console.error('❌ Error en loadBorradores:', error);
-    const lista = document.getElementById('borradores-list');
-    if (lista) {
-      lista.innerHTML = `
-        <div style="text-align:center; padding:40px; color:var(--rojo)">
-          <div style="font-size:18px; margin-bottom:8px">Error cargando borradores</div>
-          <div style="font-size:12px">${error.message}</div>
-          <button onclick="limpiarBorradores()" style="background:var(--rojo); color:white; border:none; padding:8px 16px; border-radius:4px; cursor:pointer; margin-top:10px">
-            🗑️ Limpiar y reiniciar
-          </button>
-        </div>
-      `;
-    }
+  const snap = guardarComoBorrador('pendiente');
+  if (snap) {
+    toast(`📤 Enviado a revisión. Código: ${snap.id}`, 'success');
+    // Limpiar el área de trabajo
+    State.pedidoActual = [];
+    State.borradorActualId = null;
+    renderTablaPedido();
+    showPage('borradores');
   }
 }
 
-function updateBorradoresBadge() {
-  const borradores = JSON.parse(localStorage.getItem('maxifer_borradores') || '{}');
-  const count = Object.keys(borradores).length;
-  
-  const badge = document.getElementById('badge-borradores');
-  if (badge) {
-    badge.textContent = count;
-    badge.style.display = count > 0 ? 'inline' : 'none';
+function aprobarYGenerar() {
+  if (State.pedidoActual.length === 0) { toast('Pedido vacío', 'warning'); return; }
+  const snap = guardarComoBorrador('aprobado');
+  if (snap) {
+    moverAHistorial(snap);
+    generarPDF(snap);
+    State.pedidoActual = [];
+    State.borradorActualId = null;
+    renderTablaPedido();
+    toast('✅ Aprobado y PDF generado', 'success');
   }
 }
 
-function eliminarBorrador(codigo) {
-  if (!confirm(`¿Estás seguro de eliminar el borrador ${codigo}?`)) return;
-  
-  try {
-    const borradores = JSON.parse(localStorage.getItem('maxifer_borradores') || '{}');
-    delete borradores[codigo];
-    localStorage.setItem('maxifer_borradores', JSON.stringify(borradores));
-    
-    updateBorradoresBadge();
-    loadBorradores();
-    
-    toast(`Borrador ${codigo} eliminado`);
-  } catch (error) {
-    console.error('Error eliminando borrador:', error);
-    toast('Error eliminando borrador: ' + error.message, 'error');
-  }
+function moverAHistorial(snap) {
+  // Quitar de borradores y pendientes, mover a historial
+  let borradores = lsGet(KEY_BORRADORES, []);
+  borradores = borradores.filter(b => b.id !== snap.id);
+  lsSet(KEY_BORRADORES, borradores);
+
+  let pendientes = lsGet(KEY_PENDIENTES, []);
+  pendientes = pendientes.filter(p => p.id !== snap.id);
+  lsSet(KEY_PENDIENTES, pendientes);
+
+  const historial = lsGet(KEY_HISTORIAL, []);
+  snap.estado = 'aprobado';
+  snap.aprobado_en = new Date().toISOString();
+  historial.unshift(snap);
+  lsSet(KEY_HISTORIAL, historial);
+  updateBadges();
 }
 
-function editarBorrador(codigo) {
-  const borradores = JSON.parse(localStorage.getItem('maxifer_borradores') || '{}');
-  const borrador = borradores[codigo];
-  
-  if (!borrador) {
-    toast('Borrador no encontrado', 'error');
+// ─── RENDER de listas ──────────────────────────────────────────────
+function renderBorradores() {
+  const cont = $('borradores-list');
+  if (!cont) return;
+  const borradores = lsGet(KEY_BORRADORES, []);
+  if (borradores.length === 0) {
+    cont.innerHTML = '<p style="text-align:center; color:var(--gris-texto); padding: 30px">No hay borradores guardados</p>';
     return;
   }
-  
-  // Restaurar el estado
-  document.getElementById('inp-proveedor').value = borrador.proveedor || '';
-  document.getElementById('sel-operador').value = borrador.operador || 'Max';
-  document.getElementById('inp-obs').value = borrador.observaciones || '';
-  
-  if (borrador.proveedor) {
-    onProveedorSelected(borrador.proveedor);
+  // Más recientes primero
+  borradores.sort((a, b) => new Date(b.modificado) - new Date(a.modificado));
+
+  cont.innerHTML = '';
+  borradores.forEach(b => {
+    const card = renderBorradorCard(b, ['continuar', 'enviar', 'aprobar-rapido', 'eliminar']);
+    cont.appendChild(card);
+  });
+}
+
+function renderPendientes() {
+  const cont = $('pendientes-list');
+  if (!cont) return;
+  const pendientes = lsGet(KEY_BORRADORES, []).filter(b => b.estado === 'pendiente');
+  if (pendientes.length === 0) {
+    cont.innerHTML = '<p style="text-align:center; color:var(--gris-texto); padding: 30px">No hay pedidos pendientes de aprobación</p>';
+    return;
   }
-  
-  pedidoActual = JSON.parse(JSON.stringify(borrador.pedidoActual));
-  renderTabla();
-  
-  // Guardar referencia del borrador que se está editando
-  sessionStorage.setItem('editando_borrador', codigo);
-  
+  cont.innerHTML = '';
+  pendientes.forEach(b => {
+    const card = renderBorradorCard(b, ['revisar', 'aprobar-rapido', 'eliminar']);
+    cont.appendChild(card);
+  });
+}
+
+function renderHistorial() {
+  const cont = $('historial-list');
+  if (!cont) return;
+  const historial = lsGet(KEY_HISTORIAL, []);
+  if (historial.length === 0) {
+    cont.innerHTML = '<p style="text-align:center; color:var(--gris-texto); padding: 30px">Sin compras aprobadas todavía</p>';
+    return;
+  }
+  cont.innerHTML = '';
+  historial.forEach(b => {
+    const card = renderBorradorCard(b, ['ver-pdf', 'duplicar']);
+    cont.appendChild(card);
+  });
+}
+
+function renderBorradorCard(b, acciones) {
+  const card = document.createElement('div');
+  card.className = `borrador-card estado-${b.estado || 'editando'}`;
+
+  const totalUnidades = (b.items || []).reduce((s, it) => s + (it.cantidad || 0), 0);
+  const totalCosto = (b.items || []).reduce((s, it) => s + (it.cantidad || 0) * (it.precio || 0), 0);
+
+  card.innerHTML = `
+    <div class="bc-head">
+      <div>
+        <div class="bc-codigo">${escapeHtml(b.id)}</div>
+        <div class="bc-meta">
+          ${escapeHtml(b.proveedor || '—')} • ${escapeHtml(b.operador || '—')} • ${fmtFecha(b.modificado || b.creado)}
+        </div>
+        ${b.observaciones ? `<div class="bc-meta" style="font-style:italic">"${escapeHtml(b.observaciones)}"</div>` : ''}
+      </div>
+      <span class="estado-pill ${b.estado || 'editando'}">${b.estado || 'editando'}</span>
+    </div>
+    <div class="bc-stats">
+      📦 ${(b.items || []).length} items • ${totalUnidades.toLocaleString('es-AR')} unidades • <strong style="color:var(--verde)">${fmtMoney(totalCosto)}</strong>
+    </div>
+    ${b.comentarios ? `<div class="hint-box warning" style="margin-top:8px">💬 ${escapeHtml(b.comentarios)}</div>` : ''}
+    <div class="bc-acciones"></div>
+  `;
+
+  const accionesEl = card.querySelector('.bc-acciones');
+  for (const acc of acciones) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn btn-sm';
+    switch (acc) {
+      case 'continuar':
+        btn.textContent = '✏️ Continuar editando';
+        btn.classList.add('btn-info');
+        btn.addEventListener('click', () => cargarBorradorEnEditor(b));
+        break;
+      case 'enviar':
+        btn.textContent = '📤 Enviar a aprobar';
+        btn.classList.add('btn-primary');
+        btn.addEventListener('click', () => {
+          b.estado = 'pendiente';
+          b.modificado = new Date().toISOString();
+          const all = lsGet(KEY_BORRADORES, []);
+          const idx = all.findIndex(x => x.id === b.id);
+          if (idx >= 0) all[idx] = b;
+          lsSet(KEY_BORRADORES, all);
+          renderBorradores();
+          updateBadges();
+          toast('Enviado a revisión', 'success');
+        });
+        break;
+      case 'revisar':
+        btn.textContent = '👁️ Revisar';
+        btn.classList.add('btn-info');
+        btn.addEventListener('click', () => {
+          showPage('revisar');
+          $('codigo-revisar').value = b.id;
+          cargarBorradorParaRevisar();
+        });
+        break;
+      case 'aprobar-rapido':
+        btn.textContent = '✅ Aprobar y PDF';
+        btn.classList.add('btn-success');
+        btn.addEventListener('click', () => {
+          if (!confirm(`¿Aprobar ${b.id} y generar PDF?`)) return;
+          moverAHistorial(b);
+          generarPDF(b);
+          renderBorradores();
+          renderPendientes();
+          updateBadges();
+        });
+        break;
+      case 'ver-pdf':
+        btn.textContent = '📄 Ver PDF';
+        btn.classList.add('btn-info');
+        btn.addEventListener('click', () => generarPDF(b));
+        break;
+      case 'duplicar':
+        btn.textContent = '🔁 Duplicar';
+        btn.classList.add('btn-secondary');
+        btn.addEventListener('click', () => duplicarComoNuevoPedido(b));
+        break;
+      case 'eliminar':
+        btn.textContent = '🗑 Eliminar';
+        btn.classList.add('btn-danger');
+        btn.addEventListener('click', () => {
+          if (!confirm(`¿Eliminar borrador ${b.id}?`)) return;
+          let all = lsGet(KEY_BORRADORES, []);
+          all = all.filter(x => x.id !== b.id);
+          lsSet(KEY_BORRADORES, all);
+          let pend = lsGet(KEY_PENDIENTES, []);
+          pend = pend.filter(x => x.id !== b.id);
+          lsSet(KEY_PENDIENTES, pend);
+          renderBorradores();
+          renderPendientes();
+          updateBadges();
+          toast('Eliminado', 'info');
+        });
+        break;
+    }
+    accionesEl.appendChild(btn);
+  }
+
+  return card;
+}
+
+function cargarBorradorEnEditor(b) {
+  State.borradorActualId = b.id;
+  State.proveedorActual = b.proveedor || '';
+  State.productosDelProveedor = State.DB.filter(p => p.proveedor === b.proveedor);
+  State.pedidoActual = JSON.parse(JSON.stringify(b.items || []));
+
+  $('inp-proveedor').value = b.proveedor || '';
+  $('sel-operador').value = b.operador || 'Maximiliano Gordillo';
+  $('inp-obs').value = b.observaciones || '';
+
+  if (State.proveedorActual) {
+    $('panel-agregar').style.display = 'block';
+    $('proveedor-info-wrap').style.display = 'block';
+    $('pa-nombre').textContent = State.proveedorActual;
+    $('pa-stats').textContent = `${State.productosDelProveedor.length} productos disponibles`;
+  }
+
+  renderTablaPedido();
   showPage('nuevo');
-  toast(`Editando borrador ${codigo}`);
+  toast(`📝 Editando ${b.id}`, 'info');
 }
 
-function enviarBorradorAprobacion(codigo) {
-  const borradores = JSON.parse(localStorage.getItem('maxifer_borradores') || '{}');
-  if (!borradores[codigo]) return;
-  
-  borradores[codigo].estado = 'pendiente';
-  localStorage.setItem('maxifer_borradores', JSON.stringify(borradores));
-  
-  toast(`Borrador ${codigo} enviado para aprobación`);
-  loadBorradores();
-}
+function duplicarComoNuevoPedido(b) {
+  State.borradorActualId = null; // forzar nuevo código
+  State.proveedorActual = b.proveedor || '';
+  State.productosDelProveedor = State.DB.filter(p => p.proveedor === b.proveedor);
+  State.pedidoActual = JSON.parse(JSON.stringify(b.items || []));
 
-// Funciones de debug
-function debugBorradores() {
-  console.log('🔍 Debug de borradores iniciado');
-  
-  const rawData = localStorage.getItem('maxifer_borradores');
-  console.log('Raw localStorage data:', rawData);
-  
-  if (!rawData) {
-    toast('❌ No hay datos en localStorage para "maxifer_borradores"', 'error');
-    return;
-  }
-  
-  try {
-    const borradores = JSON.parse(rawData);
-    const count = Object.keys(borradores).length;
-    
-    console.log('Borradores parseados:', borradores);
-    console.log('Cantidad:', count);
-    
-    let detalle = `📋 Debug de Borradores\n\n`;
-    detalle += `Total: ${count} borradores\n\n`;
-    
-    Object.values(borradores).forEach((b, i) => {
-      detalle += `${i + 1}. ${b.codigo}\n`;
-      detalle += `   Estado: ${b.estado}\n`;
-      detalle += `   Proveedor: ${b.proveedor || 'Sin proveedor'}\n`;
-      detalle += `   Items: ${b.totales?.items || 0}\n`;
-      detalle += `   Total: $${(b.totales?.total || 0).toLocaleString('es-AR')}\n\n`;
-    });
-    
-    alert(detalle);
-    
-  } catch (error) {
-    console.error('Error parseando borradores:', error);
-    toast(`❌ Error parseando datos: ${error.message}`, 'error');
-  }
-}
+  $('inp-proveedor').value = b.proveedor || '';
+  $('sel-operador').value = b.operador || 'Maximiliano Gordillo';
+  $('inp-obs').value = b.observaciones || '';
 
-function limpiarBorradores() {
-  if (!confirm('⚠️ ¿Estás seguro?\n\nEsto eliminará TODOS los borradores guardados.')) {
-    return;
+  if (State.proveedorActual) {
+    $('panel-agregar').style.display = 'block';
+    $('proveedor-info-wrap').style.display = 'block';
+    $('pa-nombre').textContent = State.proveedorActual;
+    $('pa-stats').textContent = `${State.productosDelProveedor.length} productos`;
   }
-  
-  localStorage.removeItem('maxifer_borradores');
-  updateBorradoresBadge();
-  loadBorradores();
-  
-  toast('🗑️ Todos los borradores han sido eliminados');
-}
 
-// Revisar borradores
-function cargarBorradorParaRevisar() {
-  const codigo = document.getElementById('codigo-revisar').value.trim();
-  if (!codigo) {
-    toast('Ingresá un código de borrador', 'error');
-    return;
-  }
-  
-  const borradores = JSON.parse(localStorage.getItem('maxifer_borradores') || '{}');
-  const borrador = borradores[codigo];
-  
-  if (!borrador) {
-    toast('Borrador no encontrado', 'error');
-    return;
-  }
-  
-  // Mostrar área de revisión
-  document.getElementById('area-revision').style.display = 'block';
-  document.getElementById('resultado-revision').style.display = 'none';
-  
-  // Llenar info del borrador
-  const fecha = new Date(borrador.fecha).toLocaleDateString('es-AR');
-  const total = borrador.totales?.total || 0;
-  const items = borrador.totales?.items || 0;
-  const unidades = borrador.totales?.unidades || 0;
-  
-  document.getElementById('info-borrador').innerHTML = `
-    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); gap:20px; text-align:center">
-      <div>
-        <div style="color:var(--gris-texto); font-size:12px">CÓDIGO</div>
-        <div style="font-weight:600; color:var(--blanco)">${codigo}</div>
-      </div>
-      <div>
-        <div style="color:var(--gris-texto); font-size:12px">FECHA</div>
-        <div style="font-weight:600; color:var(--blanco)">${fecha}</div>
-      </div>
-      <div>
-        <div style="color:var(--gris-texto); font-size:12px">PROVEEDOR</div>
-        <div style="font-weight:600; color:var(--blanco)">${borrador.proveedor || 'Sin proveedor'}</div>
-      </div>
-      <div>
-        <div style="color:var(--gris-texto); font-size:12px">OPERADOR</div>
-        <div style="font-weight:600; color:var(--blanco)">${borrador.operador || 'Max'}</div>
-      </div>
-      <div>
-        <div style="color:var(--gris-texto); font-size:12px">ITEMS</div>
-        <div style="font-weight:600; color:var(--blanco)">${items}</div>
-      </div>
-      <div>
-        <div style="color:var(--gris-texto); font-size:12px">UNIDADES</div>
-        <div style="font-weight:600; color:var(--blanco)">${unidades}</div>
-      </div>
-      <div>
-        <div style="color:var(--gris-texto); font-size:12px">TOTAL</div>
-        <div style="font-weight:600; color:var(--verde)">$${total.toLocaleString('es-AR')}</div>
-      </div>
-    </div>
-    ${borrador.observaciones ? `
-      <div style="margin-top:15px; padding:10px; background:var(--gris-oscuro); border-radius:4px">
-        <strong style="color:var(--amarillo)">Observaciones:</strong> ${borrador.observaciones}
-      </div>
-    ` : ''}
-  `;
-  
-  // Mostrar detalle de productos
-  const items_array = borrador.pedidoActual || [];
-  
-  let detalleHtml = `
-    <div style="background:var(--gris-panel); padding:15px; border-radius:4px; margin-bottom:15px">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px">
-        <h3 style="color:var(--rojo-light)">${borrador.proveedor || 'Productos'}</h3>
-        <div style="font-weight:600; color:var(--verde)">$${total.toLocaleString('es-AR')}</div>
-      </div>
-      <div style="overflow-x:auto">
-        <table style="width:100%; border-collapse:collapse">
-          <thead>
-            <tr style="background:var(--gris-oscuro)">
-              <th style="padding:8px; text-align:left; border:1px solid var(--gris-borde)">Código</th>
-              <th style="padding:8px; text-align:left; border:1px solid var(--gris-borde)">Descripción</th>
-              <th style="padding:8px; text-align:left; border:1px solid var(--gris-borde)">Familia</th>
-              <th style="padding:8px; text-align:center; border:1px solid var(--gris-borde)">Cant.</th>
-              <th style="padding:8px; text-align:right; border:1px solid var(--gris-borde)">P. Unit</th>
-              <th style="padding:8px; text-align:right; border:1px solid var(--gris-borde)">Subtotal</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${items_array.map(item => `
-              <tr>
-                <td style="padding:8px; border:1px solid var(--gris-borde); font-family:monospace">${item.numero || item.codigo || 'N/A'}</td>
-                <td style="padding:8px; border:1px solid var(--gris-borde)">${item.descripcion || item.nombre || 'Sin descripción'}</td>
-                <td style="padding:8px; border:1px solid var(--gris-borde)">${item.familia || 'N/A'}</td>
-                <td style="padding:8px; border:1px solid var(--gris-borde); text-align:center">${item.cantidad || 0}</td>
-                <td style="padding:8px; border:1px solid var(--gris-borde); text-align:right">$${((item.costo || item.precio || 0)).toLocaleString('es-AR')}</td>
-                <td style="padding:8px; border:1px solid var(--gris-borde); text-align:right">$${((item.costo || item.precio || 0) * (item.cantidad || 0)).toLocaleString('es-AR')}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  `;
-  
-  document.getElementById('detalle-revision').innerHTML = detalleHtml;
-  sessionStorage.setItem('codigo_revision', codigo);
-}
-
-function aprobarBorrador() {
-  const codigo = sessionStorage.getItem('codigo_revision');
-  if (!codigo) return;
-  
-  const borradores = JSON.parse(localStorage.getItem('maxifer_borradores') || '{}');
-  if (!borradores[codigo]) return;
-  
-  borradores[codigo].estado = 'aprobado';
-  borradores[codigo].fechaAprobacion = new Date().toISOString();
-  borradores[codigo].comentarios = '';
-  localStorage.setItem('maxifer_borradores', JSON.stringify(borradores));
-  
-  document.getElementById('area-revision').style.display = 'none';
-  document.getElementById('resultado-revision').style.display = 'block';
-  document.getElementById('resultado-revision').innerHTML = `
-    <div style="padding:30px; background:var(--verde); color:white; border-radius:8px; margin:20px 0">
-      <div style="font-size:48px; margin-bottom:16px">✅</div>
-      <div style="font-size:20px; font-weight:600; margin-bottom:8px">Compra Aprobada</div>
-      <div>El borrador ${codigo} ha sido aprobado. Tu equipo ya puede generar los archivos.</div>
-    </div>
-  `;
-  
-  document.getElementById('codigo-revisar').value = '';
-  sessionStorage.removeItem('codigo_revision');
-  updateBorradoresBadge();
-}
-
-function rechazarBorrador() {
-  const comentariosDiv = document.getElementById('comentarios-rechazo');
-  if (comentariosDiv.style.display === 'none') {
-    comentariosDiv.style.display = 'block';
-    document.getElementById('btn-rechazar').textContent = '📝 Confirmar rechazo';
-    return;
-  }
-  
-  const codigo = sessionStorage.getItem('codigo_revision');
-  if (!codigo) return;
-  
-  const comentarios = document.getElementById('comentarios-texto').value.trim();
-  
-  const borradores = JSON.parse(localStorage.getItem('maxifer_borradores') || '{}');
-  if (!borradores[codigo]) return;
-  
-  borradores[codigo].estado = 'rechazado';
-  borradores[codigo].comentarios = comentarios || 'Compra rechazada sin comentarios específicos.';
-  localStorage.setItem('maxifer_borradores', JSON.stringify(borradores));
-  
-  document.getElementById('area-revision').style.display = 'none';
-  document.getElementById('resultado-revision').style.display = 'block';
-  document.getElementById('resultado-revision').innerHTML = `
-    <div style="padding:30px; background:var(--rojo); color:white; border-radius:8px; margin:20px 0">
-      <div style="font-size:48px; margin-bottom:16px">❌</div>
-      <div style="font-size:20px; font-weight:600; margin-bottom:8px">Compra Rechazada</div>
-      <div>El borrador ${codigo} ha sido rechazado. Tu equipo puede editarlo y reenviarlo.</div>
-      ${comentarios ? `<div style="margin-top:15px; padding:10px; background:rgba(255,255,255,0.1); border-radius:4px"><strong>Comentarios:</strong> ${comentarios}</div>` : ''}
-    </div>
-  `;
-  
-  document.getElementById('codigo-revisar').value = '';
-  document.getElementById('comentarios-texto').value = '';
-  document.getElementById('comentarios-rechazo').style.display = 'none';
-  document.getElementById('btn-rechazar').textContent = '❌ Rechazar';
-  sessionStorage.removeItem('codigo_revision');
-  updateBorradoresBadge();
-}
-
-// ═══════════════════════════════════════════════════════════
-// PENDIENTES
-// ═══════════════════════════════════════════════════════════
-async function guardarPendiente() {
-  if (pedidoActual.length === 0) { 
-    toast('El pedido está vacío', 'error');
-    return;
-  }
-  
-  const pedido = {
-    id: Date.now(),
-    proveedor: proveedorActual,
-    operador: document.getElementById('sel-operador').value,
-    obs: document.getElementById('inp-obs').value,
-    fecha: new Date().toLocaleDateString('es-AR'),
-    fechaISO: new Date().toISOString(),
-    items: [...pedidoActual],
-    estado: 'pendiente'
-  };
-  
-  const pendientes = JSON.parse(localStorage.getItem('maxifer_pendientes') || '[]');
-  pendientes.push(pedido);
-  localStorage.setItem('maxifer_pendientes', JSON.stringify(pendientes));
-  
-  actualizarBadge();
-  toast('Pedido guardado como pendiente ✓');
-  
-  pedidoActual = [];
-  renderTabla();
-}
-
-function actualizarBadge() {
-  const pendientes = JSON.parse(localStorage.getItem('maxifer_pendientes') || '[]');
-  const badge = document.getElementById('badge-pendientes');
-  if (badge) {
-    badge.textContent = pendientes.length;
-    badge.style.display = pendientes.length > 0 ? 'inline' : 'none';
-  }
+  renderTablaPedido();
+  showPage('nuevo');
+  toast('🔁 Pedido duplicado como nuevo', 'success');
 }
 
 function migrarPendientesABorradores() {
-  const pendientes = JSON.parse(localStorage.getItem('maxifer_pendientes') || '[]');
-  const borradores = JSON.parse(localStorage.getItem('maxifer_borradores') || '{}');
-  
-  if (pendientes.length === 0) {
-    toast('No hay pedidos pendientes para migrar', 'warn');
-    return;
-  }
-  
+  // Compat: si por alguna razón quedaron items en KEY_PENDIENTES que no están en KEY_BORRADORES
+  const pendientes = lsGet(KEY_PENDIENTES, []);
+  const borradores = lsGet(KEY_BORRADORES, []);
   let migrados = 0;
-  
-  pendientes.forEach(pendiente => {
-    const codigo = generarCodigoBorrador();
-    const borrador = {
-      codigo: codigo,
-      fecha: pendiente.fechaISO || new Date().toISOString(),
-      estado: 'pendiente',
-      proveedor: pendiente.proveedor || 'Sin proveedor',
-      operador: pendiente.operador || 'Max',
-      observaciones: pendiente.obs || '',
-      pedidoActual: pendiente.items || [],
-      totales: {
-        items: (pendiente.items || []).length,
-        unidades: (pendiente.items || []).reduce((s, i) => s + (i.cantidad || 0), 0),
-        total: (pendiente.items || []).reduce((s, i) => s + ((i.costo || i.precio || 0) * (i.cantidad || 0)), 0)
-      },
-      comentarios: '',
-      fechaAprobacion: null,
-      migradoDePendiente: true
-    };
-    
-    borradores[codigo] = borrador;
-    migrados++;
-  });
-  
-  localStorage.setItem('maxifer_borradores', JSON.stringify(borradores));
-  localStorage.setItem('maxifer_pendientes_migrados', JSON.stringify(pendientes));
-  localStorage.setItem('maxifer_pendientes', '[]');
-  
-  updateBorradoresBadge();
-  actualizarBadge();
-  loadBorradores();
-  
-  toast(`✅ ${migrados} pedidos pendientes migrados a borradores`);
+  for (const p of pendientes) {
+    if (!borradores.find(b => b.id === p.id)) {
+      borradores.push({ ...p, estado: 'pendiente' });
+      migrados++;
+    }
+  }
+  lsSet(KEY_BORRADORES, borradores);
+  toast(`Migrados ${migrados} pedidos`, 'success');
+  renderPendientes();
+  updateBadges();
 }
 
-function generarArchivosFinales(codigo) {
-  const borradores = JSON.parse(localStorage.getItem('maxifer_borradores') || '{}');
-  const borrador = borradores[codigo];
-  
-  if (!borrador) {
-    toast('Borrador no encontrado', 'error');
+function limpiarTodosBorradores() {
+  if (!confirm('¿Eliminar TODOS los borradores? Esta acción no se puede deshacer.')) return;
+  lsSet(KEY_BORRADORES, []);
+  lsSet(KEY_PENDIENTES, []);
+  renderBorradores();
+  renderPendientes();
+  updateBadges();
+  toast('Todos los borradores eliminados', 'warning');
+}
+
+function debugBorradores() {
+  const b = lsGet(KEY_BORRADORES, []);
+  const p = lsGet(KEY_PENDIENTES, []);
+  const h = lsGet(KEY_HISTORIAL, []);
+  const c = lsGet(KEY_HIST_CANTIDADES, {});
+  const out = `LocalStorage debug:
+- Borradores: ${b.length}
+- Pendientes: ${p.length}
+- Historial: ${h.length}
+- Cantidades guardadas: ${Object.keys(c).length}
+
+Storage keys actuales:
+${Object.keys(localStorage).filter(k => k.startsWith(STORAGE_PREFIX)).join('\n')}
+
+Primer borrador (si hay):
+${b.length ? JSON.stringify(b[0], null, 2).slice(0, 500) : '—'}`;
+  alert(out);
+  log('info', out);
+}
+
+
+// ═══════════════════════════════════════════════════════════════════
+// REVISIÓN
+// ═══════════════════════════════════════════════════════════════════
+function cargarBorradorParaRevisar() {
+  const codigo = ($('codigo-revisar').value || '').trim().toUpperCase();
+  if (!codigo) { toast('Ingresá un código', 'warning'); return; }
+
+  const borradores = lsGet(KEY_BORRADORES, []);
+  const historial = lsGet(KEY_HISTORIAL, []);
+  const b = borradores.find(x => x.id === codigo) || historial.find(x => x.id === codigo);
+
+  if (!b) {
+    toast(`No se encontró ${codigo}`, 'error');
+    $('area-revision').style.display = 'none';
     return;
   }
-  
-  if (borrador.estado !== 'aprobado') {
-    toast('Solo se pueden generar archivos de borradores aprobados', 'error');
-    return;
-  }
-  
-  try {
-    // Simular generación de archivos
-    console.log('📄 Generando archivos para borrador:', codigo);
-    console.log('📋 Datos del pedido:', borrador);
-    
-    // En una implementación real, aquí se generarían:
-    // 1. PDF de cotización 
-    // 2. PDF de preparación
-    // 3. CSV para el sistema
-    
-    const nombreArchivos = [
-      `${codigo}_Cotizacion.pdf`,
-      `${codigo}_Preparacion.pdf`, 
-      `${codigo}_Datos.csv`
-    ];
-    
-    // Simular descarga/generación
-    const mensaje = `
-📁 Archivos generados para ${codigo}:
-• ${nombreArchivos[0]}
-• ${nombreArchivos[1]}
-• ${nombreArchivos[2]}
 
-💡 En desarrollo: Los archivos se abrirán automáticamente
-    `;
-    
-    alert(mensaje.trim());
-    
-    // Marcar como procesado
-    borrador.estado = 'procesado';
-    borrador.fechaProcesamiento = new Date().toISOString();
-    borrador.archivosGenerados = nombreArchivos;
-    localStorage.setItem('maxifer_borradores', JSON.stringify(borradores));
-    
-    toast('✅ Archivos generados exitosamente');
-    loadBorradores();
-    
-  } catch (error) {
-    console.error('Error generando archivos:', error);
-    toast('❌ Error generando archivos: ' + error.message, 'error');
-  }
-}
+  State.borradorActualId = b.id;
+  $('area-revision').style.display = 'block';
+  $('comentarios-rechazo').style.display = 'none';
+  $('resultado-revision').style.display = 'none';
 
-// ═══════════════════════════════════════════════════════════
-// APROBACIÓN
-// ═══════════════════════════════════════════════════════════
-function aprobarPedido() {
-  if (pedidoActual.length === 0) { 
-    toast('El pedido está vacío', 'error');
-    return;
-  }
-  
-  toast('Función en desarrollo - Por ahora usá "Guardar Borrador"', 'warn');
-}
+  const totalUnidades = (b.items || []).reduce((s, it) => s + (it.cantidad || 0), 0);
+  const totalCosto = (b.items || []).reduce((s, it) => s + (it.cantidad || 0) * (it.precio || 0), 0);
 
-// ═══════════════════════════════════════════════════════════
-// UTILIDADES
-// ═══════════════════════════════════════════════════════════
-function toast(message, type = 'success') {
-  const toast = document.createElement('div');
-  toast.className = `toast ${type}`;
-  toast.textContent = message;
-  
-  document.body.appendChild(toast);
-  
-  setTimeout(() => {
-    toast.remove();
-  }, 3000);
-}
+  $('info-borrador').innerHTML = `
+    <div style="display:flex; justify-content: space-between; flex-wrap: wrap; gap: 10px">
+      <div>
+        <div style="font-family: 'Courier New', monospace; font-weight: 700; font-size: 16px">${escapeHtml(b.id)}</div>
+        <div style="font-size:12px; color: var(--gris-texto); margin-top: 4px">
+          <strong>${escapeHtml(b.proveedor)}</strong> • ${escapeHtml(b.operador)} • ${fmtFecha(b.creado)}
+        </div>
+        ${b.observaciones ? `<div style="margin-top:6px; font-style:italic">"${escapeHtml(b.observaciones)}"</div>` : ''}
+      </div>
+      <div style="text-align: right">
+        <span class="estado-pill ${b.estado}">${b.estado}</span>
+        <div style="margin-top:6px; font-size: 12px">
+          ${(b.items || []).length} items / ${totalUnidades.toLocaleString('es-AR')} unid.
+        </div>
+        <div style="font-weight:600; color: var(--verde); font-size: 16px; margin-top: 2px">
+          ${fmtMoney(totalCosto)}
+        </div>
+      </div>
+    </div>
+  `;
 
-// ═══════════════════════════════════════════════════════════
-// INICIALIZACIÓN
-// ═══════════════════════════════════════════════════════════
-document.addEventListener('DOMContentLoaded', function() {
-  console.log('🚀 Iniciando MAXIFER Compras...');
-  loadData()
-    .then(() => {
-      init();
-      console.log('✅ App inicializada correctamente');
-    })
-    .catch(err => {
-      console.error('❌ Error durante inicialización:', err);
+  // Detalle de items
+  const det = $('detalle-revision');
+  det.innerHTML = '';
+  if (!b.items || b.items.length === 0) {
+    det.innerHTML = '<p style="padding: 20px; text-align: center; color: var(--gris-texto)">Sin items</p>';
+  } else {
+    b.items.forEach((it, idx) => {
+      const div = document.createElement('div');
+      div.className = 'detalle-item';
+      div.innerHTML = `
+        <div class="di-info">
+          <div class="di-codigo">#${idx + 1} • ${escapeHtml(it.codprov || it.numero)}</div>
+          <div class="di-desc">${escapeHtml(it.descripcion)} • ${fmtMoney(it.precio)} c/u</div>
+        </div>
+        <div class="di-cant">${it.cantidad} <span style="font-size:11px;color:var(--gris-texto)">×</span></div>
+      `;
+      det.appendChild(div);
     });
-});
+  }
 
+  // Si está aprobado o rechazado, ocultar botones de acción
+  const yaResuelto = b.estado === 'aprobado' || b.estado === 'rechazado';
+  $('btn-rechazar').style.display = yaResuelto ? 'none' : '';
+  $('btn-aprobar-rev').style.display = yaResuelto ? 'none' : '';
+  if (yaResuelto) {
+    $('resultado-revision').style.display = 'block';
+    $('resultado-revision').innerHTML = `
+      <div class="hint-box ${b.estado === 'aprobado' ? '' : 'warning'}" style="display:inline-block">
+        Este pedido ya está <strong>${b.estado}</strong>${b.aprobado_en ? ' — ' + fmtFecha(b.aprobado_en) : ''}
+      </div>
+    `;
+  }
+}
+
+function aprobarDesdeRevision() {
+  if (!State.borradorActualId) return;
+  const all = lsGet(KEY_BORRADORES, []);
+  const idx = all.findIndex(b => b.id === State.borradorActualId);
+  if (idx < 0) { toast('No encontrado', 'error'); return; }
+  const b = all[idx];
+  if (!confirm(`¿Aprobar ${b.id} y generar PDF?`)) return;
+  moverAHistorial(b);
+  generarPDF(b);
+  toast('✅ Aprobado', 'success');
+  cargarBorradorParaRevisar();
+}
+
+function confirmarRechazo() {
+  if (!State.borradorActualId) return;
+  const motivo = ($('comentarios-texto').value || '').trim();
+  if (!motivo) { toast('Escribí un motivo', 'warning'); return; }
+
+  const all = lsGet(KEY_BORRADORES, []);
+  const idx = all.findIndex(b => b.id === State.borradorActualId);
+  if (idx < 0) return;
+  all[idx].estado = 'rechazado';
+  all[idx].comentarios = motivo;
+  all[idx].modificado = new Date().toISOString();
+  lsSet(KEY_BORRADORES, all);
+
+  toast('Rechazado', 'warning');
+  $('comentarios-rechazo').style.display = 'none';
+  $('comentarios-texto').value = '';
+  cargarBorradorParaRevisar();
+  updateBadges();
+}
+
+
+// ═══════════════════════════════════════════════════════════════════
+// PDF — Orden de compra
+// ═══════════════════════════════════════════════════════════════════
+function generarPDF(borrador) {
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    toast('jsPDF no se cargó', 'error');
+    return;
+  }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+
+  const pageW = doc.internal.pageSize.getWidth();
+  const margin = 14;
+  let y = margin;
+
+  // Header MAXIFER
+  doc.setFillColor(192, 57, 43);
+  doc.rect(0, 0, pageW, 18, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(18);
+  doc.text('MAXIFER — ORDEN DE COMPRA', margin, 12);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.text(borrador.id, pageW - margin, 12, { align: 'right' });
+
+  y = 26;
+  doc.setTextColor(0, 0, 0);
+  doc.setFontSize(10);
+
+  // Datos del pedido
+  const tel = VENDEDORES[borrador.operador] || '';
+  doc.setFont('helvetica', 'bold');
+  doc.text('Proveedor:', margin, y);
+  doc.setFont('helvetica', 'normal');
+  doc.text(borrador.proveedor || '—', margin + 28, y);
+
+  doc.setFont('helvetica', 'bold');
+  doc.text('Vendedor:', pageW / 2, y);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`${borrador.operador || '—'}${tel ? ' (' + tel + ')' : ''}`, pageW / 2 + 22, y);
+  y += 6;
+
+  doc.setFont('helvetica', 'bold');
+  doc.text('Fecha:', margin, y);
+  doc.setFont('helvetica', 'normal');
+  doc.text(fmtFecha(borrador.creado), margin + 28, y);
+
+  doc.setFont('helvetica', 'bold');
+  doc.text('Estado:', pageW / 2, y);
+  doc.setFont('helvetica', 'normal');
+  doc.text((borrador.estado || '—').toUpperCase(), pageW / 2 + 22, y);
+  y += 6;
+
+  if (borrador.observaciones) {
+    doc.setFont('helvetica', 'bold');
+    doc.text('Obs:', margin, y);
+    doc.setFont('helvetica', 'normal');
+    const obsLines = doc.splitTextToSize(borrador.observaciones, pageW - margin * 2 - 18);
+    doc.text(obsLines, margin + 18, y);
+    y += obsLines.length * 5;
+  }
+
+  y += 4;
+
+  // Tabla
+  // Columnas: # | Cód.Prov | Núm. | Descripción | Cant | Precio | Subtotal
+  const cols = [
+    { w: 8, h: '#', align: 'right' },
+    { w: 24, h: 'Cód. Prov.', align: 'left' },
+    { w: 18, h: 'Núm.', align: 'left' },
+    { w: 70, h: 'Descripción', align: 'left' },
+    { w: 14, h: 'Cant.', align: 'right' },
+    { w: 22, h: 'Precio', align: 'right' },
+    { w: 26, h: 'Subtotal', align: 'right' },
+  ];
+
+  function drawHeader() {
+    doc.setFillColor(45, 45, 45);
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.rect(margin, y, pageW - margin * 2, 7, 'F');
+    let x = margin + 1;
+    cols.forEach(c => {
+      doc.text(c.h, c.align === 'right' ? x + c.w - 2 : x + 1, y + 5, { align: c.align === 'right' ? 'right' : 'left' });
+      x += c.w;
+    });
+    y += 8;
+    doc.setTextColor(0, 0, 0);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+  }
+
+  drawHeader();
+
+  let totalUnidades = 0, totalCosto = 0;
+  (borrador.items || []).forEach((it, idx) => {
+    const subtotal = (it.cantidad || 0) * (it.precio || 0);
+    totalUnidades += (it.cantidad || 0);
+    totalCosto += subtotal;
+
+    // Wrap descripción
+    const descLines = doc.splitTextToSize(it.descripcion || '', cols[3].w - 2);
+    const rowH = Math.max(5, descLines.length * 4) + 1;
+
+    // Si no entra en la página, nueva página
+    if (y + rowH > 280) {
+      doc.addPage();
+      y = margin;
+      drawHeader();
+    }
+
+    let x = margin + 1;
+    const vals = [
+      String(idx + 1),
+      String(it.codprov || ''),
+      String(it.numero || ''),
+      descLines,
+      String(it.cantidad || 0),
+      fmtMoneyPDF(it.precio),
+      fmtMoneyPDF(subtotal),
+    ];
+    cols.forEach((c, i) => {
+      const align = c.align === 'right' ? 'right' : 'left';
+      const tx = align === 'right' ? x + c.w - 2 : x + 1;
+      const v = vals[i];
+      doc.text(v, tx, y + 4, { align });
+      x += c.w;
+    });
+
+    // Línea
+    doc.setDrawColor(220, 220, 220);
+    doc.line(margin, y + rowH, pageW - margin, y + rowH);
+    y += rowH;
+  });
+
+  // Totales
+  y += 6;
+  if (y > 270) { doc.addPage(); y = margin; }
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.text(`Items: ${(borrador.items || []).length}    Unidades: ${totalUnidades.toLocaleString('es-AR')}`, margin, y);
+  doc.text(`TOTAL: ${fmtMoneyPDF(totalCosto)}`, pageW - margin, y, { align: 'right' });
+
+  // Footer
+  const totalPages = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+    doc.setFontSize(8);
+    doc.setTextColor(128, 128, 128);
+    doc.text(`MAXIFER — fabricamaxifer.com — El Palomar, Bs. As.`, margin, 290);
+    doc.text(`Página ${i} de ${totalPages}`, pageW - margin, 290, { align: 'right' });
+  }
+
+  const filename = `OC_${borrador.proveedor.replace(/[^\w]/g, '_')}_${borrador.id}.pdf`;
+  doc.save(filename);
+  log('info', 'PDF generado:', filename);
+}
+
+function fmtMoneyPDF(n) {
+  // jsPDF tiene problemas con caracteres unicode raros, mantengo formato simple
+  const num = Number(n) || 0;
+  return '$ ' + num.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function exportarHistorialCSV() {
+  const historial = lsGet(KEY_HISTORIAL, []);
+  if (historial.length === 0) { toast('Historial vacío', 'warning'); return; }
+
+  const rows = [['Codigo', 'Fecha', 'Proveedor', 'Operador', 'Item#', 'CodProv', 'Numero', 'Descripcion', 'Cantidad', 'Precio', 'Subtotal']];
+  historial.forEach(b => {
+    (b.items || []).forEach((it, idx) => {
+      rows.push([
+        b.id,
+        b.aprobado_en || b.creado,
+        b.proveedor,
+        b.operador,
+        idx + 1,
+        it.codprov,
+        it.numero,
+        (it.descripcion || '').replace(/[",\n]/g, ' '),
+        it.cantidad,
+        it.precio,
+        (it.cantidad || 0) * (it.precio || 0),
+      ]);
+    });
+  });
+  const csv = rows.map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `historial_compras_${fechaCompacta()}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('CSV descargado', 'success');
+}
+
+
+// ═══════════════════════════════════════════════════════════════════
+// TOASTS, BADGES, DEBUG
+// ═══════════════════════════════════════════════════════════════════
+function toast(msg, type = 'info', duration = 3500) {
+  const cont = $('toast-container');
+  if (!cont) {
+    console.log('[toast]', type, msg);
+    return;
+  }
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  cont.appendChild(t);
+  setTimeout(() => {
+    t.classList.add('removing');
+    setTimeout(() => t.remove(), 250);
+  }, duration);
+}
+
+function updateBadges() {
+  const borradores = lsGet(KEY_BORRADORES, []);
+  const editando = borradores.filter(b => b.estado === 'editando' || !b.estado || b.estado === 'rechazado').length;
+  const pendientes = borradores.filter(b => b.estado === 'pendiente').length;
+
+  const bb = $('badge-borradores');
+  if (bb) {
+    bb.textContent = editando;
+    bb.classList.toggle('empty', editando === 0);
+  }
+  const bp = $('badge-pendientes');
+  if (bp) {
+    bp.textContent = pendientes;
+    bp.classList.toggle('empty', pendientes === 0);
+  }
+}
+
+function toggleDebugPanel() {
+  const dp = $('debug-panel');
+  if (!dp) return;
+  if (dp.classList.contains('debug-panel-expanded')) {
+    dp.classList.remove('debug-panel-expanded');
+    dp.innerHTML = '<span id="debug-summary">⚙️ DEBUG</span>';
+    updateDebugPanel();
+  } else {
+    dp.classList.add('debug-panel-expanded');
+    const recent = State.debugLogs.slice(-15).map(l => `[${l.level}] ${l.msg}`).join('\n');
+    dp.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center">
+        <strong>DEBUG</strong>
+        <span style="color:var(--rojo-light); font-size: 14px">×</span>
+      </div>
+      <div style="margin-top:6px; font-size: 10px">
+        DB: ${State.DB.length} • Prov: ${State.PROVEEDORES.length} • Fam: ${State.FAMILIAS.length}<br>
+        Activo: ${State.proveedorActual || '—'}<br>
+        Pedido: ${State.pedidoActual.length} items<br>
+        BorradorID: ${State.borradorActualId || '—'}
+      </div>
+      <pre>${escapeHtml(recent || '(sin logs)')}</pre>
+    `;
+  }
+}
+
+function updateDebugPanel() {
+  const dp = $('debug-panel');
+  if (!dp) return;
+  if (dp.classList.contains('debug-panel-expanded')) return; // ya expandido, dejar
+  const ds = $('debug-summary');
+  if (ds) ds.textContent = `⚙️ ${State.DB.length} prod • ${State.proveedorActual || 'sin prov.'}`;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// FATAL ERROR HANDLER
+// ═══════════════════════════════════════════════════════════════════
+function showFatalError(error) {
+  const loader = $('loader');
+  if (loader) loader.style.display = 'none';
+  const body = document.body;
+  // No borrar todo el body. Crear un overlay encima.
+  const ov = document.createElement('div');
+  ov.id = 'fatal-overlay';
+  ov.style.cssText = 'position:fixed;inset:0;background:var(--gris-oscuro);z-index:99999;overflow:auto';
+  ov.innerHTML = `
+    <div class="fatal-error">
+      <h2>⚠ Error cargando datos</h2>
+      <p>No se pudo cargar <code>productos.json</code>:</p>
+      <p style="color:var(--rojo-light); font-family: 'Courier New', monospace; font-size: 12px; margin: 12px 0">
+        ${escapeHtml(String(error.message || error))}
+      </p>
+      <p style="font-size:12px; color:var(--gris-texto); margin-top: 16px">
+        Verificá que <code>productos.json</code> esté disponible en el mismo directorio que esta página, o que GitHub Pages esté online.
+      </p>
+      <div style="margin-top: 20px; display:flex; gap: 8px; justify-content: center; flex-wrap: wrap">
+        <button class="btn btn-primary" onclick="location.reload()">🔄 Reintentar</button>
+        <button class="btn btn-secondary" onclick="document.getElementById('fatal-overlay').remove()">Cerrar (modo offline limitado)</button>
+      </div>
+    </div>
+  `;
+  body.appendChild(ov);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// BOOT
+// ═══════════════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', async function() {
+  log('info', '🚀 Boot v' + APP_VERSION);
+  try {
+    await loadData();
+    init();
+    $('loader').style.display = 'none';
+    renderTablaPedido(); // estado inicial vacío
+  } catch (err) {
+    log('error', 'Boot failed:', err);
+    showFatalError(err);
+  }
+});
 </script>
 </body>
 </html>
