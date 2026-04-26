@@ -729,14 +729,13 @@
 <header>
   <div class="logo">MAXI<span>FER</span> <span style="font-size:13px;color:var(--gris-texto);font-weight:400;letter-spacing:1px;">COMPRAS</span></div>
   <div style="display:flex;align-items:center;gap:12px">
-    <span id="sheets-status" style="font-size:11px;color:var(--gris-texto);font-family:'Barlow Condensed',sans-serif;letter-spacing:1px;cursor:default" title="Estado de conexión con Google Sheets">⚪ Sheets</span>
     <div class="header-badge">v2.0</div>
   </div>
 </header>
 
 <div class="tabs">
   <button class="tab active" onclick="showPage('nuevo')">📋 Nuevo Pedido</button>
-  <button class="tab" onclick="showPage('borradores'); setTimeout(loadBorradores, 100)" id="tab-borradores">💾 Mis Borradores <span class="tab-badge" id="badge-borradores">0</span></button>
+  <button class="tab" onclick="showPage('borradores'); loadBorradores()" id="tab-borradores">💾 Mis Borradores <span class="tab-badge" id="badge-borradores">0</span></button>
   <button class="tab" onclick="showPage('revisar')" id="tab-revisar">👁️ Revisar Borrador</button>
   <button class="tab" onclick="showPage('pendientes')" id="tab-pendientes">⏳ Pendientes <span class="tab-badge" id="badge-pendientes">0</span></button>
   <button class="tab" onclick="showPage('historial')">📚 Historial</button>
@@ -2304,6 +2303,7 @@ function parsearMasivo(texto) {
   if (!texto.trim()) {
     document.getElementById('preview-masiva').classList.remove('visible');
     document.getElementById('cant-global-row').style.display = 'none';
+    document.getElementById('seleccion-masiva-row').style.display = 'none';
     previaMasiva = [];
     return;
   }
@@ -2339,11 +2339,21 @@ function parsearMasivo(texto) {
     } else {
       const prod = candidatos[0];
       const ultimaCant = getUltimaCantidad(prod.id);
+      
+      // ✅ NUEVO: Pre-llenar automáticamente con cantidad del historial
+      let cantidadInicial = 0;
+      let estado = 'warn';
+      
+      if (ultimaCant) {
+        cantidadInicial = ultimaCant.cant;
+        estado = 'ok';
+      }
+      
       previaMasiva.push({
         numero: num,
         prod,
-        cantidad: ultimaCant ? ultimaCant.cant : 0,
-        estado: ultimaCant ? 'ok' : 'warn'
+        cantidad: cantidadInicial, // ← Ahora se pre-llena automáticamente
+        estado: estado
       });
     }
   }
@@ -2378,9 +2388,10 @@ function renderPreviewMasivo() {
 
   const ok = previaMasiva.filter(i => i.estado !== 'error').length;
   const err = previaMasiva.filter(i => i.estado === 'error').length;
+  const conCantidad = previaMasiva.filter(i => i.cantidad > 0).length;
   const seleccionados = previaMasiva.filter(i => i.seleccionado && i.estado !== 'error').length;
   
-  countEl.textContent = `${ok} encontrados${err ? ' · ' + err + ' no encontrados' : ''} · ${seleccionados} seleccionados`;
+  countEl.textContent = `${ok} encontrados${err ? ' · ' + err + ' no encontrados' : ''} · ${conCantidad} con cantidad · ${seleccionados} seleccionados`;
 
   container.innerHTML = previaMasiva.map((item, idx) => {
     if (item.estado === 'error') {
@@ -2396,16 +2407,24 @@ function renderPreviewMasivo() {
       item.seleccionado = true; // Por defecto seleccionado
     }
     
-    const histLabel = item.cantidad ? '' : ' (sin historial)';
+    // Determinar el estilo del campo cantidad según si viene del historial
+    const cantidadStyle = item.cantidad > 0 && item.estado === 'ok' ? 
+      'background: rgba(26, 158, 94, 0.1); border-color: var(--verde);' : '';
+    
     return `<div class="preview-item has-checkbox">
       <input type="checkbox" class="item-checkbox" ${item.seleccionado ? 'checked' : ''} 
         onchange="previaMasiva[${idx}].seleccionado = this.checked; actualizarContadorSeleccionados()">
       <div class="pi-num">${item.numero}</div>
       <div class="pi-desc">${item.prod.descripcion}</div>
-      <input type="number" class="pi-cant masiva-area" style="min-height:unset;padding:4px 6px;width:70px"
+      <input type="number" class="pi-cant masiva-area" 
+        style="min-height:unset;padding:4px 6px;width:70px;${cantidadStyle}"
         value="${item.cantidad || ''}" min="1" placeholder="Cant."
         onchange="previaMasiva[${idx}].cantidad=parseInt(this.value)||0">
-      <span class="pi-status ${item.estado === 'ok' ? 'pi-ok' : 'pi-warn'}">${item.estado === 'ok' ? '✓ HIST' : '⚠ SIN HIST'}</span>
+      <span class="pi-status ${item.estado === 'ok' ? 'pi-ok' : 'pi-warn'}">${
+        item.estado === 'ok' ? 
+        (item.cantidad > 0 ? `✓ HIST (${item.cantidad})` : '✓ HIST') : 
+        '⚠ SIN HIST'
+      }</span>
     </div>`;
   }).join('');
 }
@@ -2746,123 +2765,108 @@ function enviarParaAprobacion() {
 }
 
 function loadBorradores() {
-  console.log('🔍 loadBorradores() ejecutándose...');
+  console.log('🔍 loadBorradores() iniciando...');
   
-  const borradores = JSON.parse(localStorage.getItem('maxifer_borradores') || '{}');
-  const lista = document.getElementById('borradores-list');
-  
-  console.log('📋 Borradores encontrados:', Object.keys(borradores).length);
-  console.log('🎯 Elemento lista:', lista);
-  
-  if (!lista) {
-    console.error('❌ Elemento borradores-list no encontrado!');
-    return;
-  }
-  
-  const misBorradores = Object.values(borradores).sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
-  console.log('📋 Borradores procesados:', misBorradores.length);
-  
-  if (misBorradores.length === 0) {
-    console.log('📭 No hay borradores, mostrando mensaje vacío');
-    lista.innerHTML = `
-      <div style="text-align:center; padding:40px; color:var(--gris-texto)">
-        <div style="font-size:48px; margin-bottom:16px">📋</div>
-        <div style="font-size:18px; margin-bottom:8px">No hay borradores guardados</div>
-        <div>Completá una compra y guardala como borrador</div>
-        <button onclick="migrarPendientesABorradores()" style="background:var(--amarillo); color:var(--gris-oscuro); border:none; padding:10px 20px; border-radius:4px; cursor:pointer; margin-top:15px">
-          📦 Migrar pendientes a borradores
-        </button>
-        <button onclick="console.log('Test localStorage:', localStorage.getItem('maxifer_borradores'))" style="background:var(--gris-medio); color:var(--blanco); border:none; padding:10px 20px; border-radius:4px; cursor:pointer; margin-top:10px">
-          🔍 Debug localStorage
-        </button>
-      </div>
-    `;
-    return;
-  }
-  
-  // Si hay borradores, mostrar la lista
-  console.log('📋 Renderizando', misBorradores.length, 'borradores...');
-  
-  let html = '';
-  misBorradores.forEach((borrador, index) => {
-    console.log(`📋 Procesando borrador ${index + 1}:`, borrador.codigo);
-    
-    const fecha = new Date(borrador.fecha).toLocaleDateString('es-AR');
-    const total = borrador.totales?.total || 0;
-    const proveedor = borrador.proveedor || 'Sin proveedor';
-    
-    let estadoColor = '';
-    let estadoTexto = '';
-    switch(borrador.estado) {
-      case 'editando':
-        estadoColor = 'var(--amarillo)';
-        estadoTexto = '✏️ En edición';
-        break;
-      case 'pendiente':
-        estadoColor = 'orange';
-        estadoTexto = '⏳ Pendiente aprobación';
-        break;
-      case 'aprobado':
-        estadoColor = 'var(--verde)';
-        estadoTexto = '✅ Aprobado';
-        break;
-      case 'rechazado':
-        estadoColor = 'var(--rojo)';
-        estadoTexto = '❌ Rechazado';
-        break;
+  try {
+    const lista = document.getElementById('borradores-list');
+    if (!lista) {
+      console.error('❌ Elemento borradores-list no encontrado');
+      return;
     }
     
-    html += `
-      <div style="background:var(--gris-panel); padding:15px; border-radius:4px; margin-bottom:15px; border-left:4px solid ${estadoColor}">
-        <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:10px">
-          <div>
-            <div style="font-weight:600; font-size:16px; color:var(--blanco)">${borrador.codigo}</div>
-            <div style="color:var(--gris-texto); font-size:13px">${fecha} • ${proveedor}</div>
-            <div style="color:var(--gris-texto); font-size:12px">${borrador.totales?.items || 0} items • ${borrador.totales?.unidades || 0} unidades</div>
+    const rawData = localStorage.getItem('maxifer_borradores');
+    console.log('Raw data:', rawData);
+    
+    if (!rawData || rawData === '{}') {
+      console.log('📭 No hay borradores');
+      lista.innerHTML = `
+        <div style="text-align:center; padding:40px; color:var(--gris-texto)">
+          <div style="font-size:48px; margin-bottom:16px">📋</div>
+          <div style="font-size:18px; margin-bottom:8px">No hay borradores guardados</div>
+          <div>Completá una compra y guardala como borrador</div>
+          <button onclick="migrarPendientesABorradores()" style="background:var(--amarillo); color:var(--gris-oscuro); border:none; padding:10px 20px; border-radius:4px; cursor:pointer; margin-top:15px">
+            📦 Migrar pendientes a borradores
+          </button>
+        </div>
+      `;
+      return;
+    }
+    
+    const borradores = JSON.parse(rawData);
+    const borradoresList = Object.values(borradores);
+    console.log('Borradores encontrados:', borradoresList.length);
+    
+    if (borradoresList.length === 0) {
+      lista.innerHTML = `
+        <div style="text-align:center; padding:40px; color:var(--gris-texto)">
+          <div style="font-size:48px; margin-bottom:16px">📋</div>
+          <div style="font-size:18px; margin-bottom:8px">No hay borradores válidos</div>
+        </div>
+      `;
+      return;
+    }
+    
+    // Renderizar cada borrador de forma simple
+    let html = '';
+    borradoresList.forEach(borrador => {
+      const fecha = new Date(borrador.fecha).toLocaleDateString('es-AR');
+      const total = (borrador.totales && borrador.totales.total) ? borrador.totales.total : 0;
+      const proveedor = borrador.proveedor || 'Sin proveedor';
+      const items = (borrador.totales && borrador.totales.items) ? borrador.totales.items : 0;
+      
+      let estadoColor = 'orange';
+      let estadoTexto = '⏳ Pendiente';
+      if (borrador.estado === 'editando') {
+        estadoColor = 'var(--amarillo)';
+        estadoTexto = '✏️ En edición';
+      } else if (borrador.estado === 'aprobado') {
+        estadoColor = 'var(--verde)';
+        estadoTexto = '✅ Aprobado';
+      } else if (borrador.estado === 'rechazado') {
+        estadoColor = 'var(--rojo)';
+        estadoTexto = '❌ Rechazado';
+      }
+      
+      html += `
+        <div style="background:var(--gris-panel); padding:15px; border-radius:4px; margin-bottom:15px; border-left:4px solid ${estadoColor}">
+          <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:10px">
+            <div>
+              <div style="font-weight:600; font-size:16px; color:var(--blanco)">${borrador.codigo}</div>
+              <div style="color:var(--gris-texto); font-size:13px">${fecha} • ${proveedor}</div>
+              <div style="color:var(--gris-texto); font-size:12px">${items} items</div>
+            </div>
+            <div style="text-align:right">
+              <div style="color:${estadoColor}; font-weight:600; font-size:12px">${estadoTexto}</div>
+              <div style="color:var(--blanco); font-weight:600">$${total.toLocaleString('es-AR')}</div>
+            </div>
           </div>
-          <div style="text-align:right">
-            <div style="color:${estadoColor}; font-weight:600; font-size:12px">${estadoTexto}</div>
-            <div style="color:var(--blanco); font-weight:600">$${total.toLocaleString('es-AR')}</div>
+          
+          <div style="display:flex; gap:8px; margin-top:15px; flex-wrap:wrap">
+            <button onclick="alert('Código: ${borrador.codigo}')" style="background:var(--azul); color:white; border:none; padding:6px 12px; border-radius:3px; cursor:pointer; font-size:11px">👁️ Ver</button>
+            <button onclick="eliminarBorrador('${borrador.codigo}')" style="background:var(--rojo); color:white; border:none; padding:6px 12px; border-radius:3px; cursor:pointer; font-size:11px">🗑️ Eliminar</button>
           </div>
         </div>
-        
-        <div style="display:flex; gap:10px; margin-top:15px; flex-wrap:wrap">
-          ${borrador.estado === 'editando' || borrador.estado === 'rechazado' ? `
-            <button onclick="editarBorrador('${borrador.codigo}')" style="background:var(--amarillo); color:var(--gris-oscuro); border:none; padding:8px 16px; border-radius:4px; cursor:pointer; font-size:12px">✏️ Editar</button>
-          ` : ''}
-          
-          ${borrador.estado === 'editando' ? `
-            <button onclick="enviarBorradorAprobacion('${borrador.codigo}')" style="background:var(--rojo); color:white; border:none; padding:8px 16px; border-radius:4px; cursor:pointer; font-size:12px">📤 Enviar para aprobación</button>
-          ` : ''}
-          
-          ${borrador.estado === 'aprobado' ? `
-            <button onclick="generarArchivosFinales('${borrador.codigo}')" style="background:var(--verde); color:white; border:none; padding:8px 16px; border-radius:4px; cursor:pointer; font-size:12px">📥 Generar archivos</button>
-          ` : ''}
-          
-          <button onclick="eliminarBorrador('${borrador.codigo}')" style="background:var(--gris-borde); color:var(--gris-texto); border:none; padding:8px 16px; border-radius:4px; cursor:pointer; font-size:12px">🗑️ Eliminar</button>
+      `;
+    });
+    
+    lista.innerHTML = html;
+    console.log('✅ Borradores renderizados exitosamente');
+    
+  } catch (error) {
+    console.error('❌ Error en loadBorradores:', error);
+    const lista = document.getElementById('borradores-list');
+    if (lista) {
+      lista.innerHTML = `
+        <div style="text-align:center; padding:40px; color:var(--rojo)">
+          <div style="font-size:18px; margin-bottom:8px">Error cargando borradores</div>
+          <div style="font-size:12px">${error.message}</div>
+          <button onclick="limpiarBorradores()" style="background:var(--rojo); color:white; border:none; padding:8px 16px; border-radius:4px; cursor:pointer; margin-top:10px">
+            🗑️ Limpiar y reiniciar
+          </button>
         </div>
-        
-        ${borrador.comentarios ? `
-          <div style="margin-top:10px; padding:8px; background:var(--gris-oscuro); border-radius:4px; border-left:3px solid var(--rojo)">
-            <strong style="color:var(--rojo)">Comentarios:</strong> ${borrador.comentarios}
-          </div>
-        ` : ''}
-      </div>
-    `;
-  });
-  
-  // Agregar botón de migración al final
-  html += `
-    <div style="text-align:center; margin-top:20px; padding-top:20px; border-top:1px solid var(--gris-borde)">
-      <button onclick="migrarPendientesABorradores()" style="background:var(--gris-medio); color:var(--gris-texto); border:none; padding:8px 16px; border-radius:4px; cursor:pointer; font-size:12px">
-        📦 Migrar pendientes a borradores
-      </button>
-    </div>
-  `;
-  
-  console.log('✅ Estableciendo HTML en elemento lista');
-  lista.innerHTML = html;
-  console.log('✅ loadBorradores() completado');
+      `;
+    }
+  }
 }
 
 function editarBorrador(codigo) {
@@ -2885,14 +2889,21 @@ function enviarBorradorAprobacion(codigo) {
 }
 
 function eliminarBorrador(codigo) {
-  if (!confirm('¿Estás seguro de eliminar este borrador?')) return;
+  if (!confirm(`¿Estás seguro de eliminar el borrador ${codigo}?`)) return;
   
-  const borradores = JSON.parse(localStorage.getItem('maxifer_borradores') || '{}');
-  delete borradores[codigo];
-  localStorage.setItem('maxifer_borradores', JSON.stringify(borradores));
-  
-  loadBorradores();
-  updateBorradoresBadge();
+  try {
+    const borradores = JSON.parse(localStorage.getItem('maxifer_borradores') || '{}');
+    delete borradores[codigo];
+    localStorage.setItem('maxifer_borradores', JSON.stringify(borradores));
+    
+    updateBorradoresBadge();
+    loadBorradores();
+    
+    toast(`Borrador ${codigo} eliminado`);
+  } catch (error) {
+    console.error('Error eliminando borrador:', error);
+    alert('Error eliminando borrador: ' + error.message);
+  }
 }
 
 function cargarBorradorParaRevisar() {
