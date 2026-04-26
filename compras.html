@@ -698,6 +698,8 @@
 
 <div class="tabs">
   <button class="tab active" onclick="showPage('nuevo')">📋 Nuevo Pedido</button>
+  <button class="tab" onclick="showPage('borradores')" id="tab-borradores">💾 Mis Borradores <span class="tab-badge" id="badge-borradores">0</span></button>
+  <button class="tab" onclick="showPage('revisar')" id="tab-revisar">👁️ Revisar Borrador</button>
   <button class="tab" onclick="showPage('pendientes')" id="tab-pendientes">⏳ Pendientes <span class="tab-badge" id="badge-pendientes">0</span></button>
   <button class="tab" onclick="showPage('historial')">📚 Historial</button>
 </div>
@@ -868,6 +870,8 @@
       <div class="btn-row" style="margin-top:0">
         <button class="btn btn-secondary" onclick="limpiarPedido()">🗑 Limpiar</button>
         <button class="btn btn-warning" onclick="guardarPendiente()">💾 Guardar Pendiente</button>
+        <button class="btn" onclick="guardarBorrador(); loadBorradores(); showPage('borradores')" style="background:var(--amarillo); color:var(--gris-oscuro)">📋 Guardar Borrador</button>
+        <button class="btn" onclick="enviarParaAprobacion()" style="background:var(--rojo-light); color:white">📤 Enviar para Aprobación</button>
         <button class="btn btn-success" onclick="aprobarPedido()">✅ Aprobar y Generar</button>
       </div>
     </div>
@@ -891,6 +895,78 @@
 ═══════════════════════════════════════ -->
 <div class="page" id="page-historial">
   <div class="stats-row" id="stats-historial"></div>
+
+<!-- ═══════════════════════════════════════
+     PÁGINA: MIS BORRADORES
+═══════════════════════════════════════ -->
+<div class="page" id="page-borradores" style="display:none">
+  <div class="section-title">💾 Mis Borradores</div>
+  <div class="panel">
+    <div id="borradores-list">
+      <div style="text-align:center; padding:40px; color:var(--gris-texto)">
+        <div style="font-size:48px; margin-bottom:16px">📋</div>
+        <div style="font-size:18px; margin-bottom:8px">No hay borradores guardados</div>
+        <div>Completá una compra y guardala como borrador</div>
+      </div>
+    </div>
+    
+    <div class="actions" style="margin-top:20px">
+      <button onclick="loadBorradores()" style="background:var(--gris-medio); color:var(--blanco); border:none; padding:10px 20px; border-radius:4px; cursor:pointer">🔄 Actualizar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     PÁGINA: REVISAR BORRADOR
+═══════════════════════════════════════ -->
+<div class="page" id="page-revisar" style="display:none">
+  <div class="section-title">👁️ Revisar Borrador</div>
+  <div class="panel">
+    <div class="form-row">
+      <div>
+        <label>Código del borrador</label>
+        <div style="display:flex; gap:10px; align-items:center">
+          <input type="text" id="codigo-revisar" placeholder="Ej: COMP-241226-001" style="flex:1; padding:10px; background:var(--gris-medio); border:1px solid var(--gris-borde); color:var(--blanco); border-radius:4px">
+          <button onclick="cargarBorradorParaRevisar()" style="background:var(--rojo); color:white; border:none; padding:10px 20px; border-radius:4px; cursor:pointer">🔍 Cargar</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Área de revisión -->
+    <div id="area-revision" style="display:none; margin-top:20px">
+      <div class="section-title">📋 Revisión de la Compra</div>
+      
+      <!-- Info del borrador -->
+      <div id="info-borrador" style="background:var(--gris-panel); padding:15px; border-radius:4px; margin-bottom:20px">
+        <!-- Se llena dinámicamente -->
+      </div>
+      
+      <!-- Detalle de proveedores -->
+      <div id="detalle-revision">
+        <!-- Se llena dinámicamente -->
+      </div>
+      
+      <!-- Acciones de aprobación -->
+      <div class="actions" style="margin-top:20px; display:flex; gap:15px; justify-content:center">
+        <button id="btn-rechazar" onclick="rechazarBorrador()" style="background:var(--amarillo); color:var(--gris-oscuro); border:none; padding:12px 24px; border-radius:4px; cursor:pointer; font-weight:600">❌ Rechazar</button>
+        <button id="btn-aprobar" onclick="aprobarBorrador()" style="background:var(--verde); color:white; border:none; padding:12px 24px; border-radius:4px; cursor:pointer; font-weight:600">✅ Aprobar</button>
+      </div>
+      
+      <!-- Campo para comentarios de rechazo -->
+      <div id="comentarios-rechazo" style="display:none; margin-top:15px">
+        <label>Comentarios (opcional)</label>
+        <textarea id="comentarios-texto" placeholder="Explicá qué hay que modificar..." style="width:100%; height:80px; padding:10px; background:var(--gris-medio); border:1px solid var(--gris-borde); color:var(--blanco); border-radius:4px; resize:vertical"></textarea>
+      </div>
+    </div>
+    
+    <!-- Estado después de aprobar/rechazar -->
+    <div id="resultado-revision" style="display:none; text-align:center; margin-top:20px">
+      <!-- Se llena dinámicamente -->
+    </div>
+  </div>
+</div>
+
+
   <div class="section-title">Historial de Compras</div>
   <div class="panel">
     <div class="form-row cols-3">
@@ -2338,6 +2414,397 @@ async function init(){
   });
   FAMILIAS = [...new Set(DB.map(p => p.familia).filter(Boolean))].sort();
   PROVEEDORES = [...new Set(DB.map(p => p.proveedor).filter(Boolean))].sort();
+}
+
+
+// ═══════════════════════════════════════
+// SISTEMA DE BORRADORES Y APROBACIÓN
+// ═══════════════════════════════════════
+
+function generarCodigoBorrador() {
+  const fecha = new Date();
+  const dia = fecha.getDate().toString().padStart(2, '0');
+  const mes = (fecha.getMonth() + 1).toString().padStart(2, '0');
+  const año = fecha.getFullYear().toString().slice(-2);
+  const timestamp = Date.now().toString().slice(-3);
+  return `COMP-${año}${mes}${dia}-${timestamp}`;
+}
+
+function guardarBorrador() {
+  // Validar que hay algo que guardar
+  if (Object.keys(currentOrder).length === 0) {
+    alert('No hay productos en la compra para guardar');
+    return null;
+  }
+  
+  const codigo = generarCodigoBorrador();
+  const borrador = {
+    codigo: codigo,
+    fecha: new Date().toISOString(),
+    estado: 'editando', // editando, pendiente, aprobado, rechazado
+    currentOrder: JSON.parse(JSON.stringify(currentOrder)),
+    totales: calcularTotales(),
+    comentarios: '',
+    fechaAprobacion: null
+  };
+  
+  // Guardar en localStorage
+  const borradores = JSON.parse(localStorage.getItem('maxifer_borradores') || '{}');
+  borradores[codigo] = borrador;
+  localStorage.setItem('maxifer_borradores', JSON.stringify(borradores));
+  
+  updateBorradoresBadge();
+  return codigo;
+}
+
+function cargarBorrador(codigo) {
+  const borradores = JSON.parse(localStorage.getItem('maxifer_borradores') || '{}');
+  const borrador = borradores[codigo];
+  
+  if (!borrador) {
+    alert('Borrador no encontrado');
+    return false;
+  }
+  
+  // Restaurar el estado
+  currentOrder = JSON.parse(JSON.stringify(borrador.currentOrder));
+  updateAllTotals();
+  renderCurrentOrder();
+  
+  return true;
+}
+
+function enviarParaAprobacion() {
+  const codigo = guardarBorrador();
+  if (!codigo) return;
+  
+  // Cambiar estado a pendiente
+  const borradores = JSON.parse(localStorage.getItem('maxifer_borradores') || '{}');
+  borradores[codigo].estado = 'pendiente';
+  localStorage.setItem('maxifer_borradores', JSON.stringify(borradores));
+  
+  // Mostrar código al usuario
+  alert(`Compra enviada para aprobación.\\n\\nCódigo: ${codigo}\\n\\nEnviá este código por WhatsApp para aprobación.`);
+  
+  updateBorradoresBadge();
+  showPage('borradores');
+  loadBorradores();
+}
+
+function loadBorradores() {
+  const borradores = JSON.parse(localStorage.getItem('maxifer_borradores') || '{}');
+  const lista = document.getElementById('borradores-list');
+  
+  const misBorradores = Object.values(borradores).sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+  
+  if (misBorradores.length === 0) {
+    lista.innerHTML = `
+      <div style="text-align:center; padding:40px; color:var(--gris-texto)">
+        <div style="font-size:48px; margin-bottom:16px">📋</div>
+        <div style="font-size:18px; margin-bottom:8px">No hay borradores guardados</div>
+        <div>Completá una compra y guardala como borrador</div>
+      </div>
+    `;
+    return;
+  }
+  
+  lista.innerHTML = misBorradores.map(borrador => {
+    const fecha = new Date(borrador.fecha).toLocaleDateString('es-AR');
+    const total = borrador.totales?.total || 0;
+    const proveedores = Object.keys(borrador.currentOrder).join(', ');
+    
+    let estadoColor = '';
+    let estadoTexto = '';
+    switch(borrador.estado) {
+      case 'editando':
+        estadoColor = 'var(--amarillo)';
+        estadoTexto = '✏️ En edición';
+        break;
+      case 'pendiente':
+        estadoColor = 'orange';
+        estadoTexto = '⏳ Pendiente aprobación';
+        break;
+      case 'aprobado':
+        estadoColor = 'var(--verde)';
+        estadoTexto = '✅ Aprobado';
+        break;
+      case 'rechazado':
+        estadoColor = 'var(--rojo)';
+        estadoTexto = '❌ Rechazado';
+        break;
+    }
+    
+    return `
+      <div style="background:var(--gris-panel); padding:15px; border-radius:4px; margin-bottom:15px; border-left:4px solid ${estadoColor}">
+        <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:10px">
+          <div>
+            <div style="font-weight:600; font-size:16px; color:var(--blanco)">${borrador.codigo}</div>
+            <div style="color:var(--gris-texto); font-size:13px">${fecha} • ${proveedores}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="color:${estadoColor}; font-weight:600; font-size:12px">${estadoTexto}</div>
+            <div style="color:var(--blanco); font-weight:600">$${total.toLocaleString('es-AR')}</div>
+          </div>
+        </div>
+        
+        <div style="display:flex; gap:10px; margin-top:15px">
+          ${borrador.estado === 'editando' || borrador.estado === 'rechazado' ? `
+            <button onclick="editarBorrador('${borrador.codigo}')" style="background:var(--amarillo); color:var(--gris-oscuro); border:none; padding:8px 16px; border-radius:4px; cursor:pointer; font-size:12px">✏️ Editar</button>
+          ` : ''}
+          
+          ${borrador.estado === 'editando' ? `
+            <button onclick="enviarBorradorAprobacion('${borrador.codigo}')" style="background:var(--rojo); color:white; border:none; padding:8px 16px; border-radius:4px; cursor:pointer; font-size:12px">📤 Enviar para aprobación</button>
+          ` : ''}
+          
+          ${borrador.estado === 'aprobado' ? `
+            <button onclick="generarArchivosFinales('${borrador.codigo}')" style="background:var(--verde); color:white; border:none; padding:8px 16px; border-radius:4px; cursor:pointer; font-size:12px">📥 Generar archivos</button>
+          ` : ''}
+          
+          <button onclick="eliminarBorrador('${borrador.codigo}')" style="background:var(--gris-borde); color:var(--gris-texto); border:none; padding:8px 16px; border-radius:4px; cursor:pointer; font-size:12px">🗑️ Eliminar</button>
+        </div>
+        
+        ${borrador.comentarios ? `
+          <div style="margin-top:10px; padding:8px; background:var(--gris-oscuro); border-radius:4px; border-left:3px solid var(--rojo)">
+            <strong style="color:var(--rojo)">Comentarios:</strong> ${borrador.comentarios}
+          </div>
+        ` : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+function editarBorrador(codigo) {
+  if (cargarBorrador(codigo)) {
+    showPage('nuevo');
+    // Guardar referencia del borrador que se está editando
+    sessionStorage.setItem('editando_borrador', codigo);
+  }
+}
+
+function enviarBorradorAprobacion(codigo) {
+  const borradores = JSON.parse(localStorage.getItem('maxifer_borradores') || '{}');
+  if (!borradores[codigo]) return;
+  
+  borradores[codigo].estado = 'pendiente';
+  localStorage.setItem('maxifer_borradores', JSON.stringify(borradores));
+  
+  alert(`Borrador ${codigo} enviado para aprobación.\\n\\nEnviá este código por WhatsApp.`);
+  loadBorradores();
+}
+
+function eliminarBorrador(codigo) {
+  if (!confirm('¿Estás seguro de eliminar este borrador?')) return;
+  
+  const borradores = JSON.parse(localStorage.getItem('maxifer_borradores') || '{}');
+  delete borradores[codigo];
+  localStorage.setItem('maxifer_borradores', JSON.stringify(borradores));
+  
+  loadBorradores();
+  updateBorradoresBadge();
+}
+
+function cargarBorradorParaRevisar() {
+  const codigo = document.getElementById('codigo-revisar').value.trim();
+  if (!codigo) {
+    alert('Ingresá un código de borrador');
+    return;
+  }
+  
+  const borradores = JSON.parse(localStorage.getItem('maxifer_borradores') || '{}');
+  const borrador = borradores[codigo];
+  
+  if (!borrador) {
+    alert('Borrador no encontrado');
+    return;
+  }
+  
+  // Mostrar área de revisión
+  document.getElementById('area-revision').style.display = 'block';
+  document.getElementById('resultado-revision').style.display = 'none';
+  
+  // Llenar info del borrador
+  const fecha = new Date(borrador.fecha).toLocaleDateString('es-AR');
+  const total = borrador.totales?.total || 0;
+  const proveedores = Object.keys(borrador.currentOrder);
+  
+  document.getElementById('info-borrador').innerHTML = `
+    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:20px; text-align:center">
+      <div>
+        <div style="color:var(--gris-texto); font-size:12px">CÓDIGO</div>
+        <div style="font-weight:600; color:var(--blanco)">${codigo}</div>
+      </div>
+      <div>
+        <div style="color:var(--gris-texto); font-size:12px">FECHA</div>
+        <div style="font-weight:600; color:var(--blanco)">${fecha}</div>
+      </div>
+      <div>
+        <div style="color:var(--gris-texto); font-size:12px">TOTAL</div>
+        <div style="font-weight:600; color:var(--verde)">$${total.toLocaleString('es-AR')}</div>
+      </div>
+    </div>
+  `;
+  
+  // Mostrar detalle por proveedor
+  let detalleHtml = '';
+  for (const prov of proveedores) {
+    const items = borrador.currentOrder[prov];
+    const totalProv = items.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+    
+    detalleHtml += `
+      <div style="background:var(--gris-panel); padding:15px; border-radius:4px; margin-bottom:15px">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px">
+          <h3 style="color:var(--rojo-light)">${prov}</h3>
+          <div style="font-weight:600; color:var(--verde)">$${totalProv.toLocaleString('es-AR')}</div>
+        </div>
+        <div style="overflow-x:auto">
+          <table style="width:100%; border-collapse:collapse">
+            <thead>
+              <tr style="background:var(--gris-oscuro)">
+                <th style="padding:8px; text-align:left; border:1px solid var(--gris-borde)">Código</th>
+                <th style="padding:8px; text-align:left; border:1px solid var(--gris-borde)">Producto</th>
+                <th style="padding:8px; text-align:center; border:1px solid var(--gris-borde)">Cant.</th>
+                <th style="padding:8px; text-align:right; border:1px solid var(--gris-borde)">P. Unit</th>
+                <th style="padding:8px; text-align:right; border:1px solid var(--gris-borde)">Subtotal</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${items.map(item => `
+                <tr>
+                  <td style="padding:8px; border:1px solid var(--gris-borde); font-family:monospace">${item.numero}</td>
+                  <td style="padding:8px; border:1px solid var(--gris-borde)">${item.descripcion}</td>
+                  <td style="padding:8px; border:1px solid var(--gris-borde); text-align:center">${item.cantidad}</td>
+                  <td style="padding:8px; border:1px solid var(--gris-borde); text-align:right">$${item.precio.toLocaleString('es-AR')}</td>
+                  <td style="padding:8px; border:1px solid var(--gris-borde); text-align:right">$${(item.precio * item.cantidad).toLocaleString('es-AR')}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  }
+  
+  document.getElementById('detalle-revision').innerHTML = detalleHtml;
+  
+  // Guardar código actual para acciones
+  sessionStorage.setItem('codigo_revision', codigo);
+}
+
+function aprobarBorrador() {
+  const codigo = sessionStorage.getItem('codigo_revision');
+  if (!codigo) return;
+  
+  const borradores = JSON.parse(localStorage.getItem('maxifer_borradores') || '{}');
+  if (!borradores[codigo]) return;
+  
+  borradores[codigo].estado = 'aprobado';
+  borradores[codigo].fechaAprobacion = new Date().toISOString();
+  borradores[codigo].comentarios = '';
+  localStorage.setItem('maxifer_borradores', JSON.stringify(borradores));
+  
+  document.getElementById('area-revision').style.display = 'none';
+  document.getElementById('resultado-revision').style.display = 'block';
+  document.getElementById('resultado-revision').innerHTML = `
+    <div style="padding:30px; background:var(--verde); color:white; border-radius:8px; margin:20px 0">
+      <div style="font-size:48px; margin-bottom:16px">✅</div>
+      <div style="font-size:20px; font-weight:600; margin-bottom:8px">Compra Aprobada</div>
+      <div>El borrador ${codigo} ha sido aprobado. Tu equipo ya puede generar los archivos.</div>
+    </div>
+  `;
+  
+  document.getElementById('codigo-revisar').value = '';
+  sessionStorage.removeItem('codigo_revision');
+}
+
+function rechazarBorrador() {
+  const comentariosDiv = document.getElementById('comentarios-rechazo');
+  if (comentariosDiv.style.display === 'none') {
+    comentariosDiv.style.display = 'block';
+    document.getElementById('btn-rechazar').textContent = '📝 Confirmar rechazo';
+    return;
+  }
+  
+  const codigo = sessionStorage.getItem('codigo_revision');
+  if (!codigo) return;
+  
+  const comentarios = document.getElementById('comentarios-texto').value.trim();
+  
+  const borradores = JSON.parse(localStorage.getItem('maxifer_borradores') || '{}');
+  if (!borradores[codigo]) return;
+  
+  borradores[codigo].estado = 'rechazado';
+  borradores[codigo].comentarios = comentarios || 'Compra rechazada sin comentarios específicos.';
+  localStorage.setItem('maxifer_borradores', JSON.stringify(borradores));
+  
+  document.getElementById('area-revision').style.display = 'none';
+  document.getElementById('resultado-revision').style.display = 'block';
+  document.getElementById('resultado-revision').innerHTML = `
+    <div style="padding:30px; background:var(--rojo); color:white; border-radius:8px; margin:20px 0">
+      <div style="font-size:48px; margin-bottom:16px">❌</div>
+      <div style="font-size:20px; font-weight:600; margin-bottom:8px">Compra Rechazada</div>
+      <div>El borrador ${codigo} ha sido rechazado. Tu equipo puede editarlo y reenviarlo.</div>
+      ${comentarios ? `<div style="margin-top:15px; padding:10px; background:rgba(255,255,255,0.1); border-radius:4px"><strong>Comentarios:</strong> ${comentarios}</div>` : ''}
+    </div>
+  `;
+  
+  document.getElementById('codigo-revisar').value = '';
+  document.getElementById('comentarios-texto').value = '';
+  document.getElementById('comentarios-rechazo').style.display = 'none';
+  document.getElementById('btn-rechazar').textContent = '❌ Rechazar';
+  sessionStorage.removeItem('codigo_revision');
+}
+
+function generarArchivosFinales(codigo) {
+  const borradores = JSON.parse(localStorage.getItem('maxifer_borradores') || '{}');
+  const borrador = borradores[codigo];
+  
+  if (!borrador || borrador.estado !== 'aprobado') {
+    alert('Este borrador no está aprobado');
+    return;
+  }
+  
+  // Restaurar el estado y generar archivos
+  const oldOrder = currentOrder;
+  currentOrder = JSON.parse(JSON.stringify(borrador.currentOrder));
+  
+  // Generar todos los archivos
+  generateAllFiles().then(() => {
+    // Generar Excel consolidado
+    generateExcelConsolidado(codigo);
+    
+    // Restaurar estado original
+    currentOrder = oldOrder;
+    
+    alert('Todos los archivos generados exitosamente (PDFs + CSVs + Excel consolidado)');
+  });
+}
+
+function updateBorradoresBadge() {
+  const borradores = JSON.parse(localStorage.getItem('maxifer_borradores') || '{}');
+  const count = Object.keys(borradores).length;
+  
+  const badge = document.getElementById('badge-borradores');
+  if (badge) {
+    badge.textContent = count;
+    badge.style.display = count > 0 ? 'inline' : 'none';
+  }
+}
+
+// Modificar función showPage para cargar borradores
+const originalShowPage = showPage;
+showPage = function(pageId) {
+  originalShowPage(pageId);
+  
+  if (pageId === 'borradores') {
+    loadBorradores();
+  }
+};
+
+// Función para generar Excel consolidado
+function generateExcelConsolidado(codigo) {
+  // Esta función se implementará para generar un Excel con todas las órdenes
+  console.log('Generando Excel consolidado para:', codigo);
+  // TODO: Implementar generación de Excel usando SheetJS
 }
 
 loadData()
