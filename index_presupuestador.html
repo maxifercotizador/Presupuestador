@@ -271,10 +271,12 @@ async function loadData(){
 
 
 async function init(){
-var searchIdx=[];
+  await loadData();
+  var searchIdx=[];
 var k;
 for(k in DB_STD) searchIdx.push({code:k,name:DB_STD[k].n,src:'std',db:DB_STD});
 for(k in DB_SUR) searchIdx.push({code:k,name:DB_SUR[k].n,src:'sur',db:DB_SUR});
+
 var curTipo='std',selEntry=null,surtidos=[],matchBuf=[],isRec=false,recog=null;
 var hoy=new Date();
 var fechaStr=hoy.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'});
@@ -337,8 +339,7 @@ updateHeader();renderPreview();
 
 }
 
-loadData()
-  .then(init)
+init()
   .catch(function(err){
     console.error('Error cargando surtidos.json:', err);
     alert('Error cargando datos: ' + err.message);

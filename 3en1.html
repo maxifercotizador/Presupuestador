@@ -969,19 +969,6 @@ function markTabDone(idx) {
   const tab = document.getElementById('navtab-' + idx);
   if (tab) tab.classList.add('done');
 }
-
-
-// Carga datos y arranca la app
-async function init(){
-  ALL_PRODUCTS = [...new Set(EXCEL_DATA.map(r => r.p))];
-}
-
-loadData()
-  .then(init)
-  .catch(err => {
-    console.error('Error cargando productos.json:', err);
-    alert('Error cargando datos: ' + err.message);
-  });
 </script>
 
 <script>
@@ -996,14 +983,9 @@ async function loadData(){
         return r.json();
       })
       .then(json => {
-        // Mapear al schema legacy esperado por el codigo: {p,c,pl,n,d,cm}
         EXCEL_DATA = json.map(it => ({
-          p: it.p,
-          c: it.c,
-          pl: String(it.pl),
-          n: it.n,
-          d: it.d,
-          cm: String(it.cm)
+          p: it.p, c: it.c, pl: String(it.pl),
+          n: it.n, d: it.d, cm: String(it.cm)
         }));
       });
   }
@@ -2331,6 +2313,12 @@ async function normalizarConIA(pedidoRaw) {
 
 // ── PROCESS ──────────────────────────────────────────────────
 async function handleSubmit() {
+  // Fix: verificar que EXCEL_DATA esté cargado antes de procesar
+  if (!EXCEL_DATA || EXCEL_DATA.length === 0) {
+    alert('Los datos de productos están cargando. Esperá un momento y volvé a intentar.');
+    return;
+  }
+
   const clientName=document.getElementById('clientName').value.trim();
   const pedidoText=document.getElementById('pedidoText').value.trim();
   if(!clientName){alert('Ingresá el nombre del cliente.');return;}
@@ -2572,6 +2560,18 @@ function copyCSV(btn) {
   const ta=btn.parentElement.previousElementSibling;
   if(navigator.clipboard){navigator.clipboard.writeText(ta.value).then(()=>{btn.textContent='✅ Copiado!';setTimeout(()=>btn.textContent='📋 Copiar CSV',2000);});}
 }
+
+// === Carga de datos asincrona ===
+async function init(){
+  ALL_PRODUCTS = [...new Set(EXCEL_DATA.map(r => r.p))];
+}
+
+loadData()
+  .then(init)
+  .catch(err => {
+    console.error('Error cargando productos.json:', err);
+    alert('Error cargando datos: ' + err.message);
+  });
 </script>
 </body>
 </html>
