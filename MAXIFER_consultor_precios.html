@@ -480,6 +480,16 @@ document.querySelectorAll('.preset-btn').forEach(b => {
 });
 
 // Init
+// Soporte para descuento via URL: ?desc=46 o ?d=46
+const urlParams = new URLSearchParams(window.location.search);
+const urlDesc = parseFloat(urlParams.get('desc') || urlParams.get('d') || '');
+if(!isNaN(urlDesc) && urlDesc >= 0 && urlDesc <= 99){
+  state.discount = urlDesc;
+  $('discount').value = urlDesc;
+  document.querySelectorAll('.preset-btn').forEach(b => {
+    b.classList.toggle('active', parseFloat(b.dataset.d) === urlDesc);
+  });
+}
 render();
 
 
