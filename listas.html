@@ -2805,28 +2805,64 @@ function renderSheet() {
     const q = sheetState.q.trim();
     const nq = norm(q);
     const qTerms = nq.split(/\s+/).filter(Boolean);
+    const isNumericQuery = qTerms.length === 1 && /^\d+$/.test(nq);
 
-    // Filtrar productos solo de esa familia + búsqueda
-    const filtered = DATA.filter(it => {
+    // Productos de esta familia que matchean el filtro
+    const matched = DATA.filter(it => {
         if (it.p !== fam) return false;
         if (qTerms.length && !qTerms.every(t => it._all.includes(t))) return false;
         return true;
     });
 
+    // Ordenar por prioridad si hay búsqueda
+    let ordered;
+    if (qTerms.length) {
+        const A = []; // match exacto del código
+        const B = []; // código empieza con la query (ej: q="10" → 100, 101...)
+        const C = []; // descripción empieza con la query
+        const D = []; // contiene la query en cualquier lado
+
+        for (const it of matched) {
+            const codeMatch = it._n === nq;
+            const codeStarts = isNumericQuery && it._n.startsWith(nq);
+            const descStarts = qTerms.some(t => {
+                const words = it._d.split(/\s+/);
+                return words.some(w => w.startsWith(t));
+            });
+
+            if (codeMatch) A.push(it);
+            else if (codeStarts) B.push(it);
+            else if (descStarts) C.push(it);
+            else D.push(it);
+        }
+
+        // Dentro de B, ordenar numéricamente para que aparezcan en orden lógico (10, 11, 12... 100, 101...)
+        B.sort((x, y) => {
+            const nx = parseInt(x.n, 10);
+            const ny = parseInt(y.n, 10);
+            if (!isNaN(nx) && !isNaN(ny)) return nx - ny;
+            return x._n.localeCompare(y._n);
+        });
+
+        ordered = [...A, ...B, ...C, ...D];
+    } else {
+        // Sin búsqueda: orden natural
+        ordered = matched;
+    }
+
     const disc = sheetState.discount;
     const mult = (100 - disc) / 100;
 
-    $('sheetInfo').textContent = filtered.length + (filtered.length === 1 ? ' producto' : ' productos');
+    $('sheetInfo').textContent = ordered.length + (ordered.length === 1 ? ' producto' : ' productos');
 
     const res = $('sheetResults');
-    if (filtered.length === 0) {
+    if (ordered.length === 0) {
         res.innerHTML = '<div class="sheet-empty"><div class="sheet-empty-title">Sin resultados</div>Probá con otro término</div>';
         return;
     }
 
-    // Limitar a 200 para no colgar el celu con familias enormes (Plásticos tiene 398)
     const LIMIT = 200;
-    const slice = filtered.slice(0, LIMIT);
+    const slice = ordered.slice(0, LIMIT);
 
     let html = '';
     slice.forEach(it => {
@@ -2847,8 +2883,8 @@ function renderSheet() {
         html += '</div></div>';
     });
 
-    if (filtered.length > LIMIT) {
-        html += '<div class="sheet-empty" style="padding:14px"><div style="font-size:11px">Mostrando ' + LIMIT + ' de ' + filtered.length + ' · Refiná tu búsqueda para ver más</div></div>';
+    if (ordered.length > LIMIT) {
+        html += '<div class="sheet-empty" style="padding:14px"><div style="font-size:11px">Mostrando ' + LIMIT + ' de ' + ordered.length + ' · Refiná tu búsqueda para ver más</div></div>';
     }
 
     res.innerHTML = html;
