@@ -1544,6 +1544,14 @@ function normalizar(s) {
     .replace(/\s+/g, ' ').trim();
 }
 
+// "Solo dígitos": saca todo lo que no sea número.
+// Útil para matchear medidas como "4x50", "4 X 50", "4X50" → "450"
+// Solo se usa en Carga Masiva cuando hay familia filtrada (sin riesgo de colisión).
+function soloDigitos(s) {
+  if (!s) return '';
+  return String(s).replace(/\D+/g, '');
+}
+
 // ─── Format ───────────────────────────────────────────────────────
 function fmtMoney(n) {
   const num = Number(n) || 0;
@@ -2712,23 +2720,80 @@ function parsearMasivo() {
   let pool = State.productosDelProveedor;
   if (familia) pool = pool.filter(p => p.familia === familia);
 
+  // Cuando hay familia filtrada, activamos modo "solo dígitos":
+  // - "4x50", "4 x 50", "4X50" → todos matchean al producto cuyo numero es "4 x 50" / "4x50"
+  // - El usuario garantiza que dentro de proveedor+familia no hay duplicados
+  // - Como bonus: "450" también matchea (puede tipear más rápido)
+  // Si NO hay familia, mantenemos el match exacto normalizado para evitar colisiones.
+  const usarSoloDigitos = !!familia;
+
+  // Pre-indexar el pool por "solo dígitos" para búsqueda rápida
+  let poolPorDigitos = null;
+  if (usarSoloDigitos) {
+    poolPorDigitos = new Map();
+    for (const p of pool) {
+      const dN = soloDigitos(p.numero);
+      const dC = soloDigitos(p.codprov);
+      // Indexamos por numero y por codprov, ambos
+      if (dN && !poolPorDigitos.has(dN)) poolPorDigitos.set(dN, p);
+      if (dC && !poolPorDigitos.has(dC)) poolPorDigitos.set(dC, p);
+    }
+  }
+
   State.previaMasiva = lineas.map(linea => {
-    // Separar código de cantidad. Soporta: "1234 50", "1234x50", "1234,50", "1234;50"
-    const m = linea.match(/^([^\s,;x]+(?:\s+[^\s,;x]+)*?)[\s,;x]+(\d+)\s*$/i);
+    // Separar código de cantidad.
+    // Sin familia (modo clásico): "1234 50", "1234x50", "1234,50", "1234;50"
+    // Con familia (modo medidas): "4x50 100" (código=4x50, cantidad=100). Solo separadores espacio/coma/;
     let codigo, cantidad;
-    if (m) {
-      codigo = m[1].trim();
-      cantidad = parseInt(m[2], 10);
+    if (usarSoloDigitos) {
+      // Si la línea contiene 'x' o 'X' (medida tipo "4x50"), asumir que TODA la línea es código.
+      // Para indicar cantidad en modo medidas, usar coma o punto-coma: "4x50,100" o "4x50;100"
+      // O bien una medida sin x con espacio: "450 100"
+      const tieneX = /[xX]/.test(linea);
+      if (tieneX) {
+        // Toda la línea es código. Cantidad solo se extrae si viene tras coma o ;
+        const m = linea.match(/^(.+?)[,;]+\s*(\d+)\s*$/);
+        if (m) {
+          codigo = m[1].trim();
+          cantidad = parseInt(m[2], 10);
+        } else {
+          codigo = linea.trim();
+          cantidad = null;
+        }
+      } else {
+        // Sin 'x': separadores espacio/coma/; — el último número es cantidad
+        const m = linea.match(/^(.+?)[\s,;]+(\d+)\s*$/);
+        if (m) {
+          codigo = m[1].trim();
+          cantidad = parseInt(m[2], 10);
+        } else {
+          codigo = linea.trim();
+          cantidad = null;
+        }
+      }
     } else {
-      codigo = linea.trim();
-      cantidad = null;
+      const m = linea.match(/^([^\s,;x]+(?:\s+[^\s,;x]+)*?)[\s,;x]+(\d+)\s*$/i);
+      if (m) {
+        codigo = m[1].trim();
+        cantidad = parseInt(m[2], 10);
+      } else {
+        codigo = linea.trim();
+        cantidad = null;
+      }
     }
 
-    const cNorm = normalizar(codigo);
-    // Buscar en pool: match exacto en numero o codprov primero, luego parcial
-    let prod = pool.find(p => normalizar(p.numero) === cNorm || normalizar(p.codprov) === cNorm);
-    if (!prod) {
-      prod = pool.find(p => normalizar(p.codprov).startsWith(cNorm));
+    let prod = null;
+    if (usarSoloDigitos) {
+      // Match por "solo dígitos"
+      const cDig = soloDigitos(codigo);
+      if (cDig) prod = poolPorDigitos.get(cDig);
+    } else {
+      // Match clásico (sin familia): exacto normalizado, luego parcial por codprov
+      const cNorm = normalizar(codigo);
+      prod = pool.find(p => normalizar(p.numero) === cNorm || normalizar(p.codprov) === cNorm);
+      if (!prod) {
+        prod = pool.find(p => normalizar(p.codprov).startsWith(cNorm));
+      }
     }
 
     const histK = prod ? ((prod.proveedor || '') + ':' + (prod.numero || '')) : null;
