@@ -1230,8 +1230,6 @@ Ejemplo:
 
     <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px">
       <button class="btn btn-primary btn-sm" type="button" id="btn-modo-exportar">📤 Exportar pedidos</button>
-      <button class="btn btn-info btn-sm" type="button" id="btn-recargar-pendientes">🔄 Recargar</button>
-      <button class="btn btn-warning btn-sm" type="button" id="btn-migrar-pendientes">↪️ Migrar a Borradores</button>
     </div>
     <div id="pendientes-list">
       <p style="text-align:center; color:var(--gris-texto); padding: 20px">Cargando...</p>
@@ -1874,10 +1872,6 @@ function wireEvents() {
   $on('modal-importar', 'click', (e) => {
     if (e.target.id === 'modal-importar') cerrarModalImportar();
   });
-
-  // Pendientes
-  $on('btn-recargar-pendientes', 'click', renderPendientes);
-  $on('btn-migrar-pendientes', 'click', migrarPendientesABorradores);
 
   // Modo exportar pedidos
   $on('btn-modo-exportar', 'click', toggleModoExportar);
@@ -3231,7 +3225,7 @@ function renderPendientes() {
   }
   cont.innerHTML = '';
   pendientes.forEach(b => {
-    const card = renderBorradorCard(b, ['revisar', 'aprobar-rapido', 'eliminar']);
+    const card = renderBorradorCard(b, ['revisar', 'confirmar-enviado', 'eliminar']);
     cont.appendChild(card);
   });
 }
@@ -3364,16 +3358,36 @@ function renderBorradorCard(b, acciones) {
         btn.classList.add('btn-info');
         btn.addEventListener('click', () => cargarBorradorEnEditor(b));
         break;
-      case 'aprobar-rapido':
-        btn.textContent = '✅ Aprobar y PDF';
+      case 'confirmar-enviado':
+        btn.textContent = '✅ Confirmar enviado';
         btn.classList.add('btn-success');
         btn.addEventListener('click', () => {
-          if (!confirm(`¿Aprobar ${b.id} y generar PDF?`)) return;
+          if (!confirm(`¿Confirmar que ${b.id} ya fue enviado al proveedor?\n\nEl pedido se va a mover al Historial.`)) return;
+          // Snapshot para undo
+          const snapshot = JSON.parse(JSON.stringify(b));
           moverAHistorial(b);
-          generarPDF(b);
           renderBorradores();
           renderPendientes();
           updateBadges();
+          toast(`✅ ${b.id} marcado como enviado`, 'success');
+          registrarUndo(
+            `${b.id} marcado como enviado`,
+            () => {
+              // Quitar del historial y volver a pendiente
+              let hist = lsGet(KEY_HISTORIAL, []);
+              hist = hist.filter(x => x.id !== snapshot.id);
+              lsSet(KEY_HISTORIAL, hist);
+              const all = lsGet(KEY_BORRADORES, []);
+              if (!all.find(x => x.id === snapshot.id)) {
+                all.push({ ...snapshot, estado: 'pendiente' });
+                lsSet(KEY_BORRADORES, all);
+              }
+              renderBorradores();
+              renderPendientes();
+              renderHistorial();
+              updateBadges();
+            }
+          );
         });
         break;
       case 'ver-pdf':
@@ -3490,23 +3504,6 @@ function duplicarComoNuevoPedido(b) {
   renderTablaPedido();
   showPage('nuevo');
   toast('🔁 Pedido duplicado como nuevo', 'success');
-}
-
-function migrarPendientesABorradores() {
-  // Compat: si por alguna razón quedaron items en KEY_PENDIENTES que no están en KEY_BORRADORES
-  const pendientes = lsGet(KEY_PENDIENTES, []);
-  const borradores = lsGet(KEY_BORRADORES, []);
-  let migrados = 0;
-  for (const p of pendientes) {
-    if (!borradores.find(b => b.id === p.id)) {
-      borradores.push({ ...p, estado: 'pendiente' });
-      migrados++;
-    }
-  }
-  lsSet(KEY_BORRADORES, borradores);
-  toast(`Migrados ${migrados} pedidos`, 'success');
-  renderPendientes();
-  updateBadges();
 }
 
 function limpiarTodosBorradores() {
@@ -4552,40 +4549,14 @@ function registrarUndo(label, restoreFn) {
   const expiresAt = Date.now() + Undo.DURATION_MS;
   Undo.pendiente = { label, restore: restoreFn, expiresAt };
 
-  // Mostrar el toast con botón Deshacer
-  mostrarToastUndo(label);
-
-  // Mostrar el botón flotante (con display: flex)
+  // Mostrar el botón flotante abajo a la derecha (con display: flex)
+  // Ya NO mostramos toast adicional para no competir con el header.
   mostrarBtnUndoFlotante(label);
 
   // Iniciar countdown del timer (se actualiza cada segundo)
   startUndoTimer();
 
   log('info', 'Undo registrado:', label);
-}
-
-function mostrarToastUndo(label) {
-  const cont = $('toast-container');
-  if (!cont) return;
-  const t = document.createElement('div');
-  t.className = 'toast warning has-undo';
-
-  const msg = document.createElement('div');
-  msg.className = 'toast-msg';
-  msg.textContent = label;
-
-  const btn = document.createElement('button');
-  btn.type = 'button';
-  btn.className = 'toast-undo-btn';
-  btn.textContent = '↶ DESHACER';
-  btn.addEventListener('click', () => {
-    ejecutarUndo();
-  });
-
-  t.appendChild(msg);
-  t.appendChild(btn);
-  cont.appendChild(t);
-  Undo.toastNode = t;
 }
 
 function mostrarBtnUndoFlotante(label) {
