@@ -2004,7 +2004,28 @@ const THUMBS_FOLDER = "thumbs/";
 
 let DATA = [];
 let _dataReady = null;
-let state = { q: '', numero: '', desc: '', family: null, discount: 0, renderLimit: 50 };
+// Leer descuento desde URL (?d=46) si existe
+const _urlParams = new URLSearchParams(window.location.search);
+const _initialDiscount = (() => {
+    const d = parseFloat(_urlParams.get('d'));
+    if (!isNaN(d) && d >= 0 && d <= 99) return d;
+    return 0;
+})();
+
+// Aplicar descuento al input apenas el DOM esté listo (independiente del init del consultor)
+function applyInitialDiscount() {
+    if (_initialDiscount > 0) {
+        const di = document.getElementById('discount');
+        if (di) di.value = _initialDiscount;
+    }
+}
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', applyInitialDiscount);
+} else {
+    applyInitialDiscount();
+}
+
+let state = { q: '', numero: '', desc: '', family: null, discount: _initialDiscount, renderLimit: 50 };
 let currentPdf = null;
 let consultorReady = false;
 
@@ -2080,6 +2101,9 @@ async function loadData() {
 function initConsultor() {
     if (consultorReady) { render(); return; }
     consultorReady = true;
+
+    // Forzar el valor del input al estado actual (incluye el descuento de la URL si vino así)
+    $('discount').value = state.discount;
 
     $('searchGeneral').addEventListener('input', e => {
         state.q = e.target.value;
@@ -2759,10 +2783,10 @@ let sheetState = {
 function openSheet(family, listaTitle) {
     sheetState.family = family;
     sheetState.q = '';
-    sheetState.discount = 0;
+    sheetState.discount = _initialDiscount;  // toma el descuento de la URL si hay
     $('sheetTitle').textContent = listaTitle || family;
     $('sheetSearch').value = '';
-    $('sheetDiscount').value = 0;
+    $('sheetDiscount').value = _initialDiscount;
 
     // Asegurarse que los datos estén cargados
     loadData().then(() => {
