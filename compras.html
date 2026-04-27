@@ -882,6 +882,111 @@
     font-size: 13px;
   }
 
+  /* "Última cosa oída" — feedback en vivo */
+  .mic-last-heard {
+    margin-top: 8px;
+    padding: 6px 12px;
+    background: rgba(52, 152, 219, 0.12);
+    border-left: 3px solid var(--azul);
+    border-radius: 3px;
+    font-size: 13px;
+    width: 100%;
+    text-align: left;
+    animation: mic-last-flash 0.3s ease-out;
+  }
+  @keyframes mic-last-flash {
+    from { background: rgba(52, 152, 219, 0.4); }
+    to { background: rgba(52, 152, 219, 0.12); }
+  }
+  .mic-last-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: var(--azul);
+    margin-right: 8px;
+    font-size: 11px;
+    text-transform: uppercase;
+  }
+  .mic-last-text {
+    font-family: 'Courier New', monospace;
+    color: var(--blanco);
+  }
+
+  /* Panel de números detectados */
+  .mic-numeros-panel {
+    margin-top: 16px;
+    padding: 12px;
+    background: var(--gris-oscuro);
+    border: 1px solid var(--gris-borde);
+    border-radius: 3px;
+  }
+  .mic-numeros-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  .mic-numeros-titulo {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    font-size: 12px;
+    color: var(--gris-texto);
+  }
+  .mic-numeros-titulo span { color: var(--verde); font-size: 14px; }
+  .mic-numeros-lista {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    min-height: 36px;
+  }
+  .mic-numero-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--gris-medio);
+    border: 1px solid var(--verde);
+    border-radius: 18px;
+    padding: 5px 4px 5px 12px;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--blanco);
+    animation: chip-in 0.25s ease-out;
+  }
+  @keyframes chip-in {
+    from { transform: scale(0.5); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  .mic-numero-chip.removing { animation: chip-out 0.2s ease-in forwards; }
+  @keyframes chip-out {
+    to { transform: scale(0.5); opacity: 0; }
+  }
+  .mic-numero-chip-x {
+    background: var(--rojo);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 22px;
+    height: 22px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+  }
+  .mic-numero-chip-x:hover { background: var(--rojo-hover, var(--rojo)); }
+  .mic-numeros-lista:empty::after {
+    content: 'Esperando que dictes números...';
+    color: var(--gris-texto);
+    font-style: italic;
+    font-size: 12px;
+    padding: 8px;
+  }
+
   /* ── DETALLE de revisión ── */
   .detalle-item {
     display: grid;
@@ -1059,17 +1164,37 @@
       <!-- Modo Micrófono -->
       <div class="modo-panel" id="modo-micro">
         <div class="hint-box info">
-          Dictá los códigos uno por uno, separados por una pausa o coma. Ej: <code>"1, 4, 5, 23, 27"</code>. Después de procesar pasa a Carga Masiva donde podés revisar y ajustar las cantidades antes de agregar al pedido.
+          Dictá los códigos uno por uno con pausa entre ellos. Ej: <code>"4 ... 33 ... 22 ... 68"</code>.
+          Cada número se va agregando a la lista a medida que lo decís. Cuando termines tocá "Agregar al pedido".
         </div>
         <div class="mic-control">
           <button class="mic-btn" id="btn-mic" type="button" aria-label="Iniciar grabación">🎙️</button>
-          <div class="mic-status" id="mic-status">Tocá para iniciar</div>
-          <div class="mic-transcript" id="mic-transcript">El texto aparecerá acá...</div>
-          <div style="display:flex; gap:8px; flex-wrap: wrap; justify-content: center">
-            <button class="btn btn-secondary btn-sm" type="button" id="btn-mic-procesar">Procesar texto</button>
-            <button class="btn btn-secondary btn-sm" type="button" id="btn-mic-limpiar">Limpiar</button>
+          <div class="mic-status" id="mic-status">Tocá el micrófono para empezar</div>
+          <div class="mic-last-heard" id="mic-last-heard" style="display:none">
+            <span class="mic-last-label">Oí:</span>
+            <span class="mic-last-text" id="mic-last-text"></span>
           </div>
         </div>
+
+        <!-- Lista en vivo de números detectados -->
+        <div class="mic-numeros-panel" id="mic-numeros-panel" style="display:none">
+          <div class="mic-numeros-header">
+            <span class="mic-numeros-titulo">Números detectados: <span id="mic-numeros-count">0</span></span>
+            <button class="btn btn-secondary btn-sm" type="button" id="btn-mic-borrar-todos" style="padding:4px 10px; font-size:11px">Borrar todos</button>
+          </div>
+          <div class="mic-numeros-lista" id="mic-numeros-lista"></div>
+        </div>
+
+        <!-- Acciones -->
+        <div style="display:flex; gap:8px; flex-wrap: wrap; justify-content: center; margin-top:14px">
+          <button class="btn btn-success" type="button" id="btn-mic-agregar" style="display:none">✅ Agregar al pedido</button>
+        </div>
+
+        <!-- Transcript crudo (debug, opcional) -->
+        <details style="margin-top:14px">
+          <summary style="cursor:pointer; color:var(--gris-texto); font-size:11px">Ver texto crudo del dictado</summary>
+          <div class="mic-transcript" id="mic-transcript" style="margin-top:8px; min-height: 60px">El texto aparecerá acá...</div>
+        </details>
       </div>
 
       <!-- Modo Masivo -->
@@ -1350,6 +1475,10 @@ const State = {
   micActivo: false,
   micShouldKeepRunning: false,
   micFinalText: '', // texto consolidado a través de los restarts
+  micNumeros: [],   // array de números detectados (modo continuo)
+  micProcesados: new Set(), // hashes de fragmentos final ya procesados (para no repetir)
+  micWatchdog: null,// interval que verifica que el mic siga activo
+  micLastResultAt: 0, // timestamp del último onresult (para watchdog)
   debugLogs: [],
 };
 
@@ -1835,13 +1964,10 @@ function wireEvents() {
   $on('btn-aplicar-global', 'click', aplicarCantGlobal);
   $on('btn-agregar-masivo', 'click', agregarMasivoSeleccionados);
 
-  // Micrófono
+  // Micrófono — modo continuo
   $on('btn-mic', 'click', toggleMic);
-  $on('btn-mic-procesar', 'click', procesarTranscriptMic);
-  $on('btn-mic-limpiar', 'click', () => {
-    $('mic-transcript').textContent = 'El texto aparecerá acá...';
-    State.micFinalText = '';
-  });
+  $on('btn-mic-agregar', 'click', micAgregarAlPedido);
+  $on('btn-mic-borrar-todos', 'click', micBorrarTodos);
 
   // Acciones del pedido
   $on('btn-limpiar', 'click', limpiarPedido);
@@ -2806,8 +2932,139 @@ function agregarMasivoSeleccionados() {
 
 
 // ═══════════════════════════════════════════════════════════════════
-// MICRÓFONO (Web Speech API)
+// MICRÓFONO — modo continuo con detección visual de números
 // ═══════════════════════════════════════════════════════════════════
+// Diseñado específicamente para dictar códigos numéricos cortos (1-3 dígitos)
+// con gaps largos entre ellos (3-15 segundos).
+//
+// Estrategia:
+// 1. Reconocimiento contínuo con auto-restart agresivo
+// 2. Watchdog cada 5s que verifica salud del reconocimiento
+// 3. Procesamiento incremental: cada vez que se detecta un fragmento
+//    final NUEVO, se extraen sus números y se agregan a la lista visual
+// 4. Deduplicación: cada fragmento se procesa una sola vez
+// 5. UI con chips eliminables (por si se cuela un número mal)
+//
+// Limitaciones del Web Speech API que mitigamos:
+// - Algunos navegadores cortan a los 5-10s de silencio → auto-restart
+// - El error 'no-speech' es esperado, lo manejamos sin alarma
+// - El restart puede fallar con InvalidState → reintentamos con backoff
+// - En Android Chrome a veces continuous=true se cuelga → watchdog
+
+
+// Diccionario expandido: 0-99 escritos en palabras
+const NUMEROS_PALABRAS = {
+  'cero': 0,
+  'un': 1, 'uno': 1, 'una': 1, 'dos': 2, 'tres': 3, 'cuatro': 4, 'cinco': 5,
+  'seis': 6, 'siete': 7, 'ocho': 8, 'nueve': 9, 'diez': 10,
+  'once': 11, 'doce': 12, 'trece': 13, 'catorce': 14, 'quince': 15,
+  'dieciseis': 16, 'dieciséis': 16, 'diecisiete': 17, 'dieciocho': 18, 'diecinueve': 19,
+  'veinte': 20, 'veintiuno': 21, 'veintiún': 21, 'veintiuna': 21,
+  'veintidos': 22, 'veintidós': 22, 'veintitres': 23, 'veintitrés': 23,
+  'veinticuatro': 24, 'veinticinco': 25, 'veintiseis': 26, 'veintiséis': 26,
+  'veintisiete': 27, 'veintiocho': 28, 'veintinueve': 29,
+  'treinta': 30, 'cuarenta': 40, 'cincuenta': 50, 'sesenta': 60,
+  'setenta': 70, 'ochenta': 80, 'noventa': 90,
+  'cien': 100, 'ciento': 100, 'doscientos': 200, 'trescientos': 300,
+  'cuatrocientos': 400, 'quinientos': 500, 'seiscientos': 600,
+  'setecientos': 700, 'ochocientos': 800, 'novecientos': 900,
+  'mil': 1000,
+};
+
+// Convierte un fragmento de texto en una lista de números enteros.
+// Maneja:
+//  - dígitos directos: "1 4 33"
+//  - palabras simples: "uno cuatro treinta y tres"
+//  - compuestas: "veintidós", "treinta y tres", "ciento veinte"
+function extraerNumerosDeTexto(texto) {
+  if (!texto) return [];
+  // Normalizar
+  let t = texto.toLowerCase()
+    .replace(/[,;.!?¿¡:()\[\]"']/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  // Filtrar palabras irrelevantes que sabemos que NO son números
+  const stopwords = ['código', 'codigo', 'cantidad', 'producto', 'item', 'el', 'la', 'los', 'las', 'un', 'una', 'de', 'por', 'numero', 'número', 'son', 'es'];
+  // OJO: 'un', 'una' los dejamos porque pueden ser el número 1
+
+  // Tokenizar
+  const tokens = t.split(/\s+/).filter(Boolean);
+  const numeros = [];
+  let i = 0;
+
+  while (i < tokens.length) {
+    const tok = tokens[i];
+
+    // 1. ¿Es un dígito directo? (ej: "33", "320", "5")
+    if (/^\d+$/.test(tok)) {
+      numeros.push(parseInt(tok, 10));
+      i++;
+      continue;
+    }
+
+    // 2. ¿Es código alfanumérico (ej: "S-001", "F-1234")? Lo pasamos como string
+    if (/^[a-z]+-?\d+/i.test(tok)) {
+      // Devolvemos como string para que la app lo busque tal cual
+      numeros.push(tok.toUpperCase());
+      i++;
+      continue;
+    }
+
+    // 3. ¿Es palabra-número?
+    const v = NUMEROS_PALABRAS[tok];
+    if (v !== undefined) {
+      // Probar combinaciones compuestas hacia adelante
+      // Caso A: "treinta y tres" → 33
+      if (v >= 20 && v <= 90 && v % 10 === 0
+          && tokens[i+1] === 'y'
+          && NUMEROS_PALABRAS[tokens[i+2]] !== undefined
+          && NUMEROS_PALABRAS[tokens[i+2]] < 10
+          && NUMEROS_PALABRAS[tokens[i+2]] > 0) {
+        numeros.push(v + NUMEROS_PALABRAS[tokens[i+2]]);
+        i += 3;
+        continue;
+      }
+      // Caso B: centenas con resto. Cubre:
+      //   "ciento veinte" → 120
+      //   "doscientos veinte" → 220
+      //   "trescientos veinte" → 320
+      //   "ciento treinta y tres" → 133
+      //   "trescientos cuarenta y cinco" → 345
+      // Solo entra si v es 100, 200, 300, ..., 900
+      if (v >= 100 && v <= 900 && v % 100 === 0) {
+        const sigVal = NUMEROS_PALABRAS[tokens[i+1]];
+        if (sigVal !== undefined && sigVal > 0 && sigVal < 100) {
+          let n = v + sigVal;
+          let consumido = 2;
+          // Si el siguiente era una decena exacta (20, 30, ..., 90),
+          // puede venir "...y X" (unidad)
+          if (sigVal >= 20 && sigVal <= 90 && sigVal % 10 === 0
+              && tokens[i+2] === 'y'
+              && NUMEROS_PALABRAS[tokens[i+3]] !== undefined
+              && NUMEROS_PALABRAS[tokens[i+3]] < 10
+              && NUMEROS_PALABRAS[tokens[i+3]] > 0) {
+            n += NUMEROS_PALABRAS[tokens[i+3]];
+            consumido += 2;
+          }
+          numeros.push(n);
+          i += consumido;
+          continue;
+        }
+      }
+      // Caso C: número simple (incluido 100, 200, etc. solos)
+      numeros.push(v);
+      i++;
+      continue;
+    }
+
+    // 4. Stopword o ruido → saltar
+    i++;
+  }
+
+  return numeros;
+}
+
 function toggleMic() {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) {
@@ -2815,114 +3072,177 @@ function toggleMic() {
     return;
   }
 
-  // Si ya está corriendo, el toque significa "detener definitivamente"
-  if (State.micActivo) {
-    State.micShouldKeepRunning = false;
-    if (State.micRecognition) {
-      try { State.micRecognition.stop(); } catch(e){}
-    }
+  // Si ya está corriendo: detener definitivamente
+  if (State.micActivo || State.micShouldKeepRunning) {
+    detenerMic();
     return;
   }
 
-  // Marcar que queremos mantenerlo corriendo
+  // Resetear estado para una nueva sesión
   State.micShouldKeepRunning = true;
+  State.micProcesados = new Set();
+  State.micFinalText = '';
+  // Mostrar el panel de números pero NO limpiar la lista
+  // (si el usuario reabre el mic, mantiene los números anteriores)
+  $('mic-numeros-panel').style.display = 'block';
+  renderMicNumeros();
 
-  // Inicializar buffer con lo que ya estaba en pantalla (si existe y no es placeholder)
-  const existing = $('mic-transcript').textContent || '';
-  if (existing === 'El texto aparecerá acá...' || existing === '(escuchando...)' || existing === 'Reconectando...') {
-    State.micFinalText = '';
-  } else {
-    // Asegurarse que el buffer termine con espacio para que lo nuevo se separe
-    State.micFinalText = existing.endsWith(' ') ? existing : existing + ' ';
-  }
-
-  // Iniciamos el reconocimiento (esto se reusará en cada restart)
   startMicRecognition();
+
+  // Iniciar watchdog
+  if (State.micWatchdog) clearInterval(State.micWatchdog);
+  State.micLastResultAt = Date.now();
+  State.micWatchdog = setInterval(() => {
+    if (!State.micShouldKeepRunning) {
+      clearInterval(State.micWatchdog);
+      State.micWatchdog = null;
+      return;
+    }
+    // Si no hubo onresult ni onstart en 30s, capaz se colgó. Reiniciar.
+    const inactivoMs = Date.now() - State.micLastResultAt;
+    if (inactivoMs > 30000 && !State.micActivo) {
+      log('warn', 'Mic watchdog: sin actividad por 30s, reiniciando');
+      try {
+        if (State.micRecognition) State.micRecognition.stop();
+      } catch (e) {}
+      // El onend va a disparar el restart automático
+    }
+  }, 5000);
+}
+
+function detenerMic() {
+  State.micShouldKeepRunning = false;
+  if (State.micWatchdog) {
+    clearInterval(State.micWatchdog);
+    State.micWatchdog = null;
+  }
+  if (State.micRecognition) {
+    try { State.micRecognition.stop(); } catch(e){}
+  }
+  $('btn-mic').classList.remove('recording');
+  $('mic-status').textContent = State.micNumeros.length > 0
+    ? `Detenido. ${State.micNumeros.length} número(s) capturados.`
+    : 'Tocá el micrófono para empezar';
+  $('mic-last-heard').style.display = 'none';
 }
 
 function startMicRecognition() {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) return;
 
-  const rec = new SR();
+  let rec;
+  try {
+    rec = new SR();
+  } catch (e) {
+    log('error', 'No se pudo crear SpeechRecognition:', e);
+    detenerMic();
+    return;
+  }
+
   rec.lang = 'es-AR';
   rec.continuous = true;
   rec.interimResults = true;
+  rec.maxAlternatives = 1;
 
   rec.onstart = () => {
     State.micActivo = true;
+    State.micLastResultAt = Date.now();
     $('btn-mic').classList.add('recording');
-    $('mic-status').textContent = 'Escuchando... tocá el micrófono para detener';
+    $('mic-status').textContent = '🎙️ Escuchando — tocá el micrófono para detener';
     log('info', 'Mic: iniciado/reiniciado');
   };
 
   rec.onend = () => {
     State.micActivo = false;
     State.micRecognition = null;
+    log('info', 'Mic: onend, shouldKeepRunning =', State.micShouldKeepRunning);
 
-    // Si el usuario NO detuvo manualmente, reiniciamos automáticamente
     if (State.micShouldKeepRunning) {
       $('mic-status').textContent = 'Reconectando...';
-      // Pequeño delay para que el navegador libere el recurso del mic
+      // Delay 400ms para que el navegador libere recursos del mic
+      // (algunos navegadores tiran InvalidStateError si reiniciás muy rápido)
       setTimeout(() => {
-        if (State.micShouldKeepRunning) {
-          try {
-            startMicRecognition();
-          } catch (e) {
-            log('error', 'Mic: no se pudo reiniciar', e);
-            $('mic-status').textContent = 'Detenido. Tocá el micrófono o "Procesar texto".';
-            $('btn-mic').classList.remove('recording');
-            State.micShouldKeepRunning = false;
-          }
-        } else {
+        if (!State.micShouldKeepRunning) {
           $('btn-mic').classList.remove('recording');
-          $('mic-status').textContent = 'Detenido. Tocá "Procesar texto" para agregar al pedido.';
+          return;
         }
-      }, 200);
+        try {
+          startMicRecognition();
+        } catch (e) {
+          log('error', 'Mic: falló restart, reintentando con más delay', e);
+          // Reintento agresivo con más delay
+          setTimeout(() => {
+            if (State.micShouldKeepRunning) {
+              try { startMicRecognition(); }
+              catch (e2) {
+                log('error', 'Mic: falló segundo restart, abortando', e2);
+                detenerMic();
+                toast('Mic dejó de responder. Tocá de nuevo para reactivar.', 'warning');
+              }
+            }
+          }, 1000);
+        }
+      }, 400);
     } else {
       $('btn-mic').classList.remove('recording');
-      $('mic-status').textContent = 'Detenido. Tocá "Procesar texto" para agregar al pedido.';
+      $('mic-status').textContent = State.micNumeros.length > 0
+        ? `Detenido. ${State.micNumeros.length} número(s) capturados.`
+        : 'Tocá el micrófono para empezar';
     }
   };
 
   rec.onerror = (e) => {
     log('warn', 'Mic error:', e.error);
     if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
-      State.micShouldKeepRunning = false;
+      detenerMic();
       toast('Permiso de micrófono denegado. Habilitalo en el navegador.', 'error', 6000);
     } else if (e.error === 'audio-capture') {
-      State.micShouldKeepRunning = false;
+      detenerMic();
       toast('No se pudo acceder al micrófono. Verificá tu hardware.', 'error', 5000);
     } else if (e.error === 'no-speech') {
-      log('info', 'Mic: no-speech (silencio prolongado), reiniciará automáticamente');
+      // Silencio prolongado: el navegador termina la sesión, pero el onend
+      // se va a encargar del restart automático. NO toast.
+      log('info', 'Mic: no-speech (esperado en silencios largos), reiniciará');
     } else if (e.error === 'aborted') {
-      // Usuario detuvo manualmente
+      // Detención manual o reinicio interno, normal
+      log('info', 'Mic: aborted (normal)');
+    } else if (e.error === 'network') {
+      // Error temporal de red, vamos a dejar que el restart lo intente solo
+      log('warn', 'Mic: error de red, intentará reconectar');
     } else {
-      toast('Mic: ' + e.error, 'warning');
+      log('warn', 'Mic: error no manejado', e.error);
     }
   };
 
   rec.onresult = (event) => {
-    // Acá está la clave del fix: solo procesamos los resultados nuevos de ESTA instancia.
-    // Cada nueva instancia empieza con resultIndex = 0 sobre sus propios results.
-    // El texto consolidado se guarda en State.micFinalText, NO en el DOM.
+    State.micLastResultAt = Date.now();
     let interim = '';
-    let nuevoFinal = '';
     for (let i = event.resultIndex; i < event.results.length; i++) {
       const tr = event.results[i][0].transcript;
       if (event.results[i].isFinal) {
-        nuevoFinal += tr + ' ';
+        // Procesar este fragmento final SOLO si no lo procesamos antes
+        const trLimpio = tr.trim().toLowerCase();
+        if (trLimpio && !State.micProcesados.has(trLimpio)) {
+          State.micProcesados.add(trLimpio);
+          State.micFinalText += tr + ' ';
+          // Mostrar lo que oyó
+          mostrarUltimoOido(tr.trim());
+          // Extraer y agregar números a la lista visible
+          const nums = extraerNumerosDeTexto(tr);
+          if (nums.length > 0) {
+            agregarNumerosDetectados(nums);
+          }
+        }
       } else {
         interim += tr;
       }
     }
-    // Solo agregamos al buffer global lo que se marcó como FINAL en esta sesión
-    if (nuevoFinal) {
-      State.micFinalText += nuevoFinal;
-    }
-    // Mostramos: buffer consolidado + lo provisional de esta instancia
+    // Mostrar interim en el transcript crudo (debug, en el details)
     const display = (State.micFinalText + interim).trim();
     $('mic-transcript').textContent = display || '(escuchando...)';
+    if (interim) {
+      mostrarUltimoOido(interim.trim() + ' ...', true);
+    }
   };
 
   State.micRecognition = rec;
@@ -2930,92 +3250,142 @@ function startMicRecognition() {
     rec.start();
   } catch (e) {
     log('error', 'Mic start failed:', e);
-    State.micShouldKeepRunning = false;
-    $('btn-mic').classList.remove('recording');
-    $('mic-status').textContent = 'No se pudo iniciar. Tocá de nuevo.';
+    // InvalidStateError suele resolverse con un retry con delay
+    setTimeout(() => {
+      if (State.micShouldKeepRunning) {
+        try {
+          startMicRecognition();
+        } catch (e2) {
+          detenerMic();
+          $('mic-status').textContent = 'No se pudo iniciar. Tocá de nuevo.';
+        }
+      }
+    }, 500);
   }
 }
 
-function procesarTranscriptMic() {
-  // Si el mic sigue activo, detenerlo antes de procesar
-  if (State.micActivo) {
-    State.micShouldKeepRunning = false;
-    if (State.micRecognition) {
-      try { State.micRecognition.stop(); } catch(e){}
-    }
+function mostrarUltimoOido(txt, esInterim) {
+  const el = $('mic-last-heard');
+  const txtEl = $('mic-last-text');
+  if (!el || !txtEl) return;
+  el.style.display = 'block';
+  txtEl.textContent = txt;
+  // Forzar reflow para reiniciar la animación de flash
+  if (!esInterim) {
+    el.style.animation = 'none';
+    void el.offsetWidth;
+    el.style.animation = '';
   }
+}
 
+function agregarNumerosDetectados(nums) {
+  // Agregar al state y re-renderizar la lista
+  for (const n of nums) {
+    State.micNumeros.push(n);
+  }
+  renderMicNumeros();
+  // Mostrar el botón "Agregar al pedido" si hay números
+  $('btn-mic-agregar').style.display = State.micNumeros.length > 0 ? 'inline-flex' : 'none';
+}
+
+function renderMicNumeros() {
+  const cont = $('mic-numeros-lista');
+  const cnt = $('mic-numeros-count');
+  if (!cont) return;
+  cont.innerHTML = '';
+  for (let i = 0; i < State.micNumeros.length; i++) {
+    const chip = document.createElement('span');
+    chip.className = 'mic-numero-chip';
+    chip.dataset.idx = String(i);
+    const txt = document.createElement('span');
+    txt.textContent = State.micNumeros[i];
+    const x = document.createElement('button');
+    x.className = 'mic-numero-chip-x';
+    x.type = 'button';
+    x.textContent = '×';
+    x.setAttribute('aria-label', 'Quitar');
+    x.addEventListener('click', () => quitarMicNumero(i));
+    chip.appendChild(txt);
+    chip.appendChild(x);
+    cont.appendChild(chip);
+  }
+  if (cnt) cnt.textContent = State.micNumeros.length;
+  // Mostrar/ocultar botón agregar
+  $('btn-mic-agregar').style.display = State.micNumeros.length > 0 ? 'inline-flex' : 'none';
+}
+
+function quitarMicNumero(idx) {
+  if (idx < 0 || idx >= State.micNumeros.length) return;
+  const cont = $('mic-numeros-lista');
+  const chip = cont && cont.querySelector(`.mic-numero-chip[data-idx="${idx}"]`);
+  if (chip) {
+    chip.classList.add('removing');
+    setTimeout(() => {
+      State.micNumeros.splice(idx, 1);
+      renderMicNumeros();
+    }, 200);
+  } else {
+    State.micNumeros.splice(idx, 1);
+    renderMicNumeros();
+  }
+}
+
+function micBorrarTodos() {
+  if (State.micNumeros.length === 0) return;
+  if (!confirm(`¿Borrar los ${State.micNumeros.length} números detectados?`)) return;
+  State.micNumeros = [];
+  renderMicNumeros();
+  $('mic-status').textContent = State.micActivo ? '🎙️ Escuchando — tocá el micrófono para detener' : 'Tocá el micrófono para empezar';
+}
+
+function micAgregarAlPedido() {
+  if (State.micNumeros.length === 0) {
+    toast('No hay números detectados', 'warning');
+    return;
+  }
   if (!State.proveedorActual) {
     toast('Elegí un proveedor primero', 'warning');
     return;
   }
-  const txt = ($('mic-transcript').textContent || '').trim();
-  if (!txt || txt === 'el texto aparecerá acá...') {
-    toast('No hay texto para procesar', 'warning');
-    return;
-  }
 
-  // Estrategia: extraer todos los "tokens" del dictado (números o palabras alfanuméricas)
-  // y tratar cada uno como un código separado.
-  // El reconocimiento de voz puede devolver:
-  //  - números separados por espacios: "1 4 5 23 27"
-  //  - números con palabras intercaladas: "uno coma cuatro y cinco"
-  //  - frases enteras: "código 1234 cantidad 100"
-  //
-  // Convertimos números escritos en palabras (uno, dos...) a dígitos y limpiamos.
-
-  const numerosEscritos = {
-    'cero': '0', 'uno': '1', 'una': '1', 'dos': '2', 'tres': '3',
-    'cuatro': '4', 'cinco': '5', 'seis': '6', 'siete': '7', 'ocho': '8',
-    'nueve': '9', 'diez': '10', 'once': '11', 'doce': '12', 'trece': '13',
-    'catorce': '14', 'quince': '15', 'dieciseis': '16', 'dieciséis': '16',
-    'diecisiete': '17', 'dieciocho': '18', 'diecinueve': '19', 'veinte': '20',
-  };
-
-  // Limpiar: quitar palabras que no son códigos
-  let limpio = txt.toLowerCase()
-    .replace(/[,;.!?¿¡]/g, ' ')
-    .replace(/\b(c[oó]digo|cantidad|por|y|coma|el|la|los|las|de|producto|item)\b/gi, ' ');
-
-  // Convertir números escritos
-  for (const [palabra, num] of Object.entries(numerosEscritos)) {
-    limpio = limpio.replace(new RegExp('\\b' + palabra + '\\b', 'gi'), num);
-  }
-
-  // Tokenizar: extraer secuencias alfanuméricas (incluido guiones)
-  const tokens = limpio.match(/[\w-]+/g) || [];
-  // Filtrar tokens vacíos o muy cortos (1 char puede ser válido para códigos como "1")
-  const codigos = tokens.filter(t => t.length >= 1 && /[\d]/.test(t)); // al menos un dígito
-
-  if (codigos.length === 0) {
-    toast('No se detectó ningún código en el dictado', 'warning');
-    log('warn', 'Mic: tokens sin números:', tokens);
-    return;
-  }
-
-  log('info', `Mic: extraídos ${codigos.length} códigos:`, codigos);
-
-  // Pasar cada código como una línea al textarea de Carga Masiva
+  // Pasar la lista al textarea de Carga Masiva (uno por línea)
   const ta = $('masiva-textarea');
   if (!ta) {
-    toast('Error: no se encontró el área de carga masiva', 'error');
+    toast('Error: no se encontró carga masiva', 'error');
     return;
   }
-
-  // Si ya hay contenido, lo concatenamos (no pisamos)
   const previo = (ta.value || '').trim();
-  const nuevoTexto = (previo ? previo + '\n' : '') + codigos.join('\n');
+  const nuevoTexto = (previo ? previo + '\n' : '') + State.micNumeros.join('\n');
   ta.value = nuevoTexto;
 
-  // Cambiar al modo masivo y disparar el parser para que arme la preview
+  const cantidad = State.micNumeros.length;
+
+  // Limpiar el estado del mic
+  State.micNumeros = [];
+  State.micFinalText = '';
+  State.micProcesados = new Set();
+  $('mic-transcript').textContent = 'El texto aparecerá acá...';
+  $('mic-last-heard').style.display = 'none';
+  renderMicNumeros();
+
+  // Mantener el mic activo si lo estaba (modo continuo): el usuario puede
+  // querer seguir dictando para otro proveedor o agregar más después.
+
+  // Cambiar al modo masivo y disparar el parser
   showModo('masivo');
   parsearMasivo();
 
-  // Limpiar el transcript del mic y el buffer
-  $('mic-transcript').textContent = 'El texto aparecerá acá...';
-  State.micFinalText = '';
+  toast(`🎙️ ${cantidad} código(s) enviados a Carga Masiva. Revisá y agregalos.`, 'success', 5000);
+}
 
-  toast(`🎙️ ${codigos.length} código(s) enviados a Carga Masiva. Revisá y agregalos al pedido.`, 'success', 5000);
+// Función legacy mantenida por compat (botón "Procesar texto" del transcript crudo)
+function procesarTranscriptMic() {
+  // Ahora redirige al flujo nuevo
+  if (State.micNumeros.length > 0) {
+    micAgregarAlPedido();
+  } else {
+    toast('No hay números detectados todavía. Dictá algo primero.', 'warning');
+  }
 }
 
 
