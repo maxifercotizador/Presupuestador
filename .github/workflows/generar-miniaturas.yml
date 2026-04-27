@@ -1,0 +1,45 @@
+name: Generar miniaturas de PDFs
+
+on:
+  push:
+    paths:
+      - 'listas/**.pdf'
+      - 'scripts/generar_miniaturas.py'
+  workflow_dispatch:
+
+jobs:
+  build-thumbs:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Instalar poppler-utils
+        run: sudo apt-get update && sudo apt-get install -y poppler-utils
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Instalar dependencias Python
+        run: pip install Pillow
+
+      - name: Generar miniaturas
+        run: python scripts/generar_miniaturas.py
+
+      - name: Commitear miniaturas si hubo cambios
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add thumbs/
+          if git diff --staged --quiet; then
+            echo "Sin cambios en miniaturas."
+          else
+            git commit -m "auto: regenerar miniaturas de PDFs"
+            git push
+          fi
