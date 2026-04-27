@@ -3240,7 +3240,7 @@ function renderHistorial() {
   }
   cont.innerHTML = '';
   historial.forEach(b => {
-    const card = renderBorradorCard(b, ['ver-pdf', 'duplicar']);
+    const card = renderBorradorCard(b, ['ver-pdf', 'duplicar', 'eliminar-historial']);
     cont.appendChild(card);
   });
 }
@@ -3424,6 +3424,34 @@ function renderBorradorCard(b, acciones) {
               renderBorradores();
               renderPendientes();
               updateBadges();
+            }
+          );
+        });
+        break;
+      case 'eliminar-historial':
+        btn.textContent = '🗑 Eliminar';
+        btn.classList.add('btn-danger');
+        btn.addEventListener('click', () => {
+          if (!confirm(`¿Eliminar ${b.id} del historial?\n\n(Vas a tener 30 segundos para deshacer)`)) return;
+          const snapshot = JSON.parse(JSON.stringify(b));
+          let hist = lsGet(KEY_HISTORIAL, []);
+          // Encontrar la posición original para que el undo lo devuelva al mismo lugar
+          const idxOriginal = hist.findIndex(x => x.id === b.id);
+          hist = hist.filter(x => x.id !== b.id);
+          lsSet(KEY_HISTORIAL, hist);
+          renderHistorial();
+          toast(`🗑 ${b.id} eliminado del historial`, 'info');
+          registrarUndo(
+            `Eliminado del historial: ${b.id}`,
+            () => {
+              const current = lsGet(KEY_HISTORIAL, []);
+              if (!current.find(x => x.id === snapshot.id)) {
+                // Insertar en la posición original si es posible
+                const insertAt = Math.min(idxOriginal >= 0 ? idxOriginal : current.length, current.length);
+                current.splice(insertAt, 0, snapshot);
+                lsSet(KEY_HISTORIAL, current);
+              }
+              renderHistorial();
             }
           );
         });
