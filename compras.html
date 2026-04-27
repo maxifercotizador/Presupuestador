@@ -359,6 +359,7 @@
     border-bottom: 1px solid var(--gris-borde);
   }
   .preview-item.no-encontrado { background: rgba(192, 57, 43, 0.08); }
+  .preview-item.ambiguo { background: rgba(243, 156, 18, 0.10); border-left: 3px solid var(--amarillo); }
   .preview-item.pedido-sel { background: rgba(192, 57, 43, 0.10); border-left: 3px solid var(--rojo); }
   .preview-item input[type="checkbox"] {
     width: auto;
@@ -368,6 +369,7 @@
   .preview-item .pi-codigo { font-weight: 600; color: var(--blanco); font-size: 13px; }
   .preview-item .pi-desc { font-size: 12px; color: var(--gris-texto); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .preview-item .pi-bad { color: var(--rojo-light); }
+  .preview-item .pi-warning { color: var(--amarillo); }
   .preview-item .pi-hint { color: var(--verde); font-size: 11px; }
   .preview-item input[type="number"] {
     width: 70px;
@@ -2727,16 +2729,43 @@ function parsearMasivo() {
   // Si NO hay familia, mantenemos el match exacto normalizado para evitar colisiones.
   const usarSoloDigitos = !!familia;
 
-  // Pre-indexar el pool por "solo dígitos" para búsqueda rápida
+  // Pre-indexar el pool por "solo dígitos" para búsqueda rápida.
+  // Guardamos arrays porque puede haber colisiones (ej: "TRF 4x90" y "TRG 4x90"
+  // ambos normalizan a "490"). Si la lista tiene más de uno, marcamos ambiguo.
+  //
+  // CASO ESPECIAL — familias tipo CARBONES, ALEMITES, TAPONES DE CARTER, Gavetas:
+  //   El campo `n` viene como "1 - 6 X 1 R" donde el código real es solo
+  //   el primer número antes del " - ". Si detectamos ese patrón, ese número
+  //   es la clave PRINCIPAL (y única) — ignoramos el resto que es descripción.
+  //   Se reconoce porque hay " - " con número antes (formato regular).
   let poolPorDigitos = null;
   if (usarSoloDigitos) {
     poolPorDigitos = new Map();
+    const agregarSiNuevo = (key, prod) => {
+      if (!key) return;
+      if (!poolPorDigitos.has(key)) poolPorDigitos.set(key, []);
+      const arr = poolPorDigitos.get(key);
+      if (!arr.includes(prod)) arr.push(prod);
+    };
+    // Detectar si TODOS los productos del pool tienen el patrón "N - resto"
+    // Si es así, usamos solo ese número como clave (modo CARBONES/ALEMITES/etc).
+    const matchGuion = (n) => {
+      const s = String(n || '');
+      const m = s.match(/^\s*(\d+(?:[,\.]\d+)?)\s*-\s*.+/);
+      return m ? m[1].replace(/[,\.]/g, '') : null;
+    };
+    const todosTienenGuion = pool.length > 0 && pool.every(p => matchGuion(p.numero));
+
     for (const p of pool) {
-      const dN = soloDigitos(p.numero);
-      const dC = soloDigitos(p.codprov);
-      // Indexamos por numero y por codprov, ambos
-      if (dN && !poolPorDigitos.has(dN)) poolPorDigitos.set(dN, p);
-      if (dC && !poolPorDigitos.has(dC)) poolPorDigitos.set(dC, p);
+      if (todosTienenGuion) {
+        // Familias tipo CARBONES: solo indexar el número antes del guión
+        const numAntesDeGuion = matchGuion(p.numero);
+        agregarSiNuevo(numAntesDeGuion, p);
+      } else {
+        // Familias normales: indexar por solo dígitos del numero y del codprov
+        agregarSiNuevo(soloDigitos(p.numero), p);
+        agregarSiNuevo(soloDigitos(p.codprov), p);
+      }
     }
   }
 
@@ -2783,10 +2812,21 @@ function parsearMasivo() {
     }
 
     let prod = null;
+    let ambiguo = false;
+    let candidatos = null;
     if (usarSoloDigitos) {
-      // Match por "solo dígitos"
+      // Match por "solo dígitos". Si hay más de un candidato → ambigüedad.
       const cDig = soloDigitos(codigo);
-      if (cDig) prod = poolPorDigitos.get(cDig);
+      if (cDig) {
+        const arr = poolPorDigitos.get(cDig) || [];
+        if (arr.length === 1) {
+          prod = arr[0];
+        } else if (arr.length > 1) {
+          // Ambigüedad: marcamos el item, no elegimos automáticamente
+          ambiguo = true;
+          candidatos = arr.slice(0, 5); // máximo 5 para mostrar
+        }
+      }
     } else {
       // Match clásico (sin familia): exacto normalizado, luego parcial por codprov
       const cNorm = normalizar(codigo);
@@ -2800,7 +2840,6 @@ function parsearMasivo() {
     const ultimaCant = (prod && histK) ? hist[histK] : null;
     const minProducto = prod ? (Number(prod.min) || null) : null;
     // Fallback de cantidad: la dictada > la compra mínima del producto (cm embebido) > la última pedida > null
-    // El cm embebido del catálogo tiene prioridad sobre la última pedida porque es la fuente real.
     const cantFinal = cantidad ?? minProducto ?? ultimaCant ?? null;
 
     return {
@@ -2811,7 +2850,9 @@ function parsearMasivo() {
       ultimaCant,
       producto: prod || null,
       encontrado: !!prod,
-      seleccionado: !!prod,
+      ambiguo: ambiguo,
+      candidatos: candidatos,
+      seleccionado: !!prod && !ambiguo,
     };
   });
 
@@ -2841,12 +2882,15 @@ function renderPreviewMasivo() {
   lista.innerHTML = '';
   State.previaMasiva.forEach((it, idx) => {
     const div = document.createElement('div');
-    div.className = 'preview-item' + (it.encontrado ? '' : ' no-encontrado');
+    let claseExtra = '';
+    if (it.ambiguo) claseExtra = ' ambiguo';
+    else if (!it.encontrado) claseExtra = ' no-encontrado';
+    div.className = 'preview-item' + claseExtra;
 
     const cb = document.createElement('input');
     cb.type = 'checkbox';
     cb.checked = it.seleccionado;
-    cb.disabled = !it.encontrado;
+    cb.disabled = !it.encontrado || it.ambiguo;
     cb.addEventListener('change', e => {
       it.seleccionado = e.target.checked;
       renderPreviewMasivo();
@@ -2854,7 +2898,42 @@ function renderPreviewMasivo() {
 
     const info = document.createElement('div');
     info.className = 'pi-info';
-    if (it.encontrado) {
+    if (it.ambiguo) {
+      // Caso AMBIGUO: mostrar candidatos clickeables
+      info.innerHTML = `
+        <div class="pi-codigo pi-warning">⚠️ "${escapeHtml(it.codigoOriginal)}" — ${it.candidatos.length} candidatos:</div>
+        <div class="pi-desc" style="color:var(--gris-texto);font-size:11px;margin-bottom:6px">Tocá el correcto:</div>
+      `;
+      const candCont = document.createElement('div');
+      candCont.style.cssText = 'display:flex; flex-direction:column; gap:4px; margin-top:4px';
+      it.candidatos.forEach(c => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn btn-sm btn-secondary';
+        btn.style.cssText = 'text-align:left; justify-content:flex-start; padding:6px 10px; font-size:12px; width:100%';
+        btn.innerHTML = `<strong>${escapeHtml(c.numero)}</strong> <span style="color:var(--gris-texto);font-weight:400">${escapeHtml(c.descripcion || '—')}</span>`;
+        btn.addEventListener('click', () => {
+          // Resolver la ambigüedad: convertir el item en encontrado
+          it.producto = c;
+          it.encontrado = true;
+          it.ambiguo = false;
+          it.candidatos = null;
+          it.seleccionado = true;
+          // Recalcular cantidad sugerida si no era manual
+          if (!it.cantidadManual) {
+            const histK = (c.proveedor || '') + ':' + (c.numero || '');
+            const hist = lsGet(KEY_HIST_CANTIDADES, {});
+            const ultima = hist[histK];
+            const minP = Number(c.min) || null;
+            it.cantidad = minP ?? ultima ?? null;
+            it.ultimaCant = ultima || null;
+          }
+          renderPreviewMasivo();
+        });
+        candCont.appendChild(btn);
+      });
+      info.appendChild(candCont);
+    } else if (it.encontrado) {
       const p = it.producto;
       info.innerHTML = `
         <div class="pi-codigo">${escapeHtml(p.codprov || p.numero)} <span style="font-weight:400;color:var(--gris-texto);font-size:11px">[${escapeHtml(p.numero)}]</span></div>
@@ -2873,7 +2952,7 @@ function renderPreviewMasivo() {
     cantInp.min = '1';
     cantInp.value = it.cantidad ?? '';
     cantInp.placeholder = 'Cant.';
-    cantInp.disabled = !it.encontrado;
+    cantInp.disabled = !it.encontrado || it.ambiguo;
     cantInp.addEventListener('input', e => {
       const v = parseInt(e.target.value, 10);
       it.cantidad = v > 0 ? v : null;
