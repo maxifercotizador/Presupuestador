@@ -60,10 +60,12 @@ def pdf_to_thumb(pdf_path: Path, thumb_path: Path) -> bool:
             print(f"  ERROR pdftoppm: {result.stderr}")
             return False
 
-        # pdftoppm agrega "-1" al final
+        # pdftoppm agrega "-1" o "-01" al final (depende del nro de páginas)
         tmp_file = Path(str(tmp_prefix) + "-1.jpg")
         if not tmp_file.exists():
-            print(f"  ERROR: no se generó {tmp_file}")
+            tmp_file = Path(str(tmp_prefix) + "-01.jpg")
+        if not tmp_file.exists():
+            print(f"  ERROR: no se generó ningún archivo temporal para {tmp_prefix}")
             return False
 
         # Redimensionar y comprimir con Pillow
