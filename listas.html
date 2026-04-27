@@ -1245,6 +1245,300 @@ mark { background: rgba(78,168,62,0.25); color: var(--green-dark); padding: 0 2p
 .pdf-mobile-error strong { display: block; margin-bottom: 8px; font-size: 16px; }
 .pdf-mobile-error a { color: #ffb380; text-decoration: underline; }
 
+/* BOTTOM SHEET - Buscador dentro de un PDF */
+.sheet-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+    z-index: 5;
+}
+
+.sheet-backdrop.open {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.sheet {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--bg-card);
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -8px 32px rgba(0,0,0,0.3);
+    transform: translateY(100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    max-height: 85%;
+    height: 85%;
+    overflow: hidden;
+}
+
+.sheet.open { transform: translateY(0); }
+
+.sheet-handle {
+    flex-shrink: 0;
+    width: 100%;
+    padding: 10px 0 6px;
+    display: flex;
+    justify-content: center;
+    cursor: grab;
+    touch-action: none;
+}
+
+.sheet-handle::before {
+    content: '';
+    width: 40px;
+    height: 4px;
+    background: var(--border-strong);
+    border-radius: 100px;
+}
+
+.sheet-header {
+    flex-shrink: 0;
+    padding: 4px 16px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    border-bottom: 1px solid var(--border);
+}
+
+.sheet-title {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 800;
+    font-size: 15px;
+    color: var(--navy);
+    letter-spacing: -0.01em;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sheet-title-prefix {
+    font-size: 10px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+    margin-bottom: 2px;
+    display: block;
+}
+
+.sheet-close {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--border);
+    background: var(--bg-soft);
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    transition: all 0.15s;
+}
+
+.sheet-close:hover { background: var(--border); color: var(--text); }
+
+.sheet-controls {
+    flex-shrink: 0;
+    padding: 12px 14px;
+    background: var(--bg-soft);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    border-bottom: 1px solid var(--border);
+}
+
+.sheet-search-wrap {
+    position: relative;
+}
+
+.sheet-search-input {
+    width: 100%;
+    padding: 11px 14px 11px 40px;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    font-size: 14px;
+    background: white;
+    color: var(--text);
+    outline: none;
+    transition: all 0.15s;
+}
+
+.sheet-search-input:focus {
+    border-color: var(--green);
+    box-shadow: 0 0 0 3px rgba(78,168,62,0.15);
+}
+
+.sheet-search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    pointer-events: none;
+}
+
+.sheet-disc-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    background: rgba(78,168,62,0.08);
+    border-radius: 10px;
+    border: 1px solid rgba(78,168,62,0.2);
+}
+
+.sheet-disc-row label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--green-dark);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+}
+
+.sheet-disc-row input {
+    width: 60px;
+    padding: 6px 8px;
+    border: 1px solid var(--green);
+    border-radius: 6px;
+    font-size: 14px;
+    text-align: center;
+    font-weight: 800;
+    color: var(--green-dark);
+    background: white;
+    outline: none;
+}
+
+.sheet-disc-row .pct {
+    font-weight: 800;
+    color: var(--green-dark);
+    font-size: 14px;
+    margin-left: -4px;
+}
+
+.sheet-info {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+}
+
+.sheet-results {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 10px 12px 20px;
+    background: var(--bg);
+}
+
+.sheet-product {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--navy);
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-bottom: 6px;
+    box-shadow: var(--shadow-sm);
+}
+
+.sheet-product-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.sheet-product-num {
+    font-size: 10px;
+    color: var(--text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.sheet-product-num strong {
+    color: var(--navy);
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.sheet-product-desc {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.35;
+    margin-bottom: 6px;
+    font-weight: 500;
+}
+
+.sheet-product-prices {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 6px;
+    border-top: 1px dashed var(--border);
+    gap: 10px;
+}
+
+.sheet-price-block {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.sheet-price-label {
+    font-size: 9px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+}
+
+.sheet-price-lista {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 600;
+    text-decoration: line-through;
+    text-decoration-color: var(--text-dim);
+}
+
+.sheet-price-neto {
+    font-size: 16px;
+    color: var(--green-dark);
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+}
+
+.sheet-price-neto.no-disc { color: var(--navy); }
+
+.sheet-empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
+.sheet-empty-title {
+    font-weight: 700;
+    color: var(--navy);
+    margin-bottom: 4px;
+    font-size: 14px;
+}
+
 /* TOAST */
 .toast {
     position: fixed;
@@ -1502,6 +1796,40 @@ mark { background: rgba(78,168,62,0.25); color: var(--green-dark); padding: 0 2p
     <div class="modal-body">
         <iframe id="pdfFrame" title="Visor PDF"></iframe>
         <div id="pdfMobileViewer" style="display:none;"></div>
+
+        <!-- Bottom sheet: buscador dentro de la lista actual -->
+        <div class="sheet-backdrop" id="sheetBackdrop"></div>
+        <div class="sheet" id="sheet" role="dialog" aria-label="Buscar en esta lista">
+            <div class="sheet-handle" id="sheetHandle"></div>
+            <div class="sheet-header">
+                <div style="flex:1; min-width:0;">
+                    <span class="sheet-title-prefix">Buscar en</span>
+                    <div class="sheet-title" id="sheetTitle">Lista</div>
+                </div>
+                <button class="sheet-close" id="sheetClose" aria-label="Cerrar buscador">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="sheet-controls">
+                <div class="sheet-search-wrap">
+                    <svg class="sheet-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <path d="m21 21-4.3-4.3"></path>
+                    </svg>
+                    <input type="text" class="sheet-search-input" id="sheetSearch" placeholder="Buscar por número o descripción..." autocomplete="off">
+                </div>
+                <div class="sheet-disc-row">
+                    <label>Tu desc.</label>
+                    <input type="number" id="sheetDiscount" value="0" min="0" max="99" step="1" inputmode="numeric">
+                    <span class="pct">%</span>
+                    <span class="sheet-info" id="sheetInfo"></span>
+                </div>
+            </div>
+            <div class="sheet-results" id="sheetResults"></div>
+        </div>
     </div>
 </div>
 
@@ -1646,12 +1974,28 @@ const escapeHtml = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&l
 const thumbName = file => file.replace(/\.pdf$/i, '.jpg');
 
 /* NAV */
-function goView(name) {
+let _suppressPush = false; // bandera para evitar push duplicados al venir de popstate
+
+function goView(name, opts) {
+    opts = opts || {};
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     $('view-' + name).classList.add('active');
     const tags = { home: 'Listas y Precios', consultor: 'Consultor de Precios', listas: 'Listas PDF' };
     $('viewTag').textContent = tags[name] || 'Listas y Precios';
     window.scrollTo(0, 0);
+
+    // Push state para que "atrás" funcione bien
+    if (!_suppressPush && !opts.replace) {
+        const cur = history.state;
+        // Solo push si la vista cambia respecto a la actual
+        if (!cur || cur.view !== name) {
+            history.pushState({ view: name }, '', '');
+        }
+    }
+    if (opts.replace) {
+        history.replaceState({ view: name }, '', '');
+    }
+
     if (name === 'consultor') {
         loadData().then(initConsultor).catch(e => {
             $('resultsCount').textContent = 'Error cargando productos';
@@ -2257,12 +2601,10 @@ function openPdf(lista) {
     $('modalSubtitle').textContent = lista.desc;
 
     if (isMobile()) {
-        // Mobile: PDF.js custom viewer
         $('pdfFrame').src = 'about:blank';
         $('pdfFrame').style.display = 'none';
         renderPdfMobile(url);
     } else {
-        // Desktop: iframe nativo
         clearMobilePdfViewer();
         $('pdfFrame').style.display = 'block';
         $('pdfFrame').src = url;
@@ -2270,6 +2612,11 @@ function openPdf(lista) {
 
     $('modal').classList.add('active');
     document.body.style.overflow = 'hidden';
+
+    // History: push estado modal
+    if (!_suppressPush) {
+        history.pushState({ view: 'modal' }, '', '');
+    }
 }
 
 function openPdfByFamily(family) {
@@ -2294,15 +2641,28 @@ function openPdfByFamily(family) {
 
         $('modal').classList.add('active');
         document.body.style.overflow = 'hidden';
+
+        if (!_suppressPush) {
+            history.pushState({ view: 'modal' }, '', '');
+        }
     } else toast('PDF no disponible');
 }
 
-function closeModal() {
+function closeModal(skipHistory) {
+    if (!$('modal').classList.contains('active')) return;
+    // Si el sheet está abierto, cerrarlo primero
+    if (sheetState.open) {
+        closeSheet(true); // sin afectar history
+    }
     $('modal').classList.remove('active');
     $('pdfFrame').src = 'about:blank';
     clearMobilePdfViewer();
     currentPdf = null;
     document.body.style.overflow = '';
+
+    if (!skipHistory && history.state && history.state.view === 'modal') {
+        history.back();
+    }
 }
 
 function downloadPdf(lista) {
@@ -2337,38 +2697,202 @@ $('newTabBtn').addEventListener('click', () => {
 $('searchInListBtn').addEventListener('click', () => {
     if (!currentPdf) return;
     const file = currentPdf.file;
+    const fam = currentPdf._originFamily || Object.keys(FAMILY_TO_PDF).find(k => FAMILY_TO_PDF[k] === file);
 
-    // Determinar familia: si fue abierto desde el consultor, usamos esa familia origen
-    // Si no, buscamos la primera familia que mapea a este archivo
-    let fam = currentPdf._originFamily || Object.keys(FAMILY_TO_PDF).find(k => FAMILY_TO_PDF[k] === file);
-
-    closeModal();
-
-    goView('consultor');
-    loadData().then(() => {
-        if (fam) {
-            state.family = fam;
-            state.q = ''; state.numero = ''; state.desc = '';
-            if ($('searchGeneral')) $('searchGeneral').value = '';
-            if ($('filterNumero')) $('filterNumero').value = '';
-            if ($('filterDesc')) $('filterDesc').value = '';
-            state.renderLimit = 50;
-            initConsultor();
-            render();
-            // Foco automático en el buscador para que escriba dentro de la familia
-            setTimeout(() => {
-                const sg = $('searchGeneral');
-                if (sg) { sg.focus(); }
-            }, 200);
-            toast('Buscá dentro de: ' + fam);
-        } else {
-            state.family = null;
-            initConsultor();
-            render();
-            toast('Buscá productos');
-        }
-    });
+    if (isMobile()) {
+        // Mobile: abrir bottom sheet sin cerrar el PDF
+        if (!fam) { toast('Esta lista no tiene productos asociados'); return; }
+        openSheet(fam, currentPdf.title);
+    } else {
+        // Desktop: ir al consultor
+        closeModal();
+        goView('consultor');
+        loadData().then(() => {
+            if (fam) {
+                state.family = fam;
+                state.q = ''; state.numero = ''; state.desc = '';
+                if ($('searchGeneral')) $('searchGeneral').value = '';
+                if ($('filterNumero')) $('filterNumero').value = '';
+                if ($('filterDesc')) $('filterDesc').value = '';
+                state.renderLimit = 50;
+                initConsultor();
+                render();
+                setTimeout(() => { const sg = $('searchGeneral'); if (sg) sg.focus(); }, 200);
+                toast('Buscá dentro de: ' + fam);
+            } else {
+                state.family = null;
+                initConsultor();
+                render();
+            }
+        });
+    }
 });
+
+/* ============================================================
+   BOTTOM SHEET (Buscar dentro de una lista en mobile)
+   ============================================================ */
+
+let sheetState = {
+    family: null,
+    q: '',
+    discount: 0,
+    open: false
+};
+
+function openSheet(family, listaTitle) {
+    sheetState.family = family;
+    sheetState.q = '';
+    sheetState.discount = 0;
+    $('sheetTitle').textContent = listaTitle || family;
+    $('sheetSearch').value = '';
+    $('sheetDiscount').value = 0;
+
+    // Asegurarse que los datos estén cargados
+    loadData().then(() => {
+        renderSheet();
+        $('sheetBackdrop').classList.add('open');
+        $('sheet').classList.add('open');
+        sheetState.open = true;
+
+        // Push history para que "atrás" cierre el sheet
+        history.pushState({ view: 'sheet' }, '', '');
+
+        // Foco en el buscador después de la animación
+        setTimeout(() => $('sheetSearch').focus(), 350);
+    }).catch(err => {
+        toast('Error cargando productos');
+        console.error(err);
+    });
+}
+
+function closeSheet(skipHistory) {
+    if (!sheetState.open) return;
+    $('sheet').classList.remove('open');
+    $('sheetBackdrop').classList.remove('open');
+    sheetState.open = false;
+
+    // Volver el foco al PDF
+    if (document.activeElement && document.activeElement.blur) {
+        document.activeElement.blur();
+    }
+
+    if (!skipHistory && history.state && history.state.view === 'sheet') {
+        history.back();
+    }
+}
+
+function renderSheet() {
+    const fam = sheetState.family;
+    if (!fam) return;
+
+    const q = sheetState.q.trim();
+    const nq = norm(q);
+    const qTerms = nq.split(/\s+/).filter(Boolean);
+
+    // Filtrar productos solo de esa familia + búsqueda
+    const filtered = DATA.filter(it => {
+        if (it.p !== fam) return false;
+        if (qTerms.length && !qTerms.every(t => it._all.includes(t))) return false;
+        return true;
+    });
+
+    const disc = sheetState.discount;
+    const mult = (100 - disc) / 100;
+
+    $('sheetInfo').textContent = filtered.length + (filtered.length === 1 ? ' producto' : ' productos');
+
+    const res = $('sheetResults');
+    if (filtered.length === 0) {
+        res.innerHTML = '<div class="sheet-empty"><div class="sheet-empty-title">Sin resultados</div>Probá con otro término</div>';
+        return;
+    }
+
+    // Limitar a 200 para no colgar el celu con familias enormes (Plásticos tiene 398)
+    const LIMIT = 200;
+    const slice = filtered.slice(0, LIMIT);
+
+    let html = '';
+    slice.forEach(it => {
+        const neto = it.pr * mult;
+        html += '<div class="sheet-product">'
+            + '<div class="sheet-product-top">'
+            +   '<div class="sheet-product-num">N° <strong>' + highlight(it.n, qTerms) + '</strong></div>'
+            + '</div>'
+            + '<div class="sheet-product-desc">' + highlight(it.d, qTerms) + '</div>'
+            + '<div class="sheet-product-prices">'
+            +   '<div class="sheet-price-block"><span class="sheet-price-label">' + (disc > 0 ? 'Lista' : 'Precio') + '</span>'
+            +     '<span class="sheet-price-' + (disc > 0 ? 'lista' : 'neto no-disc') + '">' + fmtMoney(it.pr) + '</span>'
+            +   '</div>';
+        if (disc > 0) {
+            html += '<div class="sheet-price-block" style="align-items:flex-end"><span class="sheet-price-label">Tu precio (-' + disc + '%)</span>'
+                + '<span class="sheet-price-neto">' + fmtMoney(neto) + '</span></div>';
+        }
+        html += '</div></div>';
+    });
+
+    if (filtered.length > LIMIT) {
+        html += '<div class="sheet-empty" style="padding:14px"><div style="font-size:11px">Mostrando ' + LIMIT + ' de ' + filtered.length + ' · Refiná tu búsqueda para ver más</div></div>';
+    }
+
+    res.innerHTML = html;
+    res.scrollTop = 0;
+}
+
+let sheetSearchTimer;
+$('sheetSearch').addEventListener('input', e => {
+    sheetState.q = e.target.value;
+    clearTimeout(sheetSearchTimer);
+    sheetSearchTimer = setTimeout(renderSheet, 80);
+});
+
+$('sheetDiscount').addEventListener('input', e => {
+    let v = parseFloat(e.target.value) || 0;
+    if (v < 0) v = 0;
+    if (v > 99) v = 99;
+    sheetState.discount = v;
+    renderSheet();
+});
+
+$('sheetClose').addEventListener('click', () => closeSheet());
+$('sheetBackdrop').addEventListener('click', () => closeSheet());
+
+// Drag down para cerrar el sheet
+(function setupSheetDrag() {
+    const handle = $('sheetHandle');
+    const sheet = $('sheet');
+    let startY = 0;
+    let currentY = 0;
+    let dragging = false;
+
+    function onStart(y) {
+        if (!sheetState.open) return;
+        startY = y;
+        currentY = y;
+        dragging = true;
+        sheet.style.transition = 'none';
+    }
+
+    function onMove(y) {
+        if (!dragging) return;
+        currentY = y;
+        const delta = Math.max(0, currentY - startY);
+        sheet.style.transform = `translateY(${delta}px)`;
+    }
+
+    function onEnd() {
+        if (!dragging) return;
+        dragging = false;
+        const delta = currentY - startY;
+        sheet.style.transition = '';
+        sheet.style.transform = '';
+        if (delta > 80) closeSheet();
+    }
+
+    handle.addEventListener('touchstart', e => onStart(e.touches[0].clientY), { passive: true });
+    handle.addEventListener('touchmove', e => onMove(e.touches[0].clientY), { passive: true });
+    handle.addEventListener('touchend', onEnd);
+    handle.addEventListener('touchcancel', onEnd);
+})();
 
 if (navigator.share) {
     $('shareNativeBtn').style.display = 'flex';
@@ -2385,7 +2909,48 @@ if (navigator.share) {
     });
 }
 
-goView('home');
+/* ============================================================
+   HISTORY API — botón "atrás" del celular y navegador
+   ============================================================ */
+
+// Cuando el usuario va para atrás, manejamos el cambio según el estado actual
+window.addEventListener('popstate', (event) => {
+    const target = event.state ? event.state.view : 'home';
+
+    // Si el sheet está abierto, cerrarlo (caso especial: se monta sobre el modal)
+    if (sheetState.open) {
+        closeSheet(true);
+        return;
+    }
+
+    // Si el modal está abierto y vamos a una vista no-modal, cerrar modal
+    const modalActive = $('modal').classList.contains('active');
+    if (modalActive && target !== 'modal') {
+        closeModal(true);
+        // Si el target es una vista, también la activamos
+        if (['home', 'consultor', 'listas'].includes(target)) {
+            _suppressPush = true;
+            goView(target);
+            _suppressPush = false;
+        }
+        return;
+    }
+
+    // Cambio normal de vista
+    if (['home', 'consultor', 'listas'].includes(target)) {
+        _suppressPush = true;
+        goView(target);
+        _suppressPush = false;
+    } else if (target === 'modal') {
+        // Caso raro: ir adelante a modal sin contexto. Volver a home.
+        _suppressPush = true;
+        goView('home');
+        _suppressPush = false;
+    }
+});
+
+// Estado inicial: replace en lugar de push para que el primer "atrás" salga del sitio
+goView('home', { replace: true });
 </script>
 
 </body>
