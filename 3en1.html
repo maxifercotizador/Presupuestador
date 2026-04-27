@@ -1551,6 +1551,15 @@ function tokenizarCodigos(line) {
   // Proteger coma decimal: "2,5X80" no debe partirse
   const rawTokens = cleanedLine.replace(/(\d),(\d)/g, '$1DECIMALCOMMA$2')
     .split(/[,\s]+/).map(t=>t.replace(/DECIMALCOMMA/g,',').trim()).filter(Boolean);
+
+  // CASO ESPECIAL: línea con 3+ números puros sin guiones ni "=" → todos son códigos sueltos.
+  // Esto evita que "8 9 13 116 41 42..." se interprete como pares (cod,cant).
+  // Solo aplica cuando TODOS los tokens son números puros (sin guión, sin x, sin coma decimal).
+  const allPureNumbers = rawTokens.length >= 3 && rawTokens.every(t => /^\d+$/.test(t));
+  if (allPureNumbers) {
+    return rawTokens.map(t => ({ codigo: t, cantidad: null, texto_original: t }));
+  }
+
   const result = [];
 
   for (let i = 0; i < rawTokens.length; i++) {
@@ -1814,6 +1823,22 @@ function parseOrderText(text) {
   const items = [];
   let currentFamilia = null;
   let cantDefault = null; // cantidad por defecto para la sección actual
+  let bloqueStart = 0;    // índice en items donde arranca el bloque de la familia actual
+
+  // Helper: aplica cantDefault a items del bloque actual sin cantidad (retroactivo + futuro)
+  function aplicarCantDefaultABloque() {
+    if (cantDefault == null) return;
+    for (let i = bloqueStart; i < items.length; i++) {
+      if (items[i].cantidad == null) items[i].cantidad = cantDefault;
+    }
+  }
+
+  // Helper: cambia de familia (resetea bloque y cantDefault)
+  function cambiarFamilia(nuevaFam, nuevaCantDef) {
+    currentFamilia = nuevaFam;
+    cantDefault = (nuevaCantDef !== undefined) ? nuevaCantDef : null;
+    bloqueStart = items.length;
+  }
 
   for (const rawLine of lines) {
     // PASO 0: Detectar "de todos N c/u" → aplicar cantidad a todos los ítems sin cantidad
@@ -1854,8 +1879,29 @@ function parseOrderText(text) {
         }
       }
       if (resolvedFam) {
-        currentFamilia = resolvedFam;
+        // Si es la MISMA familia que el bloque actual, NO resetear el bloque:
+        // simplemente actualizar cantDefault y aplicar retroactivamente.
+        // Esto cubre el caso "Carbon \n 8 9 13... \n 10 de cada uno"
+        // donde "Carbon" abrió el bloque y "10 de cada uno" llega después.
+        if (currentFamilia && norm(currentFamilia) === norm(resolvedFam)) {
+          cantDefault = cd;
+          aplicarCantDefaultABloque();
+        } else {
+          // Familia distinta: cerrar bloque anterior y abrir uno nuevo
+          cambiarFamilia(resolvedFam, cd);
+        }
+        continue;
+      }
+    }
+
+    // PASO 0C: Detectar línea suelta "N de cada uno" sin familia → aplica al bloque actual
+    // Ej: "10 de cada uno" en una línea sola, después de los códigos
+    const soloCantPattern = rawLine.match(/^\s*(\d+)\s+(?:de\s+cada(?:\s+uno?)?|c\/u|cada\s+uno?|por\s+unidad|pares?\s*(?:de\s*)?(?:c\/u)?)\s*\.?\s*$/i);
+    if (soloCantPattern && currentFamilia) {
+      const cd = parseInt(soloCantPattern[1]);
+      if (!isNaN(cd) && cd > 0) {
         cantDefault = cd;
+        aplicarCantDefaultABloque();
         continue;
       }
     }
@@ -1865,14 +1911,20 @@ function parseOrderText(text) {
     if (withEq) {
       const left=withEq[1].trim(), qty=parseInt(withEq[2]);
       const parsed = extractFamiliaAndCodigo(left, currentFamilia);
-      if (parsed) { currentFamilia=parsed.familia; items.push({...parsed,cantidad:qty,texto_original:rawLine}); }
+      if (parsed) {
+        // Si cambió la familia, abrir nuevo bloque
+        if (parsed.familia && (!currentFamilia || norm(parsed.familia) !== norm(currentFamilia))) {
+          cambiarFamilia(parsed.familia);
+        }
+        items.push({...parsed,cantidad:qty,texto_original:rawLine});
+      }
       continue;
     }
 
     // 2. Es una familia sola (sin números o reconocible)
     if (isFamiliaLine(line)) {
-      currentFamilia=resolveFamiliaName(line);
-      cantDefault = null; // nueva sección sin cantidad por defecto
+      const nuevaFam = resolveFamiliaName(line);
+      cambiarFamilia(nuevaFam);
       continue;
     }
 
@@ -1896,10 +1948,13 @@ function parseOrderText(text) {
     }
     if (exactMatchLen === 0 && partialMatchLen > 0) { detectedFamilia=partialMatch; restStart=partialMatchLen; }
     if (detectedFamilia) {
-      currentFamilia = resolveFamiliaName(detectedFamilia) || detectedFamilia;
-      cantDefault = null;
+      const nuevaFam = resolveFamiliaName(detectedFamilia) || detectedFamilia;
+      cambiarFamilia(nuevaFam);
       const rest = words.slice(restStart).join(' ');
-      if (rest) items.push(...parseMultiToken(rest, currentFamilia));
+      if (rest) {
+        const nuevos = parseMultiToken(rest, currentFamilia);
+        items.push(...nuevos);
+      }
       continue;
     }
 
@@ -1919,8 +1974,10 @@ function parseOrderText(text) {
     // 5. Fallback
     const parsed = extractFamiliaAndCodigo(line, currentFamilia);
     if (parsed) {
+      if (parsed.familia && (!currentFamilia || norm(parsed.familia) !== norm(currentFamilia))) {
+        cambiarFamilia(parsed.familia);
+      }
       if (cantDefault !== null && parsed.cantidad == null) parsed.cantidad = cantDefault;
-      currentFamilia=parsed.familia;
       items.push({...parsed,cantidad:parsed.cantidad??null,texto_original:rawLine});
     }
   }
