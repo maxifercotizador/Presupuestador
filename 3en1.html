@@ -1450,13 +1450,13 @@ function processItems(parsedItems) {
       const qty = item.cantidad!=null ? parseInt(item.cantidad) : (parseInt(row.cm)||0);
       results.push({producto:row.p,numero:row.n,descripcion:row.d,cantidad:qty,precio_lista:parseFloat(row.pl),codigo_bs:row.c});
     } else if (m.status==='ambiguous') {
-      errors.push({tipo:'A REVISAR',texto_original:item.texto_original,motivo:'Múltiples coincidencias para "'+item.codigo+'" en '+item.familia});
+      errors.push({tipo:'A REVISAR',texto_original:item.texto_original,familia:item.familia,codigo:item.codigo,cantidad:item.cantidad,motivo:'Múltiples coincidencias para "'+item.codigo+'" en '+item.familia});
     } else if (m.status==='ambiguous_multi') {
-      errors.push({tipo:'A REVISAR',texto_original:item.texto_original,motivo:'N°'+item.codigo+' en varias familias: '+m.matches.map(r=>r.p+' N°'+r.n).join(' | ')});
+      errors.push({tipo:'A REVISAR',texto_original:item.texto_original,familia:item.familia,codigo:item.codigo,cantidad:item.cantidad,motivo:'N°'+item.codigo+' en varias familias: '+m.matches.map(r=>r.p+' N°'+r.n).join(' | ')});
     } else if (m.status==='no_family') {
-      errors.push({tipo:'A REVISAR',texto_original:item.texto_original,motivo:'Familia no reconocida: "'+item.familia+'"'});
+      errors.push({tipo:'A REVISAR',texto_original:item.texto_original,familia:item.familia,codigo:item.codigo,cantidad:item.cantidad,motivo:'Familia no reconocida: "'+item.familia+'"'});
     } else {
-      errors.push({tipo:'NO ENCONTRADO',texto_original:item.texto_original,motivo:'No se encontró N°'+item.codigo+' en '+item.familia});
+      errors.push({tipo:'NO ENCONTRADO',texto_original:item.texto_original,familia:item.familia,codigo:item.codigo,cantidad:item.cantidad,motivo:'No se encontró N°'+item.codigo+' en '+item.familia});
     }
   }
   return {results,errors};
@@ -1492,7 +1492,9 @@ function detectFamiliaConCantidad(line) {
   // Ej: "Carbones - 3 pares de c/u" → fam="Carbones", cant=3
   // Ej: "Carbones - 3 pares" → fam="Carbones", cant=3
   // Ej: "Chavetas R - 10 de cada" → fam="Chavetas R", cant=10
-  const m = line.match(/^(.+?)\s*[-–]?\s*(\d+)\s+(?:de\s+cada(?:\s+uno?)?|pares?\s*(?:de\s*)?(?:c\/u)?|por\s+unidad|c\/u|cada\s+uno?|pares?)\s*$/i);
+  // Ej: "REGATONES 50 DE CADA UNO DE LOS SIGUIENTES CODIGOS:" → fam="REGATONES", cant=50
+  // Permite texto extra después del indicador (ej: "de los siguientes códigos:")
+  const m = line.match(/^(.+?)\s*[-–]?\s*(\d+)\s+(?:de\s+cada(?:\s+uno?)?|pares?\s*(?:de\s*)?(?:c\/u)?|por\s+unidad|c\/u|cada\s+uno?|pares?)\b.*$/i);
   if (!m) return null;
   const familiaStr = m[1].replace(/[-–\s]+$/, '').trim();
   const cantDefault = parseInt(m[2]);
@@ -2540,9 +2542,135 @@ function finishLoading() {
 
 // ── RENDER ───────────────────────────────────────────────────
 function renderErrors(errors) {
-  const rows=errors.map(e=>'<tr><td class="'+(e.tipo==='A REVISAR'?'err-revisar':'err-no')+'">'+e.tipo+'</td><td>'+(e.texto_original||'-')+'</td><td>'+(e.motivo||'-')+'</td></tr>').join('');
-  const excBtn=state.result?'<button class="btn-exclude" onclick="generateFiles()">Armar igual excluyendo no encontrados</button>':'';
-  document.getElementById('revisionEmpty').style.display='none'; goTab(2); document.getElementById('errorsBox').innerHTML='<div class="errors-box"><div class="errors-title">⚠️ Problemas encontrados</div><div style="overflow-x:auto"><table><thead><tr><th>Tipo</th><th>Item</th><th>Motivo</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+excBtn+'</div>';
+  // Render con edición inline: cada fila editable tiene input + cantidad + botón reprocesar
+  const rows = errors.map((e, idx) => {
+    const editable = (e.tipo === 'NO ENCONTRADO' || e.tipo === 'A REVISAR');
+    const tipoTd = '<td class="' + (e.tipo === 'A REVISAR' ? 'err-revisar' : 'err-no') + '">' + e.tipo + '</td>';
+    if (!editable) {
+      return '<tr>' + tipoTd
+        + '<td>' + (e.texto_original || '-') + '</td>'
+        + '<td>' + (e.motivo || '-') + '</td></tr>';
+    }
+    // Pre-llenar el input con familia + código si existen, si no con texto_original
+    const fam = e.familia || '';
+    const cod = e.codigo || '';
+    const cant = (e.cantidad != null) ? e.cantidad : '';
+    const inputVal = (fam && cod) ? (fam + ' ' + cod) : (e.texto_original || '');
+    return '<tr data-err-idx="' + idx + '">'
+      + tipoTd
+      + '<td><input type="text" class="err-edit-text" data-idx="' + idx + '" value="' + inputVal.replace(/"/g, '&quot;') + '" '
+      +     'placeholder="Familia y código (ej: Regatones 50)" '
+      +     'style="width:100%;padding:6px 8px;border:1px solid #cfd8e3;border-radius:5px;font-size:13px;box-sizing:border-box"></td>'
+      + '<td style="white-space:nowrap">'
+      +   '<input type="number" class="err-edit-qty" data-idx="' + idx + '" value="' + cant + '" min="1" '
+      +     'placeholder="Cant." '
+      +     'style="width:70px;padding:6px 8px;border:1px solid #cfd8e3;border-radius:5px;font-size:13px;margin-right:6px;box-sizing:border-box">'
+      +   '<span style="font-size:11px;color:#888;display:block;margin-top:3px">' + (e.motivo || '') + '</span>'
+      + '</td></tr>';
+  }).join('');
+
+  const editableCount = errors.filter(e => e.tipo === 'NO ENCONTRADO' || e.tipo === 'A REVISAR').length;
+  const reprocBtn = editableCount > 0
+    ? '<button class="btn-exclude" style="background:#1a73e8;margin-right:8px" onclick="reprocesarErrores()">🔁 Reprocesar items editados</button>'
+    : '';
+  const excBtn = state.result
+    ? '<button class="btn-exclude" onclick="generateFiles()">Armar igual excluyendo no encontrados</button>'
+    : '';
+
+  document.getElementById('revisionEmpty').style.display = 'none';
+  goTab(2);
+  document.getElementById('errorsBox').innerHTML =
+    '<div class="errors-box">'
+    + '<div class="errors-title">⚠️ Problemas encontrados</div>'
+    + (editableCount > 0 ? '<div style="font-size:12px;color:#666;margin:0 0 10px">Editá los items mal interpretados o no encontrados y tocá <strong>Reprocesar</strong> para sumarlos al resultado.</div>' : '')
+    + '<div style="overflow-x:auto"><table><thead><tr><th>Tipo</th><th>Item</th><th>Cant. / Detalle</th></tr></thead><tbody>' + rows + '</tbody></table></div>'
+    + '<div style="margin-top:12px">' + reprocBtn + excBtn + '</div>'
+    + '</div>';
+}
+
+// ── REPROCESAR ITEMS EDITADOS ────────────────────────────────
+function reprocesarErrores() {
+  if (!state.errors || state.errors.length === 0) return;
+
+  // Recolectar inputs editados de la tabla
+  const inputsTexto = document.querySelectorAll('.err-edit-text');
+  const inputsCant  = document.querySelectorAll('.err-edit-qty');
+
+  // Mapear idx → {texto, cantidad}
+  const editados = {};
+  inputsTexto.forEach(inp => {
+    const idx = inp.dataset.idx;
+    editados[idx] = editados[idx] || {};
+    editados[idx].texto = inp.value.trim();
+  });
+  inputsCant.forEach(inp => {
+    const idx = inp.dataset.idx;
+    editados[idx] = editados[idx] || {};
+    const v = parseInt(inp.value);
+    editados[idx].cantidad = (!isNaN(v) && v > 0) ? v : null;
+  });
+
+  // Construir un mini-pedido con los items editados (uno por línea, formato "familia codigo = cantidad")
+  const lineas = [];
+  const idxsConTexto = [];
+  for (const idx in editados) {
+    const ed = editados[idx];
+    if (!ed.texto) continue;
+    const linea = ed.cantidad ? (ed.texto + ' = ' + ed.cantidad) : ed.texto;
+    lineas.push(linea);
+    idxsConTexto.push(parseInt(idx));
+  }
+  if (lineas.length === 0) {
+    alert('No hay items para reprocesar. Editá al menos uno.');
+    return;
+  }
+
+  // Reparsear y reprocesar (sin pasar por la IA, ya está editado por el usuario)
+  const textoMini = lineas.join('\n');
+  const { items: parsedItems, orientacionLabels: newOL } = parseOrderText(textoMini);
+
+  if (parsedItems.length === 0) {
+    alert('No se pudo interpretar ninguno de los items editados. Revisá el formato (ej: "Regatones 52" o "Regatones 52 = 50").');
+    return;
+  }
+
+  const { results: newResults, errors: newErrors } = processItems(parsedItems);
+
+  // Sumar resultados nuevos al state.result
+  if (newResults.length > 0) {
+    state.result = (state.result || []).concat(newResults);
+  }
+
+  // Reconstruir state.errors: quitar los que sí se resolvieron, dejar el resto + nuevos errores
+  // Estrategia simple: los que estaban editados y reprocesaron OK se sacan; los que siguen fallando se reemplazan por el nuevo error
+  const idxsResueltos = new Set();
+  // Si el reproceso no dio errores nuevos, asumimos que TODOS los editados se resolvieron
+  if (newErrors.length === 0) {
+    idxsConTexto.forEach(i => idxsResueltos.add(i));
+  } else {
+    // Heurística: si hay menos errores nuevos que items reprocesados, asumimos que (editados - errores nuevos) se resolvieron en orden
+    // Marcamos como resueltos los primeros (editados.length - newErrors.length) idx
+    const resueltosCount = Math.max(0, idxsConTexto.length - newErrors.length);
+    for (let i = 0; i < resueltosCount; i++) idxsResueltos.add(idxsConTexto[i]);
+  }
+
+  const erroresViejosFiltrados = state.errors.filter((_, idx) => !idxsResueltos.has(idx));
+  state.errors = erroresViejosFiltrados.concat(newErrors);
+  if (state.errors.length === 0) state.errors = null;
+
+  // Mergear orientacionLabels nuevas
+  if (newOL) {
+    state.orientacionLabels = Object.assign({}, state.orientacionLabels || {}, newOL);
+  }
+
+  // Re-render
+  renderOrientacionSummary(state.orientacionLabels || {});
+  if (state.errors) {
+    renderErrors(state.errors);
+  } else {
+    document.getElementById('errorsBox').innerHTML = '';
+  }
+  if (state.result) renderResults(state.result, document.getElementById('clientName').value.trim(), state.orientacionLabels || {});
 }
 function renderResults(results,clientName,orientacionLabels) {
   const d=getDiscount();
