@@ -556,6 +556,46 @@
       font-weight: 600;
     }
 
+    /* ── AUTOCOMPLETE FAMILIAS ── */
+    .fam-ac {
+      position: absolute;
+      z-index: 100;
+      background: white;
+      border: 1px solid #cfd8e3;
+      border-radius: 8px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+      max-height: 240px;
+      overflow-y: auto;
+      min-width: 240px;
+      max-width: 360px;
+      font-size: 13px;
+      font-family: 'Barlow', sans-serif;
+    }
+    .fam-ac-item {
+      padding: 8px 12px;
+      cursor: pointer;
+      border-bottom: 1px solid #f0f0f0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .fam-ac-item:last-child { border-bottom: none; }
+    .fam-ac-item:hover, .fam-ac-item.fam-ac-active {
+      background: var(--azul);
+      color: white;
+    }
+    .fam-ac-empty {
+      padding: 10px 12px;
+      color: #888;
+      font-style: italic;
+    }
+    .pedido-hint code {
+      background: #f0f4f8;
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-size: 12px;
+    }
+
     /* ── RESULTS ── */
     .results-header {
       display: flex;
@@ -852,9 +892,12 @@
       <!-- Texto -->
       <div id="panelTexto">
         <label class="field-label">Pedido *</label>
-        <textarea id="pedidoText" rows="10"
-          placeholder="Formatos aceptados:&#10;&#10;Regatones&#10;1 5, 15, 53 10&#10;&#10;Carbones&#10;1-20  44-30  53&#10;&#10;Oring 15 = 50&#10;Oring 20"></textarea>
-        <div class="pedido-hint">Separador código-cantidad: guión (1-5), espacio (1 5) o igual (1=5). Varios por línea separados por espacio o coma.</div>
+        <div style="position:relative">
+          <textarea id="pedidoText" rows="10"
+            placeholder="Formatos aceptados:&#10;&#10;Regatones&#10;1 5, 15, 53 10&#10;&#10;Carbones&#10;1-20  44-30  53&#10;&#10;Oring 15 = 50&#10;Oring 20&#10;&#10;Tip: escribí @ para autocompletar familias"></textarea>
+          <div id="famAutocomplete" class="fam-ac" style="display:none"></div>
+        </div>
+        <div class="pedido-hint">Separador código-cantidad: guión (1-5), espacio (1 5) o igual (1=5). Varios por línea separados por espacio o coma. <strong>Tip:</strong> escribí <code>@</code> para autocompletar familias.</div>
         <div id="orientacionSummary" style="display:none;margin-top:10px"></div>
       </div>
 
@@ -1506,15 +1549,67 @@ function isFamiliaLine(line) {
   const n = norm(line);
   if (Object.keys(SYNONYM_MAP).some(k=>norm(k)===n)) return true;
   if (ALL_PRODUCTS.some(p=>norm(p)===n)) return true;
-  if (!/\d/.test(line) && ALL_PRODUCTS.some(p=>norm(p).startsWith(n)||n.startsWith(norm(p).split(' ')[0]))) return true;
+  // Si no tiene dígitos y resolveFamiliaName puede mapear esto a una familia real, es una línea de familia
+  if (!/\d/.test(line)) {
+    const resolved = resolveFamiliaName(line);
+    if (resolved && ALL_PRODUCTS.some(p=>norm(p)===norm(resolved))) return true;
+    if (ALL_PRODUCTS.some(p=>norm(p).startsWith(n)||n.startsWith(norm(p).split(' ')[0]))) return true;
+  }
   return false;
 }
 function resolveFamiliaName(line) {
   const n=norm(line);
   // No resolver "RESORTES"/"RESORTE" genérico → dejarlo como está para que matchItem lo maneje
   if (n === 'RESORTES' || n === 'RESORTE') return line;
+  // 1) Match exacto en SYNONYM_MAP
   for (const [k,v] of Object.entries(SYNONYM_MAP)) { if (n===norm(k)) return v; }
-  return ALL_PRODUCTS.find(p=>norm(p)===n) || line;
+  // 2) Match exacto en ALL_PRODUCTS
+  const exact = ALL_PRODUCTS.find(p=>norm(p)===n);
+  if (exact) return exact;
+  // 3) Matching inteligente: elegir el producto con MÁS palabras significativas en común.
+  //    Esto hace que "conectores plasticos para manguera" → "CONECTORES PLASTICOS MANGUERAS"
+  //    en lugar de caer en "PLASTICOS" (que comparte solo 1 palabra).
+  // Stopwords: palabras vacías que no cuentan para el match
+  const STOP = new Set(['DE','PARA','DEL','LA','EL','LOS','LAS','UN','UNA','Y','O','EN','POR','CON','SIN','A']);
+  // Tokenizar input, ignorar stopwords y palabras muy cortas
+  const inputTokens = n.split(/\s+/).filter(t => t.length >= 3 && !STOP.has(t));
+  if (inputTokens.length === 0) return line;
+
+  // Función auxiliar: ¿dos tokens son "compatibles" (uno es plural/singular del otro o uno contiene al otro)?
+  const tokenMatch = (a, b) => {
+    if (a === b) return true;
+    if (a.length >= 4 && b.length >= 4) {
+      // singular/plural (manguera ↔ mangueras, plastico ↔ plasticos)
+      if (a.endsWith('S') && a.slice(0,-1) === b) return true;
+      if (b.endsWith('S') && b.slice(0,-1) === a) return true;
+      // contención (cuando hay tildes/variaciones leves)
+      if (a.includes(b) || b.includes(a)) return true;
+    }
+    return false;
+  };
+
+  let bestProduct = null;
+  let bestScore = 0;
+  for (const prod of ALL_PRODUCTS) {
+    const prodTokens = norm(prod).split(/\s+/).filter(t => t.length >= 3 && !STOP.has(t));
+    if (prodTokens.length === 0) continue;
+    let matched = 0;
+    for (const it of inputTokens) {
+      if (prodTokens.some(pt => tokenMatch(it, pt))) matched++;
+    }
+    if (matched === 0) continue;
+    // Score: cantidad de palabras matcheadas - penalización por palabras del producto que no aparecen
+    // Esto hace que un producto con 3 palabras matcheadas gane sobre uno con 1
+    const score = matched * 10 - (prodTokens.length - matched);
+    if (score > bestScore) { bestScore = score; bestProduct = prod; }
+  }
+  // Solo aceptar si al menos 2 palabras matchearon (evita falsos positivos con 1 palabra suelta)
+  // O si el input tiene solo 1 palabra significativa y matchea con un producto de 1 palabra
+  if (bestProduct) {
+    const bestTokens = norm(bestProduct).split(/\s+/).filter(t => t.length >= 3 && !STOP.has(t));
+    if (bestScore >= 19 || (inputTokens.length === 1 && bestTokens.length === 1)) return bestProduct;
+  }
+  return line;
 }
 
 // Tokeniza una línea con códigos separados por "- " o guión al final
@@ -2907,9 +3002,165 @@ function copyCSV(btn) {
   if(navigator.clipboard){navigator.clipboard.writeText(ta.value).then(()=>{btn.textContent='✅ Copiado!';setTimeout(()=>btn.textContent='📋 Copiar CSV',2000);});}
 }
 
+// ═══════════════════════════════════════════════════════════
+// AUTOCOMPLETE DE FAMILIAS (@-trigger)
+// ═══════════════════════════════════════════════════════════
+const FamAC = {
+  textarea: null,
+  dropdown: null,
+  triggerStart: -1,   // posición del "@" en el textarea
+  selectedIdx: 0,     // índice del item resaltado
+  matches: [],        // familias que matchean el filtro actual
+
+  init() {
+    this.textarea = document.getElementById('pedidoText');
+    this.dropdown = document.getElementById('famAutocomplete');
+    if (!this.textarea || !this.dropdown) return;
+
+    this.textarea.addEventListener('input', () => this.handleInput());
+    this.textarea.addEventListener('keydown', (e) => this.handleKeydown(e));
+    this.textarea.addEventListener('blur', () => {
+      // Pequeño delay para que el click en el dropdown alcance a registrar
+      setTimeout(() => this.hide(), 150);
+    });
+    this.dropdown.addEventListener('mousedown', (e) => {
+      // Prevenir blur del textarea cuando se hace click en el dropdown
+      e.preventDefault();
+    });
+  },
+
+  handleInput() {
+    const pos = this.textarea.selectionStart;
+    const text = this.textarea.value;
+    // Buscar el @ más reciente antes del cursor en la línea actual
+    let at = -1;
+    for (let i = pos - 1; i >= 0; i--) {
+      const ch = text[i];
+      if (ch === '@') { at = i; break; }
+      if (ch === '\n' || ch === ' ') break; // @ tiene que estar en la "palabra" actual
+    }
+    if (at < 0) { this.hide(); return; }
+    this.triggerStart = at;
+    const filter = text.substring(at + 1, pos);
+    this.updateMatches(filter);
+    if (this.matches.length === 0) {
+      // Mostrar mensaje "sin resultados" en lugar de ocultar
+      this.renderEmpty();
+      this.position();
+    } else {
+      this.selectedIdx = 0;
+      this.render();
+      this.position();
+    }
+  },
+
+  updateMatches(filter) {
+    if (!ALL_PRODUCTS || ALL_PRODUCTS.length === 0) { this.matches = []; return; }
+    const f = (filter || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().trim();
+    const all = [...ALL_PRODUCTS].sort();
+    if (!f) { this.matches = all; return; }
+    // Score: prioridad a startsWith, luego includes
+    const scored = [];
+    for (const p of all) {
+      const np = p.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
+      if (np.startsWith(f)) scored.push({p, s: 2});
+      else if (np.includes(f)) scored.push({p, s: 1});
+      else {
+        // matching por palabra: cualquier palabra del producto que empiece con el filtro
+        const words = np.split(/\s+/);
+        if (words.some(w => w.startsWith(f))) scored.push({p, s: 1.5});
+      }
+    }
+    scored.sort((a,b) => b.s - a.s);
+    this.matches = scored.map(x => x.p);
+  },
+
+  render() {
+    const html = this.matches.map((p, i) =>
+      '<div class="fam-ac-item' + (i === this.selectedIdx ? ' fam-ac-active' : '') + '" data-idx="' + i + '">' + p + '</div>'
+    ).join('');
+    this.dropdown.innerHTML = html;
+    this.dropdown.style.display = 'block';
+    // Click en items
+    this.dropdown.querySelectorAll('.fam-ac-item').forEach(el => {
+      el.addEventListener('click', () => {
+        this.selectedIdx = parseInt(el.dataset.idx);
+        this.confirm();
+      });
+    });
+  },
+
+  renderEmpty() {
+    this.dropdown.innerHTML = '<div class="fam-ac-empty">Sin coincidencias</div>';
+    this.dropdown.style.display = 'block';
+  },
+
+  position() {
+    // Posicionar dropdown debajo del textarea (versión simple — siempre alineado al textarea)
+    // Para simplicidad lo dejo flotando justo debajo del textarea
+    this.dropdown.style.top = (this.textarea.offsetTop + this.textarea.offsetHeight + 4) + 'px';
+    this.dropdown.style.left = this.textarea.offsetLeft + 'px';
+  },
+
+  handleKeydown(e) {
+    if (this.dropdown.style.display === 'none') return;
+    if (this.matches.length === 0) {
+      // Solo Esc cierra
+      if (e.key === 'Escape') { this.hide(); e.preventDefault(); }
+      return;
+    }
+    if (e.key === 'ArrowDown') {
+      this.selectedIdx = (this.selectedIdx + 1) % this.matches.length;
+      this.render();
+      // Scroll al item activo
+      const active = this.dropdown.querySelector('.fam-ac-active');
+      if (active) active.scrollIntoView({ block: 'nearest' });
+      e.preventDefault();
+    } else if (e.key === 'ArrowUp') {
+      this.selectedIdx = (this.selectedIdx - 1 + this.matches.length) % this.matches.length;
+      this.render();
+      const active = this.dropdown.querySelector('.fam-ac-active');
+      if (active) active.scrollIntoView({ block: 'nearest' });
+      e.preventDefault();
+    } else if (e.key === 'Enter' || e.key === 'Tab') {
+      this.confirm();
+      e.preventDefault();
+    } else if (e.key === 'Escape') {
+      this.hide();
+      e.preventDefault();
+    }
+  },
+
+  confirm() {
+    if (this.matches.length === 0) return;
+    const familia = this.matches[this.selectedIdx];
+    const pos = this.textarea.selectionStart;
+    const text = this.textarea.value;
+    // Reemplazar desde @ hasta posición actual del cursor por "familia\n"
+    const before = text.substring(0, this.triggerStart);
+    const after = text.substring(pos);
+    // Si no hay newline antes del @, no agregar uno; si no hay newline después, agregar para que el usuario tipee el código en la línea siguiente
+    const needLeadingNL = before.length > 0 && !before.endsWith('\n');
+    const insertion = (needLeadingNL ? '\n' : '') + familia + '\n';
+    this.textarea.value = before + insertion + after;
+    const newPos = before.length + insertion.length;
+    this.textarea.selectionStart = this.textarea.selectionEnd = newPos;
+    this.hide();
+    this.textarea.focus();
+  },
+
+  hide() {
+    this.dropdown.style.display = 'none';
+    this.triggerStart = -1;
+    this.matches = [];
+  }
+};
+
 // === Carga de datos asincrona ===
 async function init(){
   ALL_PRODUCTS = [...new Set(EXCEL_DATA.map(r => r.p))];
+  // Activar autocomplete una vez que tenemos las familias
+  FamAC.init();
 }
 
 loadData()
