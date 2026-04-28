@@ -2291,12 +2291,65 @@ async function transcribeAllImages() {
 }
 
 async function transcribeSingleImage(imageData) {
+  // Lista de familias válidas (de productos.json) — se pasa al prompt para que la IA las use como referencia
+  const familiasValidas = (ALL_PRODUCTS && ALL_PRODUCTS.length > 0)
+    ? ALL_PRODUCTS.slice().sort().join('\n  - ')
+    : '(lista no disponible)';
+
+  const prompt = `Sos un transcriptor de pedidos de la fábrica MAXIFER. Tu trabajo es leer la imagen y devolver el pedido en un formato estructurado y limpio.
+
+ESTRUCTURA TÍPICA DE LAS IMÁGENES:
+La imagen suele ser una tabla con columnas que pueden ser cualquier subconjunto de:
+- CANTIDAD (cuántas piezas pidió el cliente)
+- CÓDIGO o NÚMERO (el "Numero" del producto en la BD)
+- FAMILIA o PRODUCTO (ej: "REGATONES", "CONECTORES NEUMATICOS", "PLASTICOS")
+- DESCRIPCIÓN o MEDIDAS (texto descriptivo, no es un código)
+
+A veces hay una sola familia para toda la tabla, a veces cambia fila por fila.
+
+FAMILIAS VÁLIDAS EN LA BD (usalas exactamente como están escritas):
+  - ${familiasValidas}
+
+REGLAS DE TRANSCRIPCIÓN:
+
+1. Agrupá items por familia. Para cada familia, escribí primero el nombre EXACTO de la familia (de la lista válida) en una línea, y después los códigos en líneas siguientes con formato "codigo=cantidad" (uno por línea).
+
+2. Si la imagen muestra un nombre de familia que NO está exacto en la lista (ej: "UNION ORIENTABLE" pero en la lista existe "UNIONES ORIENTABLES"), usá la versión de la lista válida — la más parecida.
+
+3. Si la familia de la imagen no se parece a ninguna de la lista, dejala con el nombre original (el sistema avisará después). NO inventes una familia que no estaba.
+
+4. Si una fila no tiene cantidad explícita, escribí solo "codigo" sin "=". Nunca inventes cantidades.
+
+5. Si una fila no tiene código pero sí descripción, escribila como comentario con "// descripción sin código" para que el usuario la vea.
+
+6. Ignorá filas vacías, encabezados de tabla, totales, observaciones generales.
+
+7. Si la descripción contiene un número que claramente no es código (ej: "14 mm x 8.5 mm" son medidas, no códigos), ignoralo.
+
+FORMATO DE SALIDA (estricto):
+- Solo el pedido transcrito, nada más.
+- Sin explicaciones, sin texto introductorio, sin código markdown (sin \`\`\`).
+- Una línea por item.
+
+EJEMPLO DE SALIDA VÁLIDA:
+REGATONES
+52=50
+47=50
+45=50
+PICOS PARA GAS
+9=10
+29=10
+UNIONES ORIENTABLES
+70=5
+
+Ahora transcribí la imagen.`;
+
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       model: 'claude-sonnet-4-20250514',
-      max_tokens: 1000,
+      max_tokens: 4000,
       messages: [{
         role: 'user',
         content: [
@@ -2304,18 +2357,18 @@ async function transcribeSingleImage(imageData) {
             type: 'image',
             source: { type: 'base64', media_type: imageData.type, data: imageData.data }
           },
-          {
-            type: 'text',
-            text: 'Transcribí este pedido a texto plano. Solo los productos y cantidades, nada más. Formato: una línea por familia, códigos y cantidades en líneas siguientes.'
-          }
+          { type: 'text', text: prompt }
         ]
       }]
     })
   });
-  
+
   if (!response.ok) throw new Error('HTTP ' + response.status);
   const data = await response.json();
-  return data.content?.[0]?.text || '';
+  let text = data.content?.[0]?.text || '';
+  // Limpiar fences de markdown por si la IA los pone igual
+  text = text.replace(/^```[a-z]*\n?/i, '').replace(/\n?```\s*$/, '').trim();
+  return text;
 }
 
 function cancelar() {
