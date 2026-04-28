@@ -1102,6 +1102,39 @@ const VENDORS = {
 // ⚠️ Reemplazá con la URL de tu Web App de Apps Script
 const SHEETS_URL_3EN1 = 'https://script.google.com/macros/s/AKfycbxBCXI0iEDfof5GNY6SJg8wI7WuHY18ooC74d5pOAU2701RVzBgI7iyNtEd6t2TgMM3/exec';
 
+// ═══════════════════════════════════════════════════════════
+// PROXY ANTHROPIC — Apps Script
+// ═══════════════════════════════════════════════════════════
+// ⚠️ PEGAR ACÁ la URL del Apps Script proxy (la que devuelve "Implementar como aplicación web")
+// Sin esto, transcripción de imágenes y normalización con IA NO funcionan.
+const PROXY_URL = 'https://script.google.com/macros/s/AKfycbwkE2wxAeg-ustrjMEuPdfJrGpeidId-C0rBGp8Mdo4mJLgB8UJZXssBnxJ6SOoZRmn6Q/exec';
+
+/**
+ * Llama a la API de Anthropic a través del proxy en Apps Script.
+ * Acepta el mismo payload que tomaría /v1/messages directamente.
+ * Devuelve el JSON de respuesta de Anthropic (con .content[0].text, etc.)
+ */
+async function anthropicViaProxy(payload) {
+  if (!PROXY_URL || PROXY_URL.includes('PEGAR_URL')) {
+    throw new Error('Proxy de Anthropic no configurado. Pegá la URL en la constante PROXY_URL del HTML.');
+  }
+  const resp = await fetch(PROXY_URL, {
+    method: 'POST',
+    // Importante: NO mandar Content-Type custom, así Apps Script no exige preflight CORS.
+    // Apps Script lee el body crudo desde e.postData.contents igual.
+    body: JSON.stringify(payload)
+  });
+  if (!resp.ok) {
+    const errText = await resp.text().catch(() => '');
+    throw new Error('Proxy HTTP ' + resp.status + (errText ? ': ' + errText.substring(0, 200) : ''));
+  }
+  const data = await resp.json();
+  if (data.error) {
+    throw new Error('Proxy error: ' + (typeof data.error === 'string' ? data.error : JSON.stringify(data.error)));
+  }
+  return data;
+}
+
 async function sheetsCall3en1(payload) {
   if (!SHEETS_URL_3EN1 || SHEETS_URL_3EN1.includes('PEGAR_URL')) return null;
   try {
@@ -2344,27 +2377,20 @@ UNIONES ORIENTABLES
 
 Ahora transcribí la imagen.`;
 
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 4000,
-      messages: [{
-        role: 'user',
-        content: [
-          {
-            type: 'image',
-            source: { type: 'base64', media_type: imageData.type, data: imageData.data }
-          },
-          { type: 'text', text: prompt }
-        ]
-      }]
-    })
+  const data = await anthropicViaProxy({
+    model: 'claude-sonnet-4-20250514',
+    max_tokens: 4000,
+    messages: [{
+      role: 'user',
+      content: [
+        {
+          type: 'image',
+          source: { type: 'base64', media_type: imageData.type, data: imageData.data }
+        },
+        { type: 'text', text: prompt }
+      ]
+    }]
   });
-
-  if (!response.ok) throw new Error('HTTP ' + response.status);
-  const data = await response.json();
   let text = data.content?.[0]?.text || '';
   // Limpiar fences de markdown por si la IA los pone igual
   text = text.replace(/^```[a-z]*\n?/i, '').replace(/\n?```\s*$/, '').trim();
@@ -2669,7 +2695,7 @@ RESORTES LINEA FERRETERIA
 
 async function normalizarConIA(pedidoRaw) {
   setLog('🤖 Interpretando pedido con IA...');
-  const data = await apiFetch({
+  const data = await anthropicViaProxy({
     model: 'claude-sonnet-4-20250514',
     max_tokens: 2000,
     system: getPromptNormalizar(),
