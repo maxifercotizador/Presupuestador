@@ -79,12 +79,12 @@ def build_productos():
             "p": familia,
             "c": s(r["Codigo BS GESTION"]),
             "n": s(r["Numero"]),
-            "d": s(r["Descripcion"]),
-            "pl": num(r["Precio de Lista"]),
-            "pc": num(r["Precio de Costo"]),
-            "cm": num(r["Cantidad Minima"]),
-            "prov": s(r["Proveedor"]),
-            "cp": s(r["Codigo Proveedor"]),
+            "d": s(r["Descripción"]),
+            "pl": num(r["Precio"]),
+            "pc": num(r["COSTO"]),
+            "cm": num(r["Cant. Minima"]),
+            "prov": s(r["Fabrica"]),
+            "cp": s(r["Codigo"]),
         })
 
     print(f"  Total productos: {len(productos)}  (excluidos: {excluidos})")
@@ -100,9 +100,13 @@ def build_surtidos(productos):
 
     pl_lookup = {}
     pl_lookup_swap = {}
+    desc_lookup = {}
+    desc_lookup_swap = {}
     for p in productos:
         pl_lookup[(norm(p["p"]), norm(p["n"]))] = p["pl"]
         pl_lookup_swap[(norm(p["n"]), norm(p["p"]))] = p["pl"]
+        desc_lookup[(norm(p["p"]), norm(p["n"]))] = p["d"]
+        desc_lookup_swap[(norm(p["n"]), norm(p["p"]))] = p["d"]
 
     def find_pl(familia, numero):
         k = (norm(familia), norm(numero))
@@ -111,6 +115,14 @@ def build_surtidos(productos):
         if k in pl_lookup_swap:
             return pl_lookup_swap[k], "volteado"
         return None, None
+
+    def find_desc(familia, numero):
+        k = (norm(familia), norm(numero))
+        if k in desc_lookup:
+            return desc_lookup[k]
+        if k in desc_lookup_swap:
+            return desc_lookup_swap[k]
+        return ""
 
     surtidos = {}
     no_encontrados = []
@@ -149,7 +161,7 @@ def build_surtidos(productos):
         item = {
             "n": numero,
             "p": familia,
-            "d": s(r["Descripción"]),
+            "d": find_desc(familia, numero),
             "cs": cs,
             "cr": cr,
             "pl": pl,
