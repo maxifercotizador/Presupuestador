@@ -16,7 +16,7 @@ Apps web para cotizaciones, compras y consulta de precios de MAXIFER.
 
 ### Apps
 
-- **`MAXIFER_consultor_precios.html`** — Consulta rápida de precios con descuento.
+- **`listas.html`** — Consultor de precios con descuento + listas completas en PDF.
 - **`3en1.html`** — Cotización + Preparación + CSV en un solo paso.
 - **`compras.html`** — Procesador de compras a proveedores.
 - **`index_presupuestador.html`** — Presupuestador de surtidos predefinidos.
@@ -62,7 +62,7 @@ python3 build_data.py
 
 # Servir el sitio localmente
 python3 -m http.server 8000
-# Abrir http://localhost:8000/MAXIFER_consultor_precios.html
+# Abrir http://localhost:8000/
 ```
 
 ---
