@@ -67,6 +67,8 @@ mark{background:#fef08a;color:inherit;padding:0 1px;border-radius:2px}
 .card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:5px}
 .card-num{font-size:11px;color:#64748b;font-weight:600}
 .card-num strong{color:#1e3a8a;font-size:13px;font-weight:800}
+.card-codigo{font-size:11px;color:#64748b;font-weight:600;margin:2px 0 6px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.card-codigo strong{color:#0f172a;font-weight:800;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:12px;background:#f1f5f9;padding:2px 7px;border-radius:5px;letter-spacing:.2px}
 .card-fam{font-size:10px;font-weight:700;color:#1e40af;background:#dbeafe;padding:2px 7px;border-radius:10px;white-space:nowrap}
 .card-desc{font-size:14px;color:#0f172a;line-height:1.35;margin-bottom:8px;font-weight:500}
 .card-prices{display:flex;justify-content:space-between;align-items:center;padding-top:7px;border-top:1px dashed #e2e8f0}
@@ -106,7 +108,7 @@ mark{background:#fef08a;color:inherit;padding:0 1px;border-radius:2px}
   </div>
 
   <div class="filter-grid">
-    <input type="text" id="filterNumero" placeholder="Nº código..." autocomplete="off" inputmode="text">
+    <input type="text" id="filterNumero" placeholder="Nº o Código Único..." autocomplete="off" inputmode="text">
     <input type="text" id="filterDesc" placeholder="Descripción..." autocomplete="off">
   </div>
 
@@ -145,7 +147,7 @@ async function loadData(){
       })
       .then(json => {
         // Normalizar al schema legacy esperado por el codigo: {p,n,d,pr}
-        DATA = json.map(it => ({p: it.p, n: it.n, d: it.d, pr: it.pl}));
+        DATA = json.map(it => ({p: it.p, n: it.n, d: it.d, c: it.c, pr: it.pl}));
       });
   }
   return _dataReady;
@@ -160,7 +162,8 @@ DATA.forEach(it => {
   it._p = norm(it.p);
   it._n = norm(it.n);
   it._d = norm(it.d);
-  it._all = it._p + ' ' + it._n + ' ' + it._d;
+  it._c = norm(it.c);
+  it._all = it._p + ' ' + it._n + ' ' + it._d + ' ' + it._c;
 });
 
 const families = [...new Set(DATA.map(d=>d.p))].sort();
@@ -245,7 +248,7 @@ function filterBase(applyFamily){
   const dTerms = norm(state.desc).split(/\s+/).filter(Boolean);
   return DATA.filter(it => {
     if(qTerms.length && !qTerms.every(t => it._all.includes(t))) return false;
-    if(nTerm && !it._n.includes(nTerm)) return false;
+    if(nTerm && !it._n.includes(nTerm) && !it._c.includes(nTerm)) return false;
     if(dTerms.length && !dTerms.every(t => it._d.includes(t))) return false;
     if(applyFamily && state.family && it.p !== state.family) return false;
     return true;
@@ -283,6 +286,7 @@ function render(){
       +   '<div class="card-num">Nº <strong>' + highlight(it.n, qTerms) + '</strong></div>'
       +   '<div class="card-fam">' + escapeHtml(it.p) + '</div>'
       + '</div>'
+      + (it.c ? '<div class="card-codigo">Código Único: <strong>' + highlight(it.c, qTerms) + '</strong></div>' : '')
       + '<div class="card-desc">' + highlight(it.d, qTerms) + '</div>'
       + '<div class="card-prices">'
       +   '<div class="price-block"><span class="price-label">Lista</span>'
@@ -372,7 +376,7 @@ function renderSuggestions(){
     html += '<div class="sug-item" data-type="item" data-val="' + escapeHtml(it.n) + '" data-desc="' + escapeHtml(it.d) + '">'
       + '<span class="sug-tag tag-num">Nº ' + escapeHtml(it.n) + '</span>'
       + '<span class="sug-text">' + highlight(it.d, qTerms) + '</span>'
-      + '<div class="sug-meta">' + escapeHtml(it.p) + ' · ' + fmtMoney(it.pr) + '</div></div>';
+      + '<div class="sug-meta">' + escapeHtml(it.p) + (it.c ? ' · Cód. ' + escapeHtml(it.c) : '') + ' · ' + fmtMoney(it.pr) + '</div></div>';
   });
 
   if(!html){ box.classList.remove('visible'); box.innerHTML=''; return; }

@@ -664,6 +664,31 @@ mark { background: rgba(78,168,62,0.25); color: var(--green-dark); padding: 0 2p
     border-color: var(--red);
 }
 
+.card-codigo {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin: 2px 0 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.card-codigo strong {
+    color: var(--navy);
+    font-weight: 800;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 12px;
+    background: rgba(30,44,91,0.07);
+    padding: 2px 8px;
+    border-radius: 5px;
+    text-transform: none;
+    letter-spacing: 0.2px;
+}
+
 .card-desc {
     font-size: 14px;
     color: var(--text);
@@ -722,15 +747,23 @@ mark { background: rgba(78,168,62,0.25); color: var(--green-dark); padding: 0 2p
     background: var(--bg-soft);
     border: 1px solid var(--border);
     color: var(--navy);
-    width: 36px;
     height: 36px;
+    padding: 0 12px;
     border-radius: 8px;
     cursor: pointer;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
+    gap: 7px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
     transition: all 0.15s;
+    white-space: nowrap;
 }
+
+.card-action-btn svg { flex-shrink: 0; }
 
 .card-action-btn:hover {
     border-color: var(--red);
@@ -1518,6 +1551,31 @@ mark { background: rgba(78,168,62,0.25); color: var(--green-dark); padding: 0 2p
     font-weight: 800;
 }
 
+.sheet-product-codigo {
+    font-size: 10px;
+    color: var(--text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin: 2px 0 6px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+
+.sheet-product-codigo strong {
+    color: var(--navy);
+    font-weight: 800;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 11px;
+    background: rgba(30,44,91,0.07);
+    padding: 2px 7px;
+    border-radius: 4px;
+    text-transform: none;
+    letter-spacing: 0.2px;
+}
+
 .sheet-product-desc {
     font-size: 13px;
     color: var(--text);
@@ -1738,7 +1796,7 @@ mark { background: rgba(78,168,62,0.25); color: var(--green-dark); padding: 0 2p
                 <div class="suggestions" id="suggestions"></div>
             </div>
             <div class="filter-grid">
-                <input type="text" id="filterNumero" placeholder="Nº código" autocomplete="off" inputmode="text">
+                <input type="text" id="filterNumero" placeholder="Nº o Código Único" autocomplete="off" inputmode="text">
                 <input type="text" id="filterDesc" placeholder="Descripción" autocomplete="off">
             </div>
             <div class="disc-row">
@@ -2085,12 +2143,13 @@ async function loadData() {
         _dataReady = fetch('productos.json', { cache: 'no-cache' })
             .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
             .then(json => {
-                DATA = json.map(it => ({ p: it.p, n: it.n, d: it.d, pr: it.pl }));
+                DATA = json.map(it => ({ p: it.p, n: it.n, d: it.d, c: it.c, pr: it.pl }));
                 DATA.forEach(it => {
                     it._p = norm(it.p);
                     it._n = norm(it.n);
                     it._d = norm(it.d);
-                    it._all = it._p + ' ' + it._n + ' ' + it._d;
+                    it._c = norm(it.c);
+                    it._all = it._p + ' ' + it._n + ' ' + it._d + ' ' + it._c;
                 });
             });
     }
@@ -2153,7 +2212,7 @@ function filterBase(applyFamily) {
     const dTerms = norm(state.desc).split(/\s+/).filter(Boolean);
     return DATA.filter(it => {
         if (qTerms.length && !qTerms.every(t => it._all.includes(t))) return false;
-        if (nTerm && !it._n.includes(nTerm)) return false;
+        if (nTerm && !it._n.includes(nTerm) && !it._c.includes(nTerm)) return false;
         if (dTerms.length && !dTerms.every(t => it._d.includes(t))) return false;
         if (applyFamily && state.family && it.p !== state.family) return false;
         return true;
@@ -2249,6 +2308,7 @@ function render() {
             + escapeHtml(it.p)
             + '</span>'
             + '</div>'
+            + (it.c ? '<div class="card-codigo">Código Único: <strong>' + highlight(it.c, qTerms) + '</strong></div>' : '')
             + '<div class="card-desc">' + highlight(it.d, qTerms) + '</div>'
             + '<div class="card-prices">'
             + '<div class="price-block"><span class="price-label">' + (disc > 0 ? 'Lista' : 'Precio') + '</span>'
@@ -2262,6 +2322,7 @@ function render() {
             if (hasPdf) {
                 html += '<button class="card-action-btn" data-action="open-pdf" data-fam="' + escapeHtml(it.p) + '" title="Ver lista de precios en PDF">'
                     + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>'
+                    + '<span>Abrir Lista PDF</span>'
                     + '</button>';
             }
             html += '</div>';
@@ -2338,7 +2399,7 @@ function renderSuggestions() {
         html += '<div class="sug-item" data-type="item" data-val="' + escapeHtml(it.n) + '" data-desc="' + escapeHtml(it.d) + '">'
             + '<span class="sug-tag tag-num">N° ' + escapeHtml(it.n) + '</span>'
             + '<span class="sug-text">' + highlight(it.d, qTerms) + '</span>'
-            + '<div class="sug-meta">' + escapeHtml(it.p) + ' · ' + fmtMoney(it.pr) + '</div></div>';
+            + '<div class="sug-meta">' + escapeHtml(it.p) + (it.c ? ' · Cód. ' + escapeHtml(it.c) : '') + ' · ' + fmtMoney(it.pr) + '</div></div>';
     });
 
     if (!html) { box.classList.remove('visible'); box.innerHTML = ''; return; }
@@ -2895,6 +2956,7 @@ function renderSheet() {
             + '<div class="sheet-product-top">'
             +   '<div class="sheet-product-num">N° <strong>' + highlight(it.n, qTerms) + '</strong></div>'
             + '</div>'
+            + (it.c ? '<div class="sheet-product-codigo">Código Único: <strong>' + highlight(it.c, qTerms) + '</strong></div>' : '')
             + '<div class="sheet-product-desc">' + highlight(it.d, qTerms) + '</div>'
             + '<div class="sheet-product-prices">'
             +   '<div class="sheet-price-block"><span class="sheet-price-label">' + (disc > 0 ? 'Lista' : 'Precio') + '</span>'
