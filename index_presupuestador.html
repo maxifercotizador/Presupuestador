@@ -350,5 +350,52 @@ function setAiSt(msg,cls){var el=document.getElementById('ai-st');el.textContent
 function toggleMic(){var SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){alert('Usá Chrome para el micrófono.');return;}if(isRec){recog.stop();return;}recog=new SR();recog.lang='es-AR';recog.continuous=false;recog.interimResults=false;recog.onstart=function(){isRec=true;document.getElementById('btn-mic').classList.add('rec');document.getElementById('btn-mic').textContent='⏹';setAiSt('Escuchando...','');};recog.onresult=function(e){var t=e.results[0][0].transcript;document.getElementById('ai-txt').value=t;setAiSt('"'+t+'"','ok');};recog.onerror=function(e){setAiSt('Error: '+e.error,'err');};recog.onend=function(){isRec=false;document.getElementById('btn-mic').classList.remove('rec');document.getElementById('btn-mic').textContent='🎤';};recog.start();}
 updateHeader();renderPreview();
 </script>
+<script id="maxifer-back-handler">
+// Maxifer: el boton "atras" del browser cierra modales en lugar de salir de la app.
+(function(){
+  function findOpenModal(){
+    var sels = [".modal-overlay.active",".modal.active",".modal-bg.active",".lightbox.active","[class*=modal-overlay].active","[class*=lightbox].active","[role=dialog]:not([hidden])"];
+    for (var i=0;i<sels.length;i++){
+      var els = document.querySelectorAll(sels[i]);
+      for (var j=0;j<els.length;j++){
+        var cs = getComputedStyle(els[j]);
+        if (cs.display !== "none" && cs.visibility !== "hidden" && cs.opacity !== "0") return els[j];
+      }
+    }
+    return null;
+  }
+  if (history.state && history.state.maxiferBack) return;
+  history.replaceState({maxiferBack:1, base:1}, "");
+  var seen = false;
+  var obs = new MutationObserver(function(){
+    var m = findOpenModal();
+    if (m && !seen) {
+      history.pushState({maxiferBack:1, modal:1}, "");
+      seen = true;
+    } else if (!m && seen) {
+      seen = false;
+    }
+  });
+  obs.observe(document.body, {attributes:true, attributeFilter:["class","style"], subtree:true});
+  window.addEventListener("popstate", function(){
+    var m = findOpenModal();
+    if (m) {
+      // Esc cierra la mayoria de los modales
+      document.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",code:"Escape",keyCode:27,which:27,bubbles:true,cancelable:true}));
+      // Si Esc no cerro, removemos active y/o ocultamos
+      setTimeout(function(){
+        var still = findOpenModal();
+        if (still) {
+          still.classList.remove("active");
+          if (still.style.display === "block" || still.style.display === "flex") still.style.display = "none";
+        }
+        // Re-push para que el siguiente back tambien cierre modales nuevos
+        if (findOpenModal()) history.pushState({maxiferBack:1, modal:1}, "");
+      }, 30);
+      seen = false;
+    }
+  });
+})();
+</script>
 </body>
 </html>
