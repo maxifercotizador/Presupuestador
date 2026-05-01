@@ -1023,9 +1023,23 @@
     .undo-action { max-width: 140px; font-size: 10px; }
     .undo-label { font-size: 10px; }
   }
+  /* Sync status (Firebase) */
+  #sync-status {
+    position: fixed; top: 8px; left: 8px; z-index: 9999;
+    font-size: 10px; padding: 3px 7px; border-radius: 10px;
+    background: rgba(255,255,255,0.92); color: #555;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.15); user-select: none;
+    transition: opacity .3s; pointer-events: none;
+  }
+  #sync-status[data-sync-type="ok"]  { color: #2a7a2a; }
+  #sync-status[data-sync-type="err"] { color: #c8102e; }
+  #sync-status[data-sync-type="sync"] { color: #1a3a7a; }
 </style>
+<script>window.MAXIFER_SYNC_NAMESPACE = 'compras';</script>
+<script type="module" src="./firebase-sync.js"></script>
 </head>
 <body>
+<div id="sync-status">☁️ ...</div>
 
 <!-- BOTÓN VOLVER AL INDEX -->
 <a href="index.html" id="btn-home" title="Volver al menú principal" aria-label="Volver al menú principal" style="position:fixed;top:10px;right:10px;z-index:9999;width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.92);color:#1a3a7a;display:flex;align-items:center;justify-content:center;font-size:18px;text-decoration:none;box-shadow:0 2px 6px rgba(0,0,0,0.25);border:1px solid rgba(0,0,0,0.08);">🏠</a>
@@ -5269,6 +5283,30 @@ document.addEventListener('DOMContentLoaded', async function() {
     showFatalError(err);
   }
 });
+
+// ─── Firebase sync (Firestore) ────────────────────────────────────
+function _refreshCurrentPage() {
+  if (typeof State === 'undefined') return;
+  const page = State.paginaActual;
+  if (page === 'borradores' || page === 'pendientes') {
+    if (typeof renderBorradores === 'function') renderBorradores();
+  } else if (page === 'historial') {
+    if (typeof renderHistorial === 'function') renderHistorial();
+  }
+}
+function _startSync() {
+  if (!window.MaxiferSync) return;
+  window.MaxiferSync.start(
+    [KEY_BORRADORES, KEY_HISTORIAL, KEY_HIST_CANTIDADES, KEY_CONTADOR_DIA],
+    {
+      statusEl: document.getElementById('sync-status'),
+      onRemote: _refreshCurrentPage,
+    }
+  );
+}
+if (window.MaxiferSync) _startSync();
+else window.addEventListener('maxifer-sync-ready', _startSync);
+window.addEventListener('maxifer-sync-started', _refreshCurrentPage);
 </script>
 </body>
 </html>
