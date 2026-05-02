@@ -10,7 +10,7 @@ Inputs (carpeta data/):
 
 Outputs (carpeta data/):
   - productos.json
-  - surtidos-13b2f415bd069fdd.json
+  - surtidos.json
 
 Reglas:
   - "BORNES PARA BATERIA" se excluye en ambos JSONs.
@@ -39,7 +39,7 @@ XLSX_PRODUCTOS = DATA_DIR / "Listas Maxifer.xlsx"
 XLSX_SURTIDOS = DATA_DIR / "Precio Surtidos.xlsx"
 
 OUT_PRODUCTOS = DATA_DIR / "productos.json"
-OUT_SURTIDOS = DATA_DIR / "surtidos-13b2f415bd069fdd.json"
+OUT_SURTIDOS = DATA_DIR / "surtidos.json"
 
 EXCLUIR_FAMILIAS = {"BORNES PARA BATERIA"}
 
