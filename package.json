@@ -2,7 +2,7 @@
   "name": "maxifer-presupuestador",
   "version": "1.0.0",
   "scripts": {
-    "build": "echo 'Sitio estatico. productos.json y surtidos.json los regenera el workflow generar-jsons.yml en GitHub Actions.'"
+    "build": "echo 'Sitio estatico. productos.json y surtidos-13b2f415bd069fdd.json los regenera el workflow generar-jsons.yml en GitHub Actions.'"
   },
   "dependencies": {
     "xlsx": "^0.18.5"
