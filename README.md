@@ -12,7 +12,7 @@ Apps web para cotizaciones, compras y consulta de precios de MAXIFER.
 ### Datos generados automáticamente (no los toques a mano)
 
 - **`productos.json`** — Generado desde `Listas Maxifer.xlsx`. Lo consumen los HTML.
-- **`surtidos.json`** — Generado desde `Precio Surtidos.xlsx`. Lo consume `index_presupuestador.html`.
+- **`surtidos-13b2f415bd069fdd.json`** — Generado desde `Precio Surtidos.xlsx`. Lo consume `index_presupuestador.html`.
 
 ### Apps
 
@@ -34,7 +34,7 @@ Apps web para cotizaciones, compras y consulta de precios de MAXIFER.
 2. Subís el Excel modificado al repo (drag-and-drop en la web de GitHub).
 3. La GitHub Action corre sola en menos de 1 minuto:
    - Lee los Excel.
-   - Genera `productos.json` y `surtidos.json`.
+   - Genera `productos.json` y `surtidos-13b2f415bd069fdd.json`.
    - Hace commit automático con los JSON actualizados.
 4. Las apps cargan los precios nuevos al instante (en los siguientes accesos).
 
