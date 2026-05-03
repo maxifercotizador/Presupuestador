@@ -559,11 +559,12 @@ body{
 .form-card{
     background:var(--bg-card);border:1px solid var(--border);border-radius:18px;
     padding:22px;box-shadow:var(--shadow);margin-bottom:18px;
-    position:relative;overflow:hidden;
+    position:relative;
 }
 .form-card::before{
     content:'';position:absolute;top:0;left:0;right:0;height:4px;
     background:linear-gradient(90deg,var(--green),var(--navy));
+    border-top-left-radius:18px;border-top-right-radius:18px;
 }
 .form-card h2{
     font-family:'Montserrat',sans-serif;font-size:18px;color:var(--navy);
@@ -622,11 +623,12 @@ body{
 }
 .preview{
     background:var(--bg-card);border:1px solid var(--border);border-radius:18px;
-    padding:20px;box-shadow:var(--shadow);position:relative;overflow:hidden;
+    padding:20px;box-shadow:var(--shadow);position:relative;
 }
 .preview::before{
     content:'';position:absolute;top:0;left:0;right:0;height:4px;
     background:linear-gradient(90deg,var(--navy),var(--orange));
+    border-top-left-radius:18px;border-top-right-radius:18px;
 }
 .preview h3{
     font-family:'Montserrat',sans-serif;font-size:16px;color:var(--navy);
@@ -932,7 +934,7 @@ body{
             <img src="img/favicon-192.png" alt="MAXIFER" onerror="this.src='favicon.ico'">
             <div class="brand-text">MAXIFER<br>Pedido Faltantes</div>
         </a>
-        <span class="ver-chip" id="verChip">v13</span>
+        <span class="ver-chip" id="verChip">v14</span>
         <div class="top-actions">
             <button id="userChip" class="top-chip" type="button" onclick="openProfile()" title="Mi cuenta">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
