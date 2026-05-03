@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#1a3a7a">
+<title>Generar Links · Pedido MAXIFER</title>
+<meta name="robots" content="noindex,nofollow">
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+    --navy:#1a3a7a; --navy-dark:#13295a; --navy-light:#2151a8;
+    --green:#4ea83e; --green-dark:#3d8a30; --green-light:#6bc35a;
+    --red:#c8102e;
+    --orange:#e8510a;
+    --bg:#f5f7fb; --bg-soft:#eef1f7; --bg-card:#fff;
+    --border:#dde3ee; --border-strong:#c5cee0;
+    --text:#1a2238; --text-muted:#5a6685; --text-dim:#8a94ae;
+    --shadow-sm:0 1px 2px rgba(26,58,122,.08),0 1px 3px rgba(26,58,122,.05);
+    --shadow:0 4px 12px rgba(26,58,122,.10),0 2px 4px rgba(26,58,122,.06);
+    --shadow-lg:0 16px 36px -8px rgba(26,58,122,.20),0 8px 16px -4px rgba(26,58,122,.12);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+html,body{
+    background:var(--bg);color:var(--text);
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+}
+body{
+    background-image:radial-gradient(ellipse at top right,rgba(78,168,62,.06),transparent 60%),
+                     radial-gradient(ellipse at bottom left,rgba(26,58,122,.04),transparent 60%);
+    background-attachment:fixed;
+}
+button,input,select{font-family:inherit;font-size:inherit;color:inherit}
+
+.topbar{
+    background:linear-gradient(135deg,var(--navy-dark),var(--navy) 60%,var(--navy-light));
+    color:#fff;padding:14px 18px;
+    box-shadow:0 2px 12px rgba(19,41,90,.25);
+    padding-top:max(14px, env(safe-area-inset-top));
+}
+.topbar-inner{
+    max-width:900px;margin:0 auto;display:flex;align-items:center;gap:12px;
+}
+.brand img{
+    width:42px;height:42px;object-fit:contain;
+    background:#fff;border-radius:10px;padding:3px;
+    box-shadow:0 2px 6px rgba(0,0,0,.2);
+}
+.brand-text{
+    font-family:'Montserrat',sans-serif;font-size:11px;color:rgba(255,255,255,.85);
+    text-transform:uppercase;letter-spacing:.14em;font-weight:700;
+    border-left:1px solid rgba(255,255,255,.25);padding-left:12px;line-height:1.25;
+}
+.topbar h1{
+    font-family:'Montserrat',sans-serif;font-size:14px;font-weight:800;
+    margin-left:auto;text-transform:uppercase;letter-spacing:.06em;opacity:.9;
+}
+
+.wrap{max-width:900px;margin:0 auto;padding:24px 16px 40px}
+
+.intro{
+    background:rgba(78,168,62,.08);border:1px solid rgba(78,168,62,.25);
+    border-radius:12px;padding:14px 18px;margin-bottom:20px;
+    font-size:13px;color:var(--text);line-height:1.55;
+}
+.intro b{color:var(--navy)}
+
+.card{
+    background:var(--bg-card);border:1px solid var(--border);border-radius:18px;
+    padding:24px;box-shadow:var(--shadow);margin-bottom:18px;position:relative;
+}
+.card::before{
+    content:'';position:absolute;top:0;left:0;right:0;height:4px;
+    background:linear-gradient(90deg,var(--green),var(--navy));
+    border-top-left-radius:18px;border-top-right-radius:18px;
+}
+
+.card h2{
+    font-family:'Montserrat',sans-serif;font-size:18px;color:var(--navy);
+    margin-bottom:16px;font-weight:800;display:flex;align-items:center;gap:10px;
+}
+.card h2 .step{
+    background:linear-gradient(135deg,var(--green-light),var(--green-dark));
+    color:#fff;width:30px;height:30px;border-radius:8px;
+    display:inline-flex;align-items:center;justify-content:center;font-size:14px;
+    box-shadow:0 2px 6px rgba(78,168,62,.35);
+}
+
+.field-grid{
+    display:grid;grid-template-columns:1fr 1fr;gap:14px;
+}
+@media (max-width:560px){.field-grid{grid-template-columns:1fr}}
+
+.field label{
+    display:block;font-size:11px;font-weight:700;color:var(--text-muted);
+    text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;
+}
+
+.input, .select{
+    width:100%;padding:12px 14px;border:1px solid var(--border-strong);
+    border-radius:10px;background:var(--bg-soft);outline:none;font-size:15px;
+    transition:all .15s;
+}
+.input:focus, .select:focus{border-color:var(--green);background:#fff;box-shadow:0 0 0 3px rgba(78,168,62,.12)}
+
+.disc-options{
+    display:flex;flex-wrap:wrap;gap:6px;
+}
+.disc-chip{
+    padding:8px 14px;border:1px solid var(--border-strong);border-radius:100px;
+    background:#fff;color:var(--text);font-size:13px;font-weight:700;cursor:pointer;
+    transition:all .12s;
+}
+.disc-chip:hover{border-color:var(--navy);color:var(--navy)}
+.disc-chip.on{
+    background:linear-gradient(180deg,var(--green-light),var(--green));
+    color:#fff;border-color:var(--green-dark);
+    box-shadow:0 2px 6px rgba(78,168,62,.35);
+}
+.disc-custom{
+    display:flex;align-items:center;gap:6px;
+    padding:6px 10px 6px 14px;border:1px solid var(--border-strong);border-radius:100px;
+    background:#fff;font-size:13px;font-weight:700;
+}
+.disc-custom input{
+    width:50px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;
+    text-align:center;font-weight:800;font-size:14px;outline:none;
+    color:var(--green-dark);
+}
+.disc-custom input:focus{border-color:var(--green)}
+
+/* Link preview */
+.link-card{
+    background:linear-gradient(135deg,var(--navy-dark),var(--navy));
+    color:#fff;border-radius:14px;padding:18px;margin-top:18px;
+    box-shadow:var(--shadow);
+}
+.link-label{
+    font-size:11px;font-weight:700;color:rgba(255,255,255,.75);
+    text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;
+    display:flex;justify-content:space-between;align-items:center;
+}
+.link-tag{
+    background:rgba(255,255,255,.18);padding:3px 10px;border-radius:100px;
+    font-size:10px;font-weight:800;letter-spacing:.04em;
+}
+.link-url{
+    background:rgba(0,0,0,.25);padding:12px 14px;border-radius:10px;
+    font-family:ui-monospace,Menlo,monospace;font-size:13px;
+    word-break:break-all;line-height:1.4;
+    border:1px solid rgba(255,255,255,.1);
+    color:#fff;
+}
+.link-actions{
+    display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;
+}
+.btn{
+    flex:1;min-width:120px;
+    padding:12px 16px;border:none;border-radius:10px;
+    font-weight:800;font-size:13px;cursor:pointer;
+    text-transform:uppercase;letter-spacing:.05em;
+    transition:all .15s;
+    display:inline-flex;align-items:center;justify-content:center;gap:6px;
+}
+.btn-copy{background:#fff;color:var(--navy)}
+.btn-copy:hover{background:rgba(255,255,255,.9);transform:translateY(-1px)}
+.btn-test{background:var(--green);color:#fff}
+.btn-test:hover{background:var(--green-dark);transform:translateY(-1px)}
+.btn-wa{background:#25d366;color:#fff}
+.btn-wa:hover{background:#1ebe57;transform:translateY(-1px)}
+
+.copied-toast{
+    position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(20px);
+    background:var(--green);color:#fff;padding:11px 24px;border-radius:100px;
+    font-size:13px;font-weight:700;box-shadow:var(--shadow-lg);
+    opacity:0;pointer-events:none;transition:all .25s;z-index:300;
+}
+.copied-toast.visible{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* Cheatsheet de todos los descuentos para 1 vendor */
+.cheatsheet{
+    margin-top:8px;
+}
+.cs-row{
+    display:flex;align-items:center;gap:10px;
+    padding:10px 12px;border-bottom:1px solid var(--border);
+    font-size:13px;
+}
+.cs-row:last-child{border-bottom:none}
+.cs-pct{
+    background:var(--bg-soft);border:1px solid var(--border-strong);
+    color:var(--navy);font-weight:800;
+    padding:4px 10px;border-radius:100px;font-size:12px;min-width:60px;text-align:center;
+}
+.cs-pct.lista{background:linear-gradient(180deg,var(--green-light),var(--green));color:#fff;border-color:var(--green-dark)}
+.cs-link{
+    flex:1;font-family:ui-monospace,monospace;font-size:11px;color:var(--text-muted);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.cs-actions{display:flex;gap:4px}
+.cs-btn{
+    background:var(--bg-soft);border:1px solid var(--border-strong);
+    color:var(--text-muted);padding:6px 8px;border-radius:6px;
+    font-size:11px;font-weight:700;cursor:pointer;
+}
+.cs-btn:hover{background:#fff;border-color:var(--navy);color:var(--navy)}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+    <div class="topbar-inner">
+        <div class="brand">
+            <img src="img/favicon-192.png" alt="MAXIFER">
+        </div>
+        <div class="brand-text">MAXIFER<br>Generador de Links</div>
+        <h1>Admin</h1>
+    </div>
+</div>
+
+<div class="wrap">
+    <div class="intro">
+        Generá links personalizados para cada cliente. El cliente abre el link, ya tiene el descuento aplicado y al enviar el pedido por WhatsApp va directo al número del vendedor. <b>El cliente no puede cambiar el descuento.</b>
+    </div>
+
+    <div class="card">
+        <h2><span class="step">1</span> Elegí vendedor y descuento</h2>
+
+        <div class="field-grid">
+            <div class="field">
+                <label for="selVendor">Vendedor</label>
+                <select id="selVendor" class="select">
+                    <option value="Maxi">Maxi (Maximiliano Gordillo)</option>
+                    <option value="Micky">Micky</option>
+                    <option value="Victor">Victor (Victor Gordillo)</option>
+                    <option value="Nadia">Nadia</option>
+                    <option value="Eduardo">Eduardo</option>
+                    <option value="Federico">Federico</option>
+                </select>
+            </div>
+            <div class="field">
+                <label>Descuento aplicado</label>
+                <div class="disc-options" id="discOptions">
+                    <button type="button" class="disc-chip on" data-d="lista">Precio Lista (0%)</button>
+                    <button type="button" class="disc-chip" data-d="20">−20%</button>
+                    <button type="button" class="disc-chip" data-d="30">−30%</button>
+                    <button type="button" class="disc-chip" data-d="40">−40%</button>
+                    <button type="button" class="disc-chip" data-d="46">−46%</button>
+                    <button type="button" class="disc-chip" data-d="50">−50%</button>
+                    <span class="disc-custom">
+                        Otro: <input type="number" id="discCustom" min="0" max="99" placeholder="—"> %
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <div class="link-card">
+            <div class="link-label">
+                <span>Link generado</span>
+                <span class="link-tag" id="linkTag">Maxi · Lista</span>
+            </div>
+            <div class="link-url" id="linkUrl">—</div>
+            <div class="link-actions">
+                <button class="btn btn-copy" onclick="copyLink()">📋 Copiar link</button>
+                <button class="btn btn-test" onclick="testLink()">👁 Probar link</button>
+                <button class="btn btn-wa" onclick="sendByWa()">💬 Enviar por WhatsApp</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2><span class="step">📋</span> Todos los descuentos para <span id="cheatVendor" style="color:var(--green-dark)">Maxi</span></h2>
+        <div class="cheatsheet" id="cheatsheet"></div>
+    </div>
+</div>
+
+<div class="copied-toast" id="copiedToast">✓ Link copiado al portapapeles</div>
+
+<script>
+const VENDEDORES = {
+    'Maxi':     { nombre: 'Maximiliano Gordillo', wa: '5491150408378' },
+    'Micky':    { nombre: 'Micky',                wa: '5491164865752' },
+    'Victor':   { nombre: 'Victor Gordillo',      wa: '5491149367336' },
+    'Nadia':    { nombre: 'Nadia',                wa: '5491128243870' },
+    'Eduardo':  { nombre: 'Eduardo',              wa: '5492634688163' },
+    'Federico': { nombre: 'Federico',             wa: '5493516017663' }
+};
+
+const COMMON_DISCS = ['lista', 20, 30, 40, 46, 50];
+
+// Detecta el base URL automaticamente: usa el dominio actual + /pedido.html
+function getBase(){
+    return location.origin + location.pathname.replace(/[^/]+$/, '') + 'pedido.html';
+}
+
+let state = { vendor: 'Maxi', desc: 'lista' };
+
+function buildLink(vendor, desc){
+    const base = getBase();
+    return base + '#wa=' + encodeURIComponent(vendor) + '&desc=' + encodeURIComponent(desc);
+}
+
+function descLabel(d){
+    if (d === 'lista' || d === 0 || d === '0') return 'Lista';
+    return '−' + d + '%';
+}
+
+function render(){
+    const link = buildLink(state.vendor, state.desc);
+    document.getElementById('linkUrl').textContent = link;
+    document.getElementById('linkTag').textContent = state.vendor + ' · ' + descLabel(state.desc);
+
+    // Pintar chip activo
+    document.querySelectorAll('.disc-chip').forEach(c => {
+        c.classList.toggle('on', String(c.dataset.d) === String(state.desc));
+    });
+    // Si el desc actual es uno custom, marcar el input
+    const isCommon = COMMON_DISCS.some(d => String(d) === String(state.desc));
+    if (!isCommon && state.desc !== 'lista'){
+        document.getElementById('discCustom').value = state.desc;
+    }
+
+    // Cheatsheet del vendor
+    const cs = document.getElementById('cheatsheet');
+    document.getElementById('cheatVendor').textContent = state.vendor;
+    cs.innerHTML = COMMON_DISCS.map(d => {
+        const l = buildLink(state.vendor, d);
+        const cls = d === 'lista' ? 'lista' : '';
+        return '<div class="cs-row">' +
+            '<span class="cs-pct ' + cls + '">' + descLabel(d) + '</span>' +
+            '<span class="cs-link">' + l + '</span>' +
+            '<span class="cs-actions">' +
+                '<button class="cs-btn" onclick="quickCopy(\'' + l + '\')">📋</button>' +
+                '<button class="cs-btn" onclick="window.open(\'' + l + '\',\'_blank\')">👁</button>' +
+            '</span>' +
+        '</div>';
+    }).join('');
+}
+
+function copyLink(){
+    const link = buildLink(state.vendor, state.desc);
+    quickCopy(link);
+}
+function quickCopy(text){
+    navigator.clipboard.writeText(text).then(() => {
+        const t = document.getElementById('copiedToast');
+        t.classList.add('visible');
+        setTimeout(() => t.classList.remove('visible'), 1800);
+    }, () => {
+        // fallback: prompt
+        prompt('Copiá el link:', text);
+    });
+}
+function testLink(){
+    window.open(buildLink(state.vendor, state.desc), '_blank');
+}
+function sendByWa(){
+    const v = VENDEDORES[state.vendor];
+    if (!v) return;
+    const link = buildLink(state.vendor, state.desc);
+    const txt = encodeURIComponent(
+        'Hola! Te paso el link para que cargues tu pedido de faltantes MAXIFER.\n\n' +
+        link + '\n\n' +
+        '(Tiene tu descuento ya aplicado. Cuando termines, le das a "Finalizar" y me llega por acá.)'
+    );
+    // Abre WhatsApp para que el vendedor reenvie ese mensaje al cliente
+    window.open('https://wa.me/?text=' + txt, '_blank');
+}
+
+document.getElementById('selVendor').addEventListener('change', e => {
+    state.vendor = e.target.value;
+    render();
+});
+document.querySelectorAll('.disc-chip').forEach(c => {
+    c.addEventListener('click', () => {
+        state.desc = c.dataset.d;
+        document.getElementById('discCustom').value = '';
+        render();
+    });
+});
+document.getElementById('discCustom').addEventListener('input', e => {
+    const v = parseInt(e.target.value, 10);
+    if (!isNaN(v) && v >= 0 && v <= 99){
+        state.desc = v;
+        render();
+    }
+});
+
+render();
+</script>
+</body>
+</html>
