@@ -93,6 +93,29 @@ button,input,select{font-family:inherit;font-size:inherit;color:inherit}
 .disc-pill input:focus{border-color:var(--green);box-shadow:0 0 0 2px rgba(78,168,62,.3)}
 .disc-pill .pct{font-weight:800;color:rgba(255,255,255,.9)}
 
+/* VENDOR PILL (cuando link trae #wa=...) */
+.vendor-pill{
+    display:inline-flex;align-items:center;gap:8px;
+    padding:6px 12px;border-radius:100px;
+    background:linear-gradient(180deg, rgba(78,168,62,.95), rgba(61,138,48,.9));
+    border:1px solid rgba(255,255,255,.3);
+    color:#fff;font-size:12px;font-weight:700;
+    box-shadow:0 2px 6px rgba(78,168,62,.3);
+}
+.vendor-pill .vp-icon{font-size:14px}
+.vendor-pill .vp-text{display:flex;flex-direction:column;line-height:1.1;text-align:left}
+.vendor-pill .vp-label{font-size:9px;text-transform:uppercase;letter-spacing:.06em;opacity:.85;font-weight:700}
+.vendor-pill .vp-name{font-weight:800;font-size:12px}
+.vendor-pill .vp-disc{
+    background:#fff;color:var(--green-dark);
+    padding:3px 8px;border-radius:100px;
+    font-weight:900;font-size:11px;letter-spacing:.02em;
+}
+@media (max-width:560px){
+    .vendor-pill .vp-text .vp-label{display:none}
+    .vendor-pill{padding:6px 10px}
+}
+
 /* ============ CROSS-PLATFORM (iOS / Android / PC) ============ */
 /* Safe areas para notch del iPhone */
 .topbar{
@@ -922,7 +945,7 @@ body{
             <img src="img/favicon-192.png" alt="MAXIFER" onerror="this.src='favicon.ico'">
             <div class="brand-text">MAXIFER<br>Pedido Faltantes</div>
         </a>
-        <span class="ver-chip" id="verChip">v17</span>
+        <span class="ver-chip" id="verChip">v18</span>
         <div class="top-actions">
             <button id="userChip" class="top-chip" type="button" onclick="openProfile()" title="Mi cuenta">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -933,10 +956,18 @@ body{
                 <span>Historial</span>
                 <span id="histChipBadge" class="chip-badge" style="display:none">0</span>
             </button>
-            <div class="disc-pill">
+            <div class="disc-pill" id="discPill">
                 <label>Desc.</label>
                 <input type="number" id="discInput" min="0" max="99" step="1" value="0">
                 <span class="pct">%</span>
+            </div>
+            <div class="vendor-pill" id="vendorPill" style="display:none">
+                <span class="vp-icon">👤</span>
+                <span class="vp-text">
+                    <span class="vp-label">Vendedor</span>
+                    <span class="vp-name" id="vendorPillName">—</span>
+                </span>
+                <span class="vp-disc" id="vendorPillDisc" style="display:none">−<span id="vendorPillDiscNum">0</span>%</span>
             </div>
         </div>
     </div>
@@ -1200,8 +1231,57 @@ let FAMS = [];
 let CART = {};
 let DISCOUNT = 0;
 
-const _urlD = parseFloat(new URLSearchParams(location.search).get('d'));
-if (!isNaN(_urlD) && _urlD >= 0 && _urlD <= 99) DISCOUNT = _urlD;
+/* =========================================================
+   VENDEDORES (mismo objeto que catalogo_actualizado.html)
+   Para generar links: pedido.html#wa=Maxi&desc=46
+   ========================================================= */
+const VENDEDORES = {
+    'Maxi':     { nombre: 'Maximiliano Gordillo', wa: '5491150408378' },
+    'Micky':    { nombre: 'Micky',                wa: '5491164865752' },
+    'Victor':   { nombre: 'Victor Gordillo',      wa: '5491149367336' },
+    'Nadia':    { nombre: 'Nadia',                wa: '5491128243870' },
+    'Eduardo':  { nombre: 'Eduardo',              wa: '5492634688163' },
+    'Federico': { nombre: 'Federico',             wa: '5493516017663' }
+};
+
+/* Lee parametros de URL: hash (#wa=Maxi&desc=46) y query (?d=46) */
+function _parseUrlParams(){
+    const params = {};
+    // Hash primero
+    const hash = (location.hash || '').replace(/^#/, '');
+    if (hash){
+        hash.split('&').forEach(p => {
+            const eq = p.indexOf('=');
+            if (eq > 0) params[p.slice(0,eq)] = decodeURIComponent(p.slice(eq+1));
+        });
+    }
+    // Query (no overrides hash)
+    const sp = new URLSearchParams(location.search);
+    for (const [k, v] of sp.entries()){
+        if (!(k in params)) params[k] = v;
+    }
+    return params;
+}
+const URL_PARAMS = _parseUrlParams();
+
+/* Vendor del link */
+let VENDOR_FROM_LINK = null;
+if (URL_PARAMS.wa && VENDEDORES[URL_PARAMS.wa]){
+    VENDOR_FROM_LINK = Object.assign({ key: URL_PARAMS.wa }, VENDEDORES[URL_PARAMS.wa]);
+}
+
+/* Descuento: ?d=46 (legacy), #desc=46, #desc=lista (alias de 0) */
+let URL_LOCKED = false;  // si link trae config, el cliente no puede cambiarla
+const _rawDesc = String(URL_PARAMS.desc != null ? URL_PARAMS.desc : URL_PARAMS.d || '').toLowerCase().trim();
+const _modoDesc = parseFloat(_rawDesc);
+if (_rawDesc === 'lista' || _rawDesc === 'sin'){
+    DISCOUNT = 0;
+    URL_LOCKED = true;
+} else if (!isNaN(_modoDesc) && _modoDesc >= 0 && _modoDesc <= 99){
+    DISCOUNT = _modoDesc;
+    URL_LOCKED = true;
+}
+if (VENDOR_FROM_LINK) URL_LOCKED = true;
 
 /* Persistencia: guardamos snapshot completo asi el carrito se renderiza
    sin depender de productos.json (importante en offline / sin red). */
@@ -1977,7 +2057,8 @@ function buildSummary(){
     if (PROFILE.name) pData.push('👤 ' + PROFILE.name);
     if (PROFILE.biz && !cliente) pData.push('🏢 ' + PROFILE.biz);
     if (PROFILE.exp)  pData.push('🚚 Expreso: ' + PROFILE.exp);
-    if (PROFILE.ven)  pData.push('🤝 Vendedor: ' + PROFILE.ven);
+    const vendorName = VENDOR_FROM_LINK ? VENDOR_FROM_LINK.nombre : PROFILE.ven;
+    if (vendorName) pData.push('🤝 Vendedor: ' + vendorName);
     if (pData.length) txt += '\n\n' + pData.join('\n');
     return txt;
 }
@@ -2014,7 +2095,10 @@ function closeFinalize(){ $('modalBg').classList.remove('visible'); removeFromOv
 function sendWhatsApp(){
     const txt = encodeURIComponent(buildSummary());
     saveCurrentToHistory('whatsapp');
-    window.open('https://wa.me/?text=' + txt, '_blank');
+    // Si el link trae vendor, manda directo al WhatsApp del vendor.
+    // Si no, abre wa.me sin destinatario para que elija contacto.
+    const num = VENDOR_FROM_LINK ? VENDOR_FROM_LINK.wa : '';
+    window.open('https://wa.me/' + num + '?text=' + txt, '_blank');
     closeFinalize();
     setTimeout(showPostSend, 400);
 }
@@ -2212,6 +2296,7 @@ function deleteHistItem(idx){
 }
 
 function setDiscount(v){
+    if (URL_LOCKED) return; // el descuento esta fijado por el link, no se puede cambiar
     v = parseFloat(v) || 0;
     if (v < 0) v = 0;
     if (v > 99) v = 99;
@@ -2282,7 +2367,8 @@ function sendEmail(){
     if (PROFILE.name) body += 'Nombre: ' + PROFILE.name + '\n';
     if (PROFILE.biz)  body += 'Negocio: ' + PROFILE.biz + '\n';
     if (PROFILE.exp)  body += 'Expreso: ' + PROFILE.exp + '\n';
-    if (PROFILE.ven)  body += 'Vendedor: ' + PROFILE.ven + '\n';
+    const vendorNameEmail = VENDOR_FROM_LINK ? VENDOR_FROM_LINK.nombre : PROFILE.ven;
+    if (vendorNameEmail) body += 'Vendedor: ' + vendorNameEmail + '\n';
     body += '\n_Adjuntá el CSV que se descargó automáticamente._';
     // Strip whatsapp markdown asterisks/underscores for email plain text
     body = body.replace(/\*([^*]+)\*/g,'$1').replace(/_([^_]+)_/g,'$1');
@@ -2370,6 +2456,25 @@ if ('serviceWorker' in navigator){
 document.addEventListener('DOMContentLoaded', async () => {
     $('discInput').value = DISCOUNT;
     $('discInput').addEventListener('input', e => setDiscount(e.target.value));
+
+    // Si el link trae vendor / descuento configurado, ocultamos el input de
+    // descuento (el cliente no puede cambiarlo) y mostramos un pill verde con
+    // nombre del vendedor + descuento aplicado.
+    if (URL_LOCKED){
+        const dp = $('discPill'); if (dp) dp.style.display = 'none';
+        const vp = $('vendorPill'); if (vp) vp.style.display = 'inline-flex';
+        if (VENDOR_FROM_LINK){
+            const nm = $('vendorPillName');
+            if (nm) nm.textContent = VENDOR_FROM_LINK.nombre.split(' ')[0]; // primer nombre
+        } else {
+            const nm = $('vendorPillName');
+            if (nm) nm.textContent = 'Cliente';
+        }
+        if (DISCOUNT > 0){
+            $('vendorPillDisc').style.display = 'inline-block';
+            $('vendorPillDiscNum').textContent = DISCOUNT;
+        }
+    }
     ['fClient','fNotes'].forEach(id => {
         const el = $(id);
         if (el) el.addEventListener('input', () => $('fSummary').textContent = buildSummary());
