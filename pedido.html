@@ -7,6 +7,12 @@
 <title>MAXIFER · Armar Pedido de Faltantes</title>
 <meta name="description" content="Armá tu pedido de faltantes MAXIFER. Carga rápida o asistida por wizard.">
 <link rel="icon" type="image/x-icon" href="favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32.png">
+<link rel="apple-touch-icon" href="img/favicon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Pedido MAXIFER">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -220,30 +226,41 @@ button,input,select{font-family:inherit;font-size:inherit;color:inherit}
 
 .wrap{max-width:1500px;margin:0 auto;padding:14px 14px}
 
-/* ============ 3-COLUMN LAYOUT ============ */
+/* ============ 2-COLUMN LAYOUT (form | cart) ============ */
 .layout{
-    display:grid;gap:14px;
-    grid-template-columns:240px minmax(0,1fr) 340px;
+    display:grid;gap:16px;
+    grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);
     align-items:start;
 }
-@media(max-width:1200px){
-    .layout{grid-template-columns:minmax(0,1fr) 320px}
-    .col-user{grid-column:1/-1}
-    .col-user .panel{display:flex;align-items:center;gap:14px;padding:10px 14px}
-    .col-user .panel-head{padding:0;border:0;flex:1}
-    .col-user .panel-body{padding:0;display:flex;flex-wrap:wrap;gap:10px;font-size:12px}
-    .col-user .pf-row{display:inline-flex;gap:5px;padding:0;border:0}
-    .col-user .pf-empty{display:none}
-}
-@media(max-width:780px){
-    .layout{grid-template-columns:1fr;gap:12px}
-    .col-user .panel{flex-direction:column;align-items:flex-start}
-    .col-hist .panel-body{max-height:400px}
+.col-cart{position:sticky;top:74px;align-self:start}
+@media(max-width:860px){
+    .layout{grid-template-columns:1fr;gap:14px}
+    .col-cart{position:static}
 }
 
-aside.col-user, aside.col-hist{position:sticky;top:74px;align-self:start}
-@media(max-width:1200px){aside.col-user{position:static}}
-@media(max-width:780px){aside.col-hist{position:static}}
+/* TOPBAR CHIPS */
+.top-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.top-chip{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:7px 12px;border-radius:100px;
+    background:rgba(30,44,91,.06);color:var(--navy);
+    border:1px solid var(--border-strong);
+    font-size:12px;font-weight:700;cursor:pointer;
+    transition:all .15s;position:relative;
+}
+.top-chip:hover{background:var(--navy);color:#fff;border-color:var(--navy)}
+.top-chip.has-data{background:var(--navy);color:#fff;border-color:var(--navy)}
+.top-chip.has-data:hover{background:var(--navy-dark)}
+.chip-badge{
+    background:var(--green);color:#fff;border-radius:100px;
+    padding:1px 7px;font-size:10px;font-weight:800;line-height:1.4;
+    min-width:18px;text-align:center;
+}
+@media(max-width:560px){
+    .top-chip span:not(.chip-badge){display:none}
+    .top-chip{padding:7px 10px}
+    .top-actions{gap:4px}
+}
 
 .panel{
     background:var(--bg-card);border:1px solid var(--border);
@@ -742,13 +759,24 @@ aside.col-user, aside.col-hist{position:sticky;top:74px;align-self:start}
 <div class="topbar">
     <div class="topbar-inner">
         <a href="index.html" class="brand">
-            <img src="https://www.fabricamaxifer.com/favicon.ico" alt="MAXIFER" onerror="this.src='favicon.ico'">
+            <img src="img/favicon-192.png" alt="MAXIFER" onerror="this.src='favicon.ico'">
             <div class="brand-text">MAXIFER<br>Pedido Faltantes</div>
         </a>
-        <div class="disc-pill">
-            <label>Desc.</label>
-            <input type="number" id="discInput" min="0" max="99" step="1" value="0">
-            <span class="pct">%</span>
+        <div class="top-actions">
+            <button id="userChip" class="top-chip" type="button" onclick="openProfile()" title="Mi cuenta">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                <span id="userChipLabel">Mi cuenta</span>
+            </button>
+            <button id="histChip" class="top-chip" type="button" onclick="openHistDrawer()" title="Historial">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>
+                <span>Historial</span>
+                <span id="histChipBadge" class="chip-badge" style="display:none">0</span>
+            </button>
+            <div class="disc-pill">
+                <label>Desc.</label>
+                <input type="number" id="discInput" min="0" max="99" step="1" value="0">
+                <span class="pct">%</span>
+            </div>
         </div>
     </div>
 </div>
@@ -756,20 +784,7 @@ aside.col-user, aside.col-hist{position:sticky;top:74px;align-self:start}
 <div class="wrap">
     <div class="layout">
 
-        <!-- ============ COLUMNA IZQ: USUARIO ============ -->
-        <aside class="col-user">
-            <div class="panel">
-                <div class="panel-head">
-                    <h3>👤 Mi cuenta</h3>
-                    <button class="panel-edit" onclick="openProfile()" title="Editar datos">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-                    </button>
-                </div>
-                <div class="panel-body" id="profileInline"></div>
-            </div>
-        </aside>
-
-        <!-- ============ COLUMNA CENTRO: CARGA + PEDIDO ============ -->
+        <!-- ============ COLUMNA FORM ============ -->
         <main class="col-main">
             <div class="form-card">
                 <h2><span class="step-num">⚡</span> Cargá un producto</h2>
@@ -809,8 +824,11 @@ aside.col-user, aside.col-hist{position:sticky;top:74px;align-self:start}
                 </div>
                 <div class="selected-prod empty" id="bSelected">Elegí familia y código para ver el producto</div>
             </div>
+        </main>
 
-            <div class="preview">
+        <!-- ============ COLUMNA PEDIDO ACTUAL ============ -->
+        <aside class="col-cart">
+            <div class="preview" style="position:sticky;top:74px">
                 <h3>
                     <span>📋 Pedido actual</span>
                     <span id="bCartCount" class="muted">0 modelos</span>
@@ -825,19 +843,6 @@ aside.col-user, aside.col-hist{position:sticky;top:74px;align-self:start}
                         <button class="btn btn-success" style="flex:2;justify-content:center" onclick="openFinalize()">Finalizar →</button>
                     </div>
                 </div>
-            </div>
-        </main>
-
-        <!-- ============ COLUMNA DER: HISTORIAL ============ -->
-        <aside class="col-hist">
-            <div class="panel">
-                <div class="panel-head">
-                    <h3>📜 Historial <span id="histCountInline" class="hist-count-pill">0</span></h3>
-                    <button class="panel-edit" onclick="clearHistory()" title="Vaciar historial" id="histClearBtn">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                    </button>
-                </div>
-                <div class="panel-body" id="historyInline"></div>
             </div>
         </aside>
 
@@ -856,6 +861,19 @@ aside.col-user, aside.col-hist{position:sticky;top:74px;align-self:start}
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
     </div>
 </button>
+
+<!-- HISTORY DRAWER -->
+<div class="drawer-bg" id="histDrawerBg" onclick="closeHistDrawer()"></div>
+<aside class="drawer" id="histDrawer">
+    <div class="drawer-head">
+        <h2>📜 Historial</h2>
+        <button class="drawer-close" onclick="closeHistDrawer()" aria-label="Cerrar">✕</button>
+    </div>
+    <div class="drawer-body" id="historyInline"></div>
+    <div class="drawer-foot">
+        <button class="btn btn-ghost" id="histClearBtn" style="width:100%;justify-content:center" onclick="clearHistory()">Vaciar historial</button>
+    </div>
+</aside>
 
 <!-- DRAWER -->
 <div class="drawer-bg" id="drawerBg" onclick="closeCart()"></div>
@@ -905,20 +923,6 @@ aside.col-user, aside.col-hist{position:sticky;top:74px;align-self:start}
     </div>
 </div>
 
-<!-- MODAL HISTORIAL -->
-<div class="modal-bg" id="historyBg" onclick="if(event.target===this)closeHistory()">
-    <div class="modal" style="max-width:640px">
-        <div class="modal-head">
-            <h2>📜 Historial de pedidos</h2>
-            <button class="drawer-close" onclick="closeHistory()" aria-label="Cerrar">✕</button>
-        </div>
-        <div class="modal-body" id="historyBody"></div>
-        <div class="modal-foot">
-            <button class="btn btn-ghost" onclick="clearHistory()" style="margin-right:auto">Vaciar historial</button>
-            <button class="btn btn-ghost" onclick="closeHistory()">Cerrar</button>
-        </div>
-    </div>
-</div>
 
 <!-- MODAL PROFILE -->
 <div class="modal-bg" id="profileBg" onclick="if(event.target===this)closeProfile()">
@@ -961,8 +965,18 @@ let DISCOUNT = 0;
 const _urlD = parseFloat(new URLSearchParams(location.search).get('d'));
 if (!isNaN(_urlD) && _urlD >= 0 && _urlD <= 99) DISCOUNT = _urlD;
 
+/* Persistencia: guardamos snapshot completo asi el carrito se renderiza
+   sin depender de productos.json (importante en offline / sin red). */
 function saveCart(){
-    try { localStorage.setItem('maxifer_cart', JSON.stringify(Object.entries(CART).map(([id,e])=>({id,qty:e.qty})))); } catch(e){}
+    try {
+        const snap = Object.entries(CART).map(([id,e]) => ({
+            id, qty: e.qty,
+            // Snapshot del item por si productos.json no esta disponible
+            n: e.item.n, d: e.item.d, c: e.item.c, p: e.item.p,
+            pl: e.item.pl, cm: e.item.cm
+        }));
+        localStorage.setItem('maxifer_cart', JSON.stringify(snap));
+    } catch(e){}
 }
 function loadCartFromStorage(){
     try {
@@ -970,16 +984,42 @@ function loadCartFromStorage(){
         if (!raw) return;
         const arr = JSON.parse(raw);
         const map = {}; DATA.forEach(it => { map[it.id] = it; });
-        arr.forEach(({id,qty}) => {
-            if (map[id]) CART[id] = { item: map[id], qty: parseInt(qty,10) || 1 };
+        arr.forEach(entry => {
+            const live = map[entry.id];
+            // Si DATA esta cargado y tiene el item, uso ese (precio actualizado).
+            // Si no, uso el snapshot guardado para que igual se vea algo.
+            const item = live || (entry.n ? {
+                id: entry.id, p: entry.p, n: entry.n, d: entry.d, c: entry.c,
+                pl: entry.pl, cm: entry.cm,
+                _stale: true  // marca por si quiero mostrar warning
+            } : null);
+            if (item) CART[entry.id] = { item, qty: parseInt(entry.qty,10) || 1 };
         });
     } catch(e){}
 }
 
-async function loadData(){
-    const r = await fetch('productos.json', { cache:'no-cache' });
-    if (!r.ok) throw new Error('HTTP '+r.status);
-    const json = await r.json();
+/* Cache de productos.json en localStorage para arranque instantaneo / offline */
+const PRODUCTS_CACHE_KEY = 'maxifer_products_cache_v1';
+function loadProductsFromCache(){
+    try {
+        const raw = localStorage.getItem(PRODUCTS_CACHE_KEY);
+        if (!raw) return null;
+        const obj = JSON.parse(raw);
+        if (!obj || !Array.isArray(obj.data)) return null;
+        return obj;
+    } catch(e){ return null; }
+}
+function saveProductsToCache(json){
+    try {
+        localStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify({
+            data: json, savedAt: Date.now()
+        }));
+    } catch(e){
+        // QuotaExceeded — borramos cache anterior y reintentamos sin guardar
+        try { localStorage.removeItem(PRODUCTS_CACHE_KEY); } catch(_){}
+    }
+}
+function buildDataFromJson(json){
     const isExcluded = p => {
         const np = norm(p);
         return np.includes('gaveta') || np.includes('mueble') || np.includes('vario');
@@ -993,8 +1033,43 @@ async function loadData(){
         it._all = it._p+' '+it._n+' '+it._d+' '+it._c;
     });
     FAMS = [...new Set(DATA.map(d => d.p))].sort();
-    loadCartFromStorage();
 }
+
+async function loadData(){
+    // 1) Si hay cache, lo uso para arrancar instantaneo
+    const cached = loadProductsFromCache();
+    if (cached){
+        buildDataFromJson(cached.data);
+        loadCartFromStorage();
+    }
+    // 2) Fetch en paralelo. Si hay red, actualizo. Si no hay, sigo con cache.
+    let online = false;
+    try {
+        const r = await fetch('productos.json', { cache:'no-cache' });
+        if (!r.ok) throw new Error('HTTP '+r.status);
+        const json = await r.json();
+        online = true;
+        saveProductsToCache(json);
+        buildDataFromJson(json);
+        if (cached) {
+            // Refresco el carrito con datos frescos (precios pueden haber cambiado)
+            const oldCart = CART; CART = {};
+            Object.values(oldCart).forEach(e => {
+                const live = DATA.find(d => d.id === e.item.id);
+                if (live) CART[e.item.id] = { item: live, qty: e.qty };
+                else CART[e.item.id] = e; // si ya no existe, mantengo el snapshot
+            });
+        } else {
+            loadCartFromStorage();
+        }
+    } catch(err) {
+        if (!cached) throw err; // sin cache y sin red: error fatal
+        // Tenemos cache, sigamos en modo offline
+        toast('Modo offline · usando datos guardados','warn');
+    }
+    return { online };
+}
+
 
 function netPrice(pl){ return pl * (100 - DISCOUNT) / 100; }
 function lineTotal(item, qty){ return netPrice(item.pl) * qty; }
@@ -1284,6 +1359,7 @@ function bInit(){
         $('bQtyHint').innerHTML = '&nbsp;';
         $('bSelected').className = 'selected-prod empty';
         $('bSelected').textContent = 'Escribí código o número del próximo producto';
+        if (typeof saveFormState === 'function') saveFormState();
         $('bCodeInput').focus();
     });
 }
@@ -1523,28 +1599,23 @@ function renderAllCarts(){
    INLINE PANELS (left = profile, right = history)
    ========================================================= */
 function renderProfileInline(){
-    const el = $('profileInline');
-    if (!el) return;
-    const has = PROFILE.name || PROFILE.biz || PROFILE.exp || PROFILE.ven;
-    if (!has){
-        el.innerHTML = '<div class="pf-empty"><div class="icon">👤</div><div>Cargá tus datos una vez y se autocompletan en cada pedido.</div><button onclick="openProfile()">+ Cargar mis datos</button></div>';
-        return;
-    }
-    const row = (lbl, val) => val ? '<div class="pf-row"><span class="pf-label">'+lbl+'</span><span class="pf-value">'+escapeHtml(val)+'</span></div>' : '';
-    el.innerHTML =
-        row('Nombre',  PROFILE.name) +
-        row('Negocio', PROFILE.biz) +
-        row('Expreso', PROFILE.exp) +
-        row('Vendedor',PROFILE.ven);
+    // Pinta el chip topbar (la edicion vive en el modal openProfile)
+    const chip = $('userChip'), lbl = $('userChipLabel');
+    if (!chip) return;
+    const has = !!(PROFILE.name || PROFILE.biz || PROFILE.exp || PROFILE.ven);
+    chip.classList.toggle('has-data', has);
+    const display = PROFILE.ven || PROFILE.name || PROFILE.biz;
+    lbl.textContent = display ? display.substring(0,16) : 'Mi cuenta';
 }
 
 function renderHistoryInline(){
     const el = $('historyInline');
     if (!el) return;
-    const pill = $('histCountInline');
-    if (pill){
-        pill.textContent = HISTORY.length;
-        pill.classList.toggle('zero', HISTORY.length === 0);
+    // Badge del chip topbar
+    const badge = $('histChipBadge');
+    if (badge){
+        if (HISTORY.length){ badge.style.display = 'inline-block'; badge.textContent = HISTORY.length; }
+        else { badge.style.display = 'none'; }
     }
     const clearBtn = $('histClearBtn');
     if (clearBtn) clearBtn.style.display = HISTORY.length ? '' : 'none';
@@ -1625,48 +1696,21 @@ function saveCurrentToHistory(via){
     if (HISTORY.length > 50) HISTORY.length = 50;
     saveHistoryStorage();
 }
-function openHistory(){
-    renderHistory();
-    $('historyBg').classList.add('visible');
+function openHistDrawer(){
+    renderHistoryInline();
+    $('histDrawerBg').classList.add('visible');
+    $('histDrawer').classList.add('visible');
 }
-function closeHistory(){ $('historyBg').classList.remove('visible'); }
+function closeHistDrawer(){
+    $('histDrawerBg').classList.remove('visible');
+    $('histDrawer').classList.remove('visible');
+}
 function clearHistory(){
     if (!HISTORY.length) return;
     if (!confirm('¿Borrar todo el historial?')) return;
     HISTORY = [];
     saveHistoryStorage();
-    renderHistory();
-}
-function renderHistory(){
-    const body = $('historyBody');
-    if (!HISTORY.length){
-        body.innerHTML = '<div class="hist-empty"><div class="icon">📭</div><div style="font-weight:700;color:var(--text);margin-bottom:4px">Todavía no enviaste pedidos</div><div style="font-size:13px">Cuando finalices un pedido por WhatsApp o email, aparecerá acá automáticamente.</div></div>';
-        return;
-    }
-    body.innerHTML = HISTORY.map((o,idx) => {
-        const dt = new Date(o.date);
-        const fecha = dt.toLocaleDateString('es-AR');
-        const hora = dt.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
-        const cliente = o.client ? ' · ' + escapeHtml(o.client) : '';
-        return '<details class="hist-item">'+
-            '<summary>'+
-                '<div>'+
-                    '<div class="h-date">'+fecha+' <span class="h-time">'+hora+'</span>'+cliente+'</div>'+
-                    '<div class="h-meta">'+o.lines+' modelos · '+o.pieces+' piezas'+(o.discount>0?' · -'+o.discount+'%':'')+(o.via?' · '+escapeHtml(o.via):'')+'</div>'+
-                '</div>'+
-                '<div class="h-total">'+fmtMoney(o.total)+'</div>'+
-            '</summary>'+
-            '<div class="h-body">'+
-                '<div class="h-summary">'+escapeHtml(o.summary)+'</div>'+
-                '<div class="h-actions">'+
-                    '<button onclick="repeatOrder('+idx+')">↺ Repetir pedido</button>'+
-                    '<button onclick="downloadHistCSV('+idx+')">⬇ CSV</button>'+
-                    '<button onclick="copyHistSummary('+idx+')">📋 Copiar</button>'+
-                    '<button class="del" onclick="deleteHistItem('+idx+')">✕ Borrar</button>'+
-                '</div>'+
-            '</div>'+
-        '</details>';
-    }).join('');
+    renderHistoryInline();
 }
 function repeatOrder(idx){
     const o = HISTORY[idx]; if (!o) return;
@@ -1707,7 +1751,7 @@ function deleteHistItem(idx){
     if (!confirm('¿Borrar este pedido del historial?')) return;
     HISTORY.splice(idx,1);
     saveHistoryStorage();
-    renderHistory();
+    renderHistoryInline();
 }
 
 function setDiscount(v){
@@ -1818,6 +1862,52 @@ function bulkAddItems(items, mode){
    GLOBAL RENDER + MODE SWITCH (already declared above)
    ========================================================= */
 
+/* =========================================================
+   FORM STATE — persiste lo que estas escribiendo (familia/codigo/qty)
+   ========================================================= */
+const FORM_STATE_KEY = 'maxifer_formstate_v1';
+function saveFormState(){
+    try {
+        localStorage.setItem(FORM_STATE_KEY, JSON.stringify({
+            family: stateB.family || '',
+            codeText: $('bCodeInput') ? $('bCodeInput').value : '',
+            qty: $('bQty') ? $('bQty').value : '',
+            multi: !!stateB.multi
+        }));
+    } catch(e){}
+}
+function loadFormState(){
+    try {
+        const raw = localStorage.getItem(FORM_STATE_KEY);
+        if (!raw) return;
+        const s = JSON.parse(raw);
+        if (s.family && FAMS.includes(s.family)){
+            bSetFamily(s.family);
+            if (s.codeText){
+                $('bCodeInput').value = s.codeText;
+                // Si coincide exacto con un producto, lo selecciono
+                const item = DATA.find(it => it.p === s.family && (String(it.n) === String(s.codeText) || it.c === s.codeText));
+                if (item) bSelectProduct(item);
+            }
+            if (s.qty) $('bQty').value = s.qty;
+        }
+    } catch(e){}
+}
+function clearFormState(){
+    try { localStorage.removeItem(FORM_STATE_KEY); } catch(e){}
+}
+
+/* =========================================================
+   SERVICE WORKER — instala el cache offline
+   ========================================================= */
+if ('serviceWorker' in navigator){
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch(err => {
+            console.warn('SW register failed:', err);
+        });
+    });
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     $('discInput').value = DISCOUNT;
     $('discInput').addEventListener('input', e => setDiscount(e.target.value));
@@ -1838,6 +1928,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     bInit();
     renderAllCarts();
+    loadFormState();
+
+    // Persistir form state en cada cambio
+    ['bFamilyInput','bCodeInput','bQty'].forEach(id => {
+        const el = $(id);
+        if (el) el.addEventListener('input', saveFormState);
+    });
+
     setTimeout(() => $('bFamilyInput').focus(), 100);
 });
 </script>
