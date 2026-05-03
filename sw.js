@@ -1,7 +1,7 @@
 /* Service Worker para Pedido MAXIFER
  * Cachea SOLO los recursos de pedido.html. El resto del sitio pasa directo.
  */
-const CACHE = 'maxifer-pedido-v14';
+const CACHE = 'maxifer-pedido-v15';
 const APP_PATHS = ['/pedido.html', '/productos.json', '/manifest.webmanifest',
                    '/img/favicon-192.png', '/img/favicon-512.png', '/img/favicon-32.png',
                    '/favicon.ico'];

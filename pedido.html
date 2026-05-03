@@ -196,6 +196,8 @@ body{
     display:inline-block;flex-shrink:0;transition:all .15s;
 }
 .multi-toggle:hover{border-color:var(--navy);color:var(--navy);transform:translateY(-1px)}
+.multi-toggle:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.multi-toggle:disabled:hover{border-color:var(--border-strong);color:var(--navy);transform:none}
 .multi-toggle.on{
     background:linear-gradient(180deg,var(--green-light),var(--green));
     color:#fff;border-color:var(--green-dark);
@@ -649,64 +651,6 @@ body{
     box-shadow:0 1px 0 var(--border-strong);color:var(--navy);margin:0 2px;
 }
 
-/* ============ MODE D ============ */
-#mode-d .wiz-steps{
-    display:flex;justify-content:center;gap:6px;margin-bottom:24px;flex-wrap:wrap;
-}
-#mode-d .wiz-step{
-    display:flex;align-items:center;gap:8px;padding:8px 14px;
-    border-radius:100px;background:var(--bg-soft);color:var(--text-muted);
-    font-size:12px;font-weight:700;
-}
-#mode-d .wiz-step.active{background:var(--navy);color:#fff}
-#mode-d .wiz-step.done{background:var(--green);color:#fff}
-#mode-d .wiz-step .num{
-    width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,.1);
-    display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;
-}
-#mode-d .wiz-step.active .num,#mode-d .wiz-step.done .num{background:rgba(255,255,255,.2)}
-
-#mode-d .wiz-pane{display:none}
-#mode-d .wiz-pane.active{display:block}
-
-#mode-d .pane1-head{
-    display:flex;justify-content:space-between;align-items:center;gap:14px;
-    margin-bottom:14px;flex-wrap:wrap;
-}
-#mode-d .pane1-head h2{
-    font-family:'Montserrat',sans-serif;font-size:20px;color:var(--navy);
-    flex:1;min-width:240px;
-}
-#mode-d .fam-search{position:relative;width:300px;max-width:100%}
-@media(max-width:560px){#mode-d .fam-search{width:100%}}
-
-#mode-d .fam-grid{
-    display:grid;gap:10px;
-    grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
-}
-#mode-d .fam-card{
-    background:var(--bg-card);border:1px solid var(--border);border-radius:12px;
-    padding:18px;cursor:pointer;text-align:left;
-    transition:all .2s;box-shadow:var(--shadow-sm);
-    display:flex;flex-direction:column;gap:6px;
-}
-#mode-d .fam-card:hover{border-color:var(--navy);transform:translateY(-2px);box-shadow:var(--shadow)}
-#mode-d .fam-card.hl{
-    border-color:var(--green);
-    box-shadow:0 0 0 2px rgba(78,168,62,.25),var(--shadow);
-    transform:translateY(-2px);
-}
-#mode-d .fam-card.has-items{border-color:var(--green);background:rgba(78,168,62,.04)}
-#mode-d .fam-card-name{
-    font-family:'Montserrat',sans-serif;font-weight:800;font-size:14px;color:var(--navy);
-}
-#mode-d .fam-card-meta{font-size:12px;color:var(--text-muted)}
-#mode-d .fam-card-meta b{color:var(--green-dark)}
-
-#mode-d .wiz-nav{
-    display:flex;justify-content:space-between;gap:10px;margin-top:18px;
-    padding-top:14px;border-top:1px solid var(--border);
-}
 .btn{
     padding:11px 18px;border:none;border-radius:8px;font-weight:700;
     cursor:pointer;font-size:13px;display:inline-flex;align-items:center;gap:6px;
@@ -834,7 +778,8 @@ body{
 .cart-item.selected{
     border-color:var(--red);background:rgba(200,16,46,.04);
 }
-.cart-item.selected .cart-item-info{padding-left:34px}
+/* Padding-left siempre en sel-mode (item con checkbox aun sin checkear) */
+.cart-item.sel-mode .cart-item-info{padding-left:34px}
 
 .cart-item{
     background:#fff;border:1px solid var(--border);border-radius:12px;
@@ -934,7 +879,7 @@ body{
             <img src="img/favicon-192.png" alt="MAXIFER" onerror="this.src='favicon.ico'">
             <div class="brand-text">MAXIFER<br>Pedido Faltantes</div>
         </a>
-        <span class="ver-chip" id="verChip">v14</span>
+        <span class="ver-chip" id="verChip">v15</span>
         <div class="top-actions">
             <button id="userChip" class="top-chip" type="button" onclick="openProfile()" title="Mi cuenta">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -975,7 +920,7 @@ body{
                     <div class="field">
                         <label for="bCodeInput">
                             Código / Número
-                            <button type="button" class="multi-toggle" id="bMultiToggle" title="Activar selección múltiple">Multi</button>
+                            <button type="button" class="multi-toggle" id="bMultiToggle" title="Elegí familia primero" disabled>Multi</button>
                         </label>
                         <div class="cbx-wrap">
                             <input type="text" id="bCodeInput" class="cbx-input" placeholder="N° o código BS..." autocomplete="off" disabled>
@@ -1628,6 +1573,8 @@ function bSetFamily(f){
     $('bQty').disabled = true;
     $('bQty').value = '';
     $('bAdd').disabled = true;
+    $('bMultiToggle').disabled = false;
+    $('bMultiToggle').title = 'Activar selección múltiple';
     $('bSelected').className = 'selected-prod empty';
     $('bSelected').textContent = 'Escribí código o número del producto';
     $('bQtyHint').innerHTML = '&nbsp;';
@@ -1692,8 +1639,9 @@ function bRenderCart(){
         famItems.forEach(e => {
             const sub = lineTotal(e.item, e.qty);
             const isSel = cartState.sel.has(e.item.id);
+            const modeClass = cartState.selMode ? ' sel-mode' : '';
             const selClass = cartState.selMode && isSel ? ' selected' : '';
-            html += '<div class="cart-item'+selClass+'" data-id="'+e.item.id+'"'+
+            html += '<div class="cart-item'+modeClass+selClass+'" data-id="'+e.item.id+'"'+
                 (cartState.selMode ? ' onclick="cartToggleSel(\''+e.item.id+'\',event)"' : '')+'>'+
                 (cartState.selMode ? '<div class="cart-chk">'+(isSel?'✓':'')+'</div>' : '')+
                 '<div class="cart-item-top">'+
