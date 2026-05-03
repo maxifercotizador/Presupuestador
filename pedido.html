@@ -54,34 +54,44 @@ button,input,select{font-family:inherit;font-size:inherit;color:inherit}
 
 /* TOPBAR */
 .topbar{
-    border-bottom:1px solid var(--border);background:rgba(255,255,255,.94);
-    backdrop-filter:blur(12px);position:sticky;top:0;z-index:50;
-    padding:10px 16px;box-shadow:var(--shadow-sm);
+    border-bottom:1px solid rgba(255,255,255,.08);
+    background:linear-gradient(135deg, var(--navy-dark) 0%, var(--navy) 60%, var(--navy-light) 100%);
+    position:sticky;top:0;z-index:50;
+    padding:12px 16px;
+    box-shadow:0 2px 12px rgba(19,41,90,.25);
+    color:#fff;
 }
 .topbar-inner{
     max-width:1400px;margin:0 auto;display:flex;align-items:center;
     justify-content:space-between;gap:12px;
 }
-.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit}
-.brand img{width:38px;height:38px;object-fit:contain}
+.brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:#fff}
+.brand img{
+    width:40px;height:40px;object-fit:contain;
+    background:#fff;border-radius:10px;padding:3px;
+    box-shadow:0 2px 6px rgba(0,0,0,.2);
+}
 .brand-text{
-    font-family:'Montserrat',sans-serif;font-size:10px;color:var(--text-muted);
-    text-transform:uppercase;letter-spacing:.12em;font-weight:700;
-    border-left:1px solid var(--border-strong);padding-left:10px;line-height:1.2;
+    font-family:'Montserrat',sans-serif;font-size:10px;
+    color:rgba(255,255,255,.85);
+    text-transform:uppercase;letter-spacing:.14em;font-weight:700;
+    border-left:1px solid rgba(255,255,255,.25);padding-left:12px;line-height:1.25;
 }
 .disc-pill{
     display:flex;align-items:center;gap:8px;
-    padding:6px 12px;border-radius:100px;
-    background:linear-gradient(135deg,rgba(78,168,62,.12),rgba(78,168,62,.04));
-    border:1px solid rgba(78,168,62,.3);font-size:12px;
+    padding:7px 12px;border-radius:100px;
+    background:rgba(255,255,255,.14);
+    border:1px solid rgba(255,255,255,.28);font-size:12px;
+    backdrop-filter:blur(8px);
 }
-.disc-pill label{font-weight:700;color:var(--green-dark);text-transform:uppercase;letter-spacing:.05em;font-size:10px}
+.disc-pill label{font-weight:700;color:rgba(255,255,255,.9);text-transform:uppercase;letter-spacing:.06em;font-size:10px}
 .disc-pill input{
-    width:48px;padding:3px 6px;border:1px solid var(--green);border-radius:5px;
-    font-size:13px;font-weight:800;text-align:center;color:var(--green-dark);
+    width:48px;padding:3px 6px;border:1px solid rgba(78,168,62,.6);border-radius:6px;
+    font-size:14px;font-weight:800;text-align:center;color:var(--green-dark);
     background:#fff;outline:none;
 }
-.disc-pill .pct{font-weight:800;color:var(--green-dark)}
+.disc-pill input:focus{border-color:var(--green);box-shadow:0 0 0 2px rgba(78,168,62,.3)}
+.disc-pill .pct{font-weight:800;color:rgba(255,255,255,.9)}
 
 /* ============ CROSS-PLATFORM (iOS / Android / PC) ============ */
 /* Safe areas para notch del iPhone */
@@ -145,9 +155,9 @@ body{
 
 /* Version chip (chiquito, esquina topbar) */
 .ver-chip{
-    font-size:9px;color:var(--text-dim);font-weight:700;
-    letter-spacing:.05em;opacity:.6;
-    align-self:center;margin-left:2px;
+    font-size:9px;color:rgba(255,255,255,.5);font-weight:700;
+    letter-spacing:.05em;
+    align-self:center;margin-left:4px;
     font-family:ui-monospace,monospace;
 }
 
@@ -331,19 +341,20 @@ body{
     .col-cart{position:static}
 }
 
-/* TOPBAR CHIPS */
-.top-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+/* TOPBAR CHIPS (sobre fondo navy) */
+.top-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
 .top-chip{
     display:inline-flex;align-items:center;gap:6px;
     padding:7px 12px;border-radius:100px;
-    background:rgba(30,44,91,.06);color:var(--navy);
-    border:1px solid var(--border-strong);
+    background:rgba(255,255,255,.14);color:#fff;
+    border:1px solid rgba(255,255,255,.28);
     font-size:12px;font-weight:700;cursor:pointer;
     transition:all .15s;position:relative;
+    backdrop-filter:blur(8px);
 }
-.top-chip:hover{background:var(--navy);color:#fff;border-color:var(--navy)}
-.top-chip.has-data{background:var(--navy);color:#fff;border-color:var(--navy)}
-.top-chip.has-data:hover{background:var(--navy-dark)}
+.top-chip:hover{background:#fff;color:var(--navy);border-color:#fff}
+.top-chip.has-data{background:rgba(255,255,255,.24);color:#fff;border-color:rgba(255,255,255,.4)}
+.top-chip.has-data:hover{background:#fff;color:var(--navy)}
 .chip-badge{
     background:var(--green);color:#fff;border-radius:100px;
     padding:1px 7px;font-size:10px;font-weight:800;line-height:1.4;
@@ -921,7 +932,7 @@ body{
             <img src="img/favicon-192.png" alt="MAXIFER" onerror="this.src='favicon.ico'">
             <div class="brand-text">MAXIFER<br>Pedido Faltantes</div>
         </a>
-        <span class="ver-chip" id="verChip">v11</span>
+        <span class="ver-chip" id="verChip">v12</span>
         <div class="top-actions">
             <button id="userChip" class="top-chip" type="button" onclick="openProfile()" title="Mi cuenta">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
