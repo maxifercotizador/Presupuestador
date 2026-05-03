@@ -922,7 +922,7 @@ body{
             <img src="img/favicon-192.png" alt="MAXIFER" onerror="this.src='favicon.ico'">
             <div class="brand-text">MAXIFER<br>Pedido Faltantes</div>
         </a>
-        <span class="ver-chip" id="verChip">v16</span>
+        <span class="ver-chip" id="verChip">v17</span>
         <div class="top-actions">
             <button id="userChip" class="top-chip" type="button" onclick="openProfile()" title="Mi cuenta">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -1175,6 +1175,26 @@ const norm = s => (s||'').toString().toLowerCase().normalize('NFD').replace(/[̀
 const fmtMoney = v => '$' + (v||0).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2});
 const escapeHtml = s => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
+/* =========================================================
+   OVERLAY STACK — boton 'atras' del navegador cierra overlays
+   ========================================================= */
+const _overlayStack = [];
+function pushOverlay(closeFn){
+    if (_overlayStack[_overlayStack.length-1] === closeFn) return;
+    _overlayStack.push(closeFn);
+    try { history.pushState({ovr: _overlayStack.length}, ''); } catch(e){}
+}
+function removeFromOverlayStack(closeFn){
+    const idx = _overlayStack.lastIndexOf(closeFn);
+    if (idx !== -1) _overlayStack.splice(idx, 1);
+}
+window.addEventListener('popstate', () => {
+    if (_overlayStack.length > 0){
+        const closeFn = _overlayStack.pop();
+        try { closeFn(); } catch(_){}
+    }
+});
+
 let DATA = [];
 let FAMS = [];
 let CART = {};
@@ -1370,11 +1390,13 @@ function makeCombobox(opts){
     const multi = !!opts.isMulti;
 
     function open(){
+        const wasVisible = list.classList.contains('visible');
         items = opts.getItems(inp.value || '');
         if (!items.length){
             list.innerHTML = '<div class="cbx-empty">Sin coincidencias</div>';
             list.classList.add('visible');
             hl = -1;
+            if (!wasVisible) pushOverlay(close);
             return;
         }
         const isMulti = multi && opts.isMulti();
@@ -1392,6 +1414,7 @@ function makeCombobox(opts){
         }
         list.innerHTML = html;
         list.classList.add('visible');
+        if (!wasVisible) pushOverlay(close);
         list.querySelectorAll('.cbx-item').forEach(el => {
             // 'click' (no pointerdown) para que el navegador distinga scroll de tap.
             // Si el usuario desliza el dedo para hacer scroll, click NO se dispara.
@@ -1412,9 +1435,8 @@ function makeCombobox(opts){
     }
     function close(){
         list.classList.remove('visible'); hl = -1;
-        // Si el input tiene atributo data-keyboard-default, lo respetamos.
-        // Sino, lo dejamos en 'none' para que la proxima vez no salte el teclado.
         if (opts.searchBtn) inp.setAttribute('inputmode', 'none');
+        removeFromOverlayStack(close);
     }
     function paintHl(){
         list.querySelectorAll('.cbx-item').forEach((el,i) => el.classList.toggle('hl', i === hl));
@@ -1871,8 +1893,8 @@ function renderMini(){
 /* =========================================================
    DRAWER
    ========================================================= */
-function openCart(){ renderDrawer(); $('drawerBg').classList.add('visible'); $('drawer').classList.add('visible'); }
-function closeCart(){ $('drawerBg').classList.remove('visible'); $('drawer').classList.remove('visible'); }
+function openCart(){ renderDrawer(); $('drawerBg').classList.add('visible'); $('drawer').classList.add('visible'); pushOverlay(closeCart); }
+function closeCart(){ $('drawerBg').classList.remove('visible'); $('drawer').classList.remove('visible'); removeFromOverlayStack(closeCart); }
 
 function renderDrawer(){
     const items = Object.values(CART);
@@ -1985,8 +2007,9 @@ function openFinalize(){
     }
 
     $('modalBg').classList.add('visible');
+    pushOverlay(closeFinalize);
 }
-function closeFinalize(){ $('modalBg').classList.remove('visible'); }
+function closeFinalize(){ $('modalBg').classList.remove('visible'); removeFromOverlayStack(closeFinalize); }
 
 function sendWhatsApp(){
     const txt = encodeURIComponent(buildSummary());
@@ -2132,10 +2155,12 @@ function openHistDrawer(){
     renderHistoryInline();
     $('histDrawerBg').classList.add('visible');
     $('histDrawer').classList.add('visible');
+    pushOverlay(closeHistDrawer);
 }
 function closeHistDrawer(){
     $('histDrawerBg').classList.remove('visible');
     $('histDrawer').classList.remove('visible');
+    removeFromOverlayStack(closeHistDrawer);
 }
 function clearHistory(){
     if (!HISTORY.length) return;
@@ -2220,9 +2245,10 @@ function openProfile(){
     $('pfExp').value = PROFILE.exp || '';
     $('pfVen').value = PROFILE.ven || '';
     $('profileBg').classList.add('visible');
+    pushOverlay(closeProfile);
     setTimeout(() => $('pfName').focus(), 100);
 }
-function closeProfile(){ $('profileBg').classList.remove('visible'); }
+function closeProfile(){ $('profileBg').classList.remove('visible'); removeFromOverlayStack(closeProfile); }
 function saveProfile(){
     PROFILE.name = $('pfName').value.trim();
     PROFILE.biz  = $('pfBiz').value.trim();
@@ -2382,10 +2408,11 @@ document.addEventListener('DOMContentLoaded', async () => {
    POST-SEND DIALOG (Feature 1)
    ========================================================= */
 function showPostSend(){
-    const el = $('postSendBg'); if (el) el.classList.add('visible');
+    const el = $('postSendBg'); if (el) { el.classList.add('visible'); pushOverlay(closePostSend); }
 }
 function closePostSend(){
     const el = $('postSendBg'); if (el) el.classList.remove('visible');
+    removeFromOverlayStack(closePostSend);
 }
 function newOrderAfterSend(){
     CART = {};
@@ -2422,10 +2449,11 @@ function showOldDraftModal(days){
     const ageEl = $('draftAge');
     if (ageEl) ageEl.textContent = days === 1 ? '1 día' : days + ' días';
     const bg = $('oldDraftBg');
-    if (bg) bg.classList.add('visible');
+    if (bg) { bg.classList.add('visible'); pushOverlay(dismissOldDraft); }
 }
 function dismissOldDraft(){
     const bg = $('oldDraftBg'); if (bg) bg.classList.remove('visible');
+    removeFromOverlayStack(dismissOldDraft);
 }
 function clearOldDraftAndStart(){
     CART = {};
