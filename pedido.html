@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#1e2c5b">
 <title>MAXIFER · Armar Pedido de Faltantes</title>
 <meta name="description" content="Armá tu pedido de faltantes MAXIFER. Carga rápida o asistida por wizard.">
@@ -29,7 +29,12 @@
     --shadow:0 4px 12px rgba(30,44,91,.08),0 2px 4px rgba(30,44,91,.05);
     --shadow-lg:0 16px 36px -8px rgba(30,44,91,.18),0 8px 16px -4px rgba(30,44,91,.1);
 }
-*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+*{
+    box-sizing:border-box;margin:0;padding:0;
+    -webkit-tap-highlight-color:transparent;
+    /* Saca el delay de 300ms en taps (iOS+Android) */
+    touch-action:manipulation;
+}
 html,body{
     background:var(--bg);color:var(--text);
     font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
@@ -74,6 +79,74 @@ button,input,select{font-family:inherit;font-size:inherit;color:inherit}
     background:#fff;outline:none;
 }
 .disc-pill .pct{font-weight:800;color:var(--green-dark)}
+
+/* ============ CROSS-PLATFORM (iOS / Android / PC) ============ */
+/* Safe areas para notch del iPhone */
+.topbar{
+    padding-top:max(10px, env(safe-area-inset-top));
+    padding-left:max(16px, env(safe-area-inset-left));
+    padding-right:max(16px, env(safe-area-inset-right));
+}
+.mini-cart{
+    bottom:max(16px, env(safe-area-inset-bottom));
+    left:max(16px, env(safe-area-inset-left));
+    right:max(16px, env(safe-area-inset-right));
+}
+@media(max-width:560px){
+    .mini-cart{
+        bottom:max(12px, env(safe-area-inset-bottom));
+        left:max(12px, env(safe-area-inset-left));
+        right:max(12px, env(safe-area-inset-right));
+    }
+}
+.drawer{
+    padding-top:env(safe-area-inset-top);
+    padding-bottom:env(safe-area-inset-bottom);
+}
+body{
+    padding-bottom:max(120px, calc(120px + env(safe-area-inset-bottom)));
+}
+
+/* Fix iOS auto-zoom: inputs deben tener font-size >= 16px en mobile */
+@media(max-width:760px){
+    .cbx-input,
+    .search-input,
+    .qty-input,
+    .field-block input,
+    .field-block textarea,
+    #discInput,
+    .stepper input{
+        font-size:16px !important;
+    }
+}
+
+/* Tap targets 44x44 en touch devices (recomendacion Apple HIG) */
+@media(hover:none) and (pointer:coarse){
+    .stepper button{
+        width:44px;height:44px;font-size:22px;
+    }
+    .stepper input{
+        width:60px;height:44px;
+    }
+    .cbx-item{padding:14px;}
+    .cbx-chk{width:24px;height:24px;}
+    .pc-chk{width:30px;height:30px;}
+    .top-chip{padding:10px 14px;}
+    .multi-toggle{padding:6px 10px;}
+    .panel-edit, .drawer-close, .cart-item-rm{
+        min-width:36px;min-height:36px;
+    }
+    .btn{padding:14px 18px;}
+    .tab{padding:14px 16px;}
+}
+
+/* Version chip (chiquito, esquina topbar) */
+.ver-chip{
+    font-size:9px;color:var(--text-dim);font-weight:700;
+    letter-spacing:.05em;opacity:.6;
+    align-self:center;margin-left:2px;
+    font-family:ui-monospace,monospace;
+}
 
 /* PROFILE BUTTON */
 .profile-btn{
@@ -762,6 +835,7 @@ button,input,select{font-family:inherit;font-size:inherit;color:inherit}
             <img src="img/favicon-192.png" alt="MAXIFER" onerror="this.src='favicon.ico'">
             <div class="brand-text">MAXIFER<br>Pedido Faltantes</div>
         </a>
+        <span class="ver-chip" id="verChip">v6</span>
         <div class="top-actions">
             <button id="userChip" class="top-chip" type="button" onclick="openProfile()" title="Mi cuenta">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -1174,12 +1248,21 @@ function makeCombobox(opts){
         list.innerHTML = html;
         list.classList.add('visible');
         list.querySelectorAll('.cbx-item').forEach(el => {
-            el.onmousedown = e => { e.preventDefault(); pick(parseInt(el.dataset.i,10)); };
+            // pointerdown unifica mouse/touch/pen y es mas confiable en iOS
+            // que mousedown (que se sintetiza con delay despues de touchend).
+            el.addEventListener('pointerdown', e => {
+                e.preventDefault();
+                pick(parseInt(el.dataset.i, 10));
+            });
             el.onmouseenter = () => { hl = parseInt(el.dataset.i,10); paintHl(); };
         });
         const confirmBtn = list.querySelector('[data-confirm-multi]');
         if (confirmBtn){
-            confirmBtn.onmousedown = e => { e.preventDefault(); opts.bulkConfirm(); close(); };
+            confirmBtn.addEventListener('pointerdown', e => {
+                e.preventDefault();
+                opts.bulkConfirm();
+                close();
+            });
         }
     }
     function close(){ list.classList.remove('visible'); hl = -1; }
@@ -1248,9 +1331,9 @@ function makeCombobox(opts){
         });
     }
 
-    // Click afuera del dropdown lo cierra (importante para multi mode
+    // Click/tap afuera del dropdown lo cierra (importante para multi mode
     // cuando el input ya esta blurreado y el blur listener no dispara).
-    document.addEventListener('mousedown', (e) => {
+    document.addEventListener('pointerdown', (e) => {
         if (!list.classList.contains('visible')) return;
         if (list.contains(e.target) || inp.contains(e.target)) return;
         if (opts.caretBtn && opts.caretBtn.contains(e.target)) return;
