@@ -154,6 +154,42 @@ button,input,select{font-family:inherit;font-size:inherit;color:inherit}
 .product-card.selected{border-color:var(--green);background:rgba(78,168,62,.04)}
 .pc-top{padding-right:30px}
 
+/* HISTORY */
+.hist-empty{text-align:center;padding:40px 10px;color:var(--text-muted)}
+.hist-empty .icon{font-size:48px;opacity:.4;margin-bottom:10px}
+.hist-item{
+    background:var(--bg-card);border:1px solid var(--border);border-radius:10px;
+    margin-bottom:10px;overflow:hidden;
+}
+.hist-item summary{
+    padding:12px 14px;cursor:pointer;list-style:none;
+    display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;
+    transition:background .12s;
+}
+.hist-item summary::-webkit-details-marker{display:none}
+.hist-item summary:hover{background:var(--bg-soft)}
+.hist-item .h-date{font-weight:700;color:var(--navy);font-family:'Montserrat',sans-serif;font-size:14px}
+.hist-item .h-time{color:var(--text-muted);font-size:11px;font-weight:600}
+.hist-item .h-meta{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em}
+.hist-item .h-total{
+    font-family:'Montserrat',sans-serif;font-weight:900;color:var(--navy);font-size:18px;
+}
+.hist-item .h-body{
+    padding:12px 14px;border-top:1px solid var(--border);background:var(--bg-soft);
+}
+.hist-item .h-summary{
+    font-family:ui-monospace,monospace;font-size:11.5px;line-height:1.5;
+    white-space:pre-wrap;word-break:break-word;max-height:240px;overflow-y:auto;
+    background:#fff;padding:10px;border-radius:6px;border:1px solid var(--border);
+}
+.hist-item .h-actions{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.hist-item .h-actions button{
+    padding:6px 11px;border-radius:6px;border:1px solid var(--border-strong);
+    background:#fff;color:var(--text);font-size:12px;font-weight:700;cursor:pointer;
+}
+.hist-item .h-actions button:hover{border-color:var(--navy);color:var(--navy)}
+.hist-item .h-actions button.del:hover{border-color:var(--red);color:var(--red);background:rgba(200,16,46,.06)}
+
 /* TABS */
 .tabs-bar{
     background:var(--bg-card);border-bottom:1px solid var(--border);
@@ -612,7 +648,11 @@ button,input,select{font-family:inherit;font-size:inherit;color:inherit}
             <img src="https://www.fabricamaxifer.com/favicon.ico" alt="MAXIFER" onerror="this.src='favicon.ico'">
             <div class="brand-text">MAXIFER<br>Pedido Faltantes</div>
         </a>
-        <div style="display:flex;gap:8px;align-items:center">
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
+            <button id="historyBtn" class="profile-btn" type="button" onclick="openHistory()" title="Historial de pedidos">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>
+                <span>Historial <span id="historyBadge" style="display:none;background:var(--green);color:#fff;border-radius:100px;padding:0 6px;font-size:10px;margin-left:2px"></span></span>
+            </button>
             <button id="profileBtn" class="profile-btn" type="button" onclick="openProfile()" title="Mi cuenta">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                 <span id="profileBtnLabel">Mi cuenta</span>
@@ -628,15 +668,16 @@ button,input,select{font-family:inherit;font-size:inherit;color:inherit}
 
 <div class="tabs-bar">
     <div class="tabs-inner">
-        <button class="tab active" data-mode="b"><span class="tab-letter">B</span> Carga rápida</button>
+        <button class="tab" data-mode="b"><span class="tab-letter">B</span> Carga rápida</button>
         <button class="tab" data-mode="d"><span class="tab-letter">D</span> Wizard guiado</button>
+        <button class="tab active" data-mode="e"><span class="tab-letter" style="background:var(--green);color:#fff">E</span> Combinado <span style="background:var(--green);color:#fff;font-size:9px;padding:2px 6px;border-radius:100px;margin-left:2px;letter-spacing:.05em">NUEVO</span></button>
     </div>
 </div>
 
 <div class="wrap">
 
 <!-- ============ MODE B ============ -->
-<section class="mode active" id="mode-b">
+<section class="mode" id="mode-b">
     <div class="form-card">
         <h2><span class="step-num">1</span> Cargá un producto</h2>
         <div class="form-grid">
@@ -674,12 +715,6 @@ button,input,select{font-family:inherit;font-size:inherit;color:inherit}
             </div>
         </div>
         <div class="selected-prod empty" id="bSelected">Elegí familia y código para ver el producto</div>
-        <div class="kbd-hint">
-            <span><span class="kbd">↑</span><span class="kbd">↓</span> navegar</span>
-            <span><span class="kbd">Enter</span> seleccionar / agregar</span>
-            <span><span class="kbd">Tab</span> siguiente campo</span>
-            <span><span class="kbd">Esc</span> cerrar lista</span>
-        </div>
     </div>
 
     <div class="preview">
@@ -758,6 +793,66 @@ button,input,select{font-family:inherit;font-size:inherit;color:inherit}
     </div>
 </section>
 
+<!-- ============ MODE E (Combinado) ============ -->
+<section class="mode active" id="mode-e">
+    <div class="form-card" style="margin-bottom:14px">
+        <h2><span class="step-num">⚡</span> Carga rápida por código</h2>
+        <div class="form-grid">
+            <div class="field">
+                <label for="eFamilyInput">Familia</label>
+                <div class="cbx-wrap">
+                    <input type="text" id="eFamilyInput" class="cbx-input" placeholder="Escribí o elegí familia..." autocomplete="off">
+                    <button type="button" class="cbx-caret" id="eFamilyCaret" tabindex="-1"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></button>
+                    <div class="cbx-list" id="eFamilyList"></div>
+                </div>
+            </div>
+            <div class="field">
+                <label for="eCodeInput">
+                    Código / Número
+                    <button type="button" class="multi-toggle" id="eMultiToggle" title="Selección múltiple">☐ Multi</button>
+                </label>
+                <div class="cbx-wrap">
+                    <input type="text" id="eCodeInput" class="cbx-input" placeholder="N° o código BS..." autocomplete="off" disabled>
+                    <button type="button" class="cbx-caret" id="eCodeCaret" tabindex="-1"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></button>
+                    <div class="cbx-list" id="eCodeList"></div>
+                </div>
+            </div>
+            <div class="field" id="eQtyField">
+                <label for="eQty">Cantidad</label>
+                <input type="number" id="eQty" class="qty-input" min="1" step="1" placeholder="—" disabled>
+                <div class="field-hint" id="eQtyHint">&nbsp;</div>
+            </div>
+            <div class="field" id="eAddField">
+                <label>&nbsp;</label>
+                <button class="btn-quick-add" id="eAdd" disabled>+ Agregar</button>
+            </div>
+        </div>
+        <div class="selected-prod empty" id="eSelected">Elegí familia para empezar</div>
+    </div>
+
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:14px;box-shadow:var(--shadow-sm)">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap">
+            <h3 style="font-family:'Montserrat',sans-serif;font-size:15px;color:var(--navy);display:flex;align-items:center;gap:6px">
+                📂 Catálogo <span style="color:var(--text-muted);font-size:12px;font-weight:600" id="eCatalogTitle">— elegí una familia arriba</span>
+            </h3>
+            <button type="button" id="eCardsMultiToggle" class="multi-toggle" disabled>☐ Selección múltiple</button>
+        </div>
+        <div class="search-wrap" style="margin-bottom:10px">
+            <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            <input type="text" class="search-input" id="eGridSearch" placeholder="Filtrar dentro de la familia (prioriza N°)..." autocomplete="off" disabled>
+        </div>
+        <div class="bulk-bar" id="eBulkBar" style="display:none">
+            <span class="info"><b id="eSelCount">0</b> seleccionados</span>
+            <button type="button" onclick="eSelectVisible()">Seleccionar visibles</button>
+            <button type="button" onclick="eClearSelection()">Limpiar</button>
+            <button type="button" class="primary" onclick="eBulkAdd()" id="eBulkAddBtn" disabled>+ Agregar con mínimo</button>
+        </div>
+        <div id="eGrid" style="display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(280px,1fr))">
+            <div class="empty"><div class="empty-icon">📂</div><div class="empty-title">Elegí una familia</div><div style="font-size:13px">arriba para ver sus productos</div></div>
+        </div>
+    </div>
+</section>
+
 </div>
 
 <!-- FLOATING MINI-CART -->
@@ -820,6 +915,21 @@ button,input,select{font-family:inherit;font-size:inherit;color:inherit}
     </div>
 </div>
 
+<!-- MODAL HISTORIAL -->
+<div class="modal-bg" id="historyBg" onclick="if(event.target===this)closeHistory()">
+    <div class="modal" style="max-width:640px">
+        <div class="modal-head">
+            <h2>📜 Historial de pedidos</h2>
+            <button class="drawer-close" onclick="closeHistory()" aria-label="Cerrar">✕</button>
+        </div>
+        <div class="modal-body" id="historyBody"></div>
+        <div class="modal-foot">
+            <button class="btn btn-ghost" onclick="clearHistory()" style="margin-right:auto">Vaciar historial</button>
+            <button class="btn btn-ghost" onclick="closeHistory()">Cerrar</button>
+        </div>
+    </div>
+</div>
+
 <!-- MODAL PROFILE -->
 <div class="modal-bg" id="profileBg" onclick="if(event.target===this)closeProfile()">
     <div class="modal">
@@ -857,7 +967,7 @@ let DATA = [];
 let FAMS = [];
 let CART = {};
 let DISCOUNT = 0;
-let MODE = 'b';
+let MODE = 'e';
 
 const _urlD = parseFloat(new URLSearchParams(location.search).get('d'));
 if (!isNaN(_urlD) && _urlD >= 0 && _urlD <= 99) DISCOUNT = _urlD;
@@ -1017,8 +1127,9 @@ function makeCombobox(opts){
     function pick(i){
         if (i < 0 || i >= items.length) return;
         if (multi && opts.isMulti()){
-            // Toggle without closing
+            // Toggle without closing. Blur the input on touch devices so the keyboard hides.
             opts.toggle(items[i]);
+            if ('ontouchstart' in window || navigator.maxTouchPoints > 0) inp.blur();
             open();
             return;
         }
@@ -1403,6 +1514,11 @@ function dToggleSel(id, ev){
     if (ev && ev.target.closest('.cart-item-rm')) return;
     if (stateD.multiSel.has(id)) stateD.multiSel.delete(id);
     else stateD.multiSel.add(id);
+    // Hide mobile keyboard if open
+    if ('ontouchstart' in window || navigator.maxTouchPoints > 0){
+        const a = document.activeElement;
+        if (a && a.tagName === 'INPUT') a.blur();
+    }
     dRenderProducts();
 }
 function dSelectVisible(){
@@ -1593,7 +1709,9 @@ function closeFinalize(){ $('modalBg').classList.remove('visible'); }
 
 function sendWhatsApp(){
     const txt = encodeURIComponent(buildSummary());
+    saveCurrentToHistory('whatsapp');
     window.open('https://wa.me/?text=' + txt, '_blank');
+    toast('Pedido enviado y guardado en historial','success');
 }
 
 function downloadCSV(){
@@ -1623,9 +1741,11 @@ function renderAllCarts(){
     if (stateD.step === 1) dRenderFamGrid();
     if (stateD.step === 2) dRenderProducts();
     if (stateD.step === 3) dRenderReview();
+    if (stateE.family) eRenderGrid();
     renderDrawer();
     renderMini();
     if ($('modalBg').classList.contains('visible')) $('fSummary').textContent = buildSummary();
+    if ($('historyBg') && $('historyBg').classList.contains('visible')) renderHistory();
 }
 
 function switchMode(m){
@@ -1635,6 +1755,376 @@ function switchMode(m){
     closeCart();
     if (m === 'b'){ setTimeout(()=>$('bFamilyInput').focus(), 80); }
     if (m === 'd'){ dGoStep(stateD.step); }
+    if (m === 'e'){ setTimeout(()=>$('eFamilyInput').focus(), 80); }
+}
+
+/* =========================================================
+   MODE E (Combinado: carga rápida + catálogo familia)
+   ========================================================= */
+const stateE = { family:'', selected:null, multi:false, multiSel:new Set(),
+                 cardsMulti:false, cardsSel:new Set(), gridSearch:'' };
+let eCodeCbx;
+
+function eInit(){
+    makeCombobox({
+        input: $('eFamilyInput'),
+        listEl: $('eFamilyList'),
+        caretBtn: $('eFamilyCaret'),
+        getItems: (q) => {
+            const nq = norm(q);
+            const list = nq ? FAMS.filter(f => norm(f).includes(nq)) : FAMS.slice();
+            return list.map(f => ({ kind:'fam', value:f, label:f }));
+        },
+        renderItem: it => '<span class="num">📁</span><span class="desc">'+escapeHtml(it.label)+'</span>',
+        onSelect: it => { eSetFamily(it.value); $('eCodeInput').focus(); },
+    });
+
+    eCodeCbx = makeCombobox({
+        input: $('eCodeInput'),
+        listEl: $('eCodeList'),
+        caretBtn: $('eCodeCaret'),
+        getItems: (q) => {
+            if (!stateE.family) return [];
+            const nq = norm(q);
+            return DATA.filter(it => it.p === stateE.family).filter(it => {
+                if (!nq) return true;
+                return it._n.startsWith(nq) || it._n.includes(nq) || it._c.includes(nq) || it._d.includes(nq);
+            }).sort((a,b) => {
+                if (!nq) return 0;
+                const aS = a._n.startsWith(nq), bS = b._n.startsWith(nq);
+                if (aS && !bS) return -1;
+                if (bS && !aS) return 1;
+                return 0;
+            }).slice(0,80).map(it => ({ kind:'prod', item:it }));
+        },
+        renderItem: it => {
+            const x = it.item;
+            const cmI = x.cm > 1 ? ' · <span style="color:var(--amber);font-weight:700">mín '+x.cm+'</span>' : '';
+            return '<span class="num">N°'+escapeHtml(x.n)+'</span>'+
+                '<span class="desc">'+escapeHtml(x.d)+(x.c?'<small>'+escapeHtml(x.c)+cmI+'</small>': cmI ? '<small>'+cmI+'</small>' : '')+'</span>'+
+                '<span class="price">'+fmtMoney(netPrice(x.pl))+'</span>';
+        },
+        onSelect: it => { eSelectProduct(it.item); },
+        isMulti: () => stateE.multi,
+        isChecked: it => stateE.multiSel.has(it.item.id),
+        toggle: it => {
+            if (stateE.multiSel.has(it.item.id)) stateE.multiSel.delete(it.item.id);
+            else stateE.multiSel.add(it.item.id);
+        },
+        countSelected: () => stateE.multiSel.size,
+        bulkConfirm: () => {
+            if (!stateE.multiSel.size) return;
+            const items = DATA.filter(it => stateE.multiSel.has(it.id));
+            bulkAddItems(items, 'min');
+            stateE.multiSel.clear();
+            $('eCodeInput').value = '';
+            $('eCodeInput').focus();
+        }
+    });
+
+    $('eMultiToggle').addEventListener('click', () => {
+        stateE.multi = !stateE.multi;
+        const btn = $('eMultiToggle');
+        btn.classList.toggle('on', stateE.multi);
+        btn.innerHTML = stateE.multi ? '☑ Multi' : '☐ Multi';
+        if (!stateE.multi) stateE.multiSel.clear();
+        $('eQtyField').style.display = stateE.multi ? 'none' : '';
+        $('eAddField').style.display = stateE.multi ? 'none' : '';
+        $('eSelected').style.display = stateE.multi ? 'none' : '';
+        if (stateE.multi){ $('eCodeInput').focus(); eCodeCbx.refresh(); }
+    });
+
+    $('eQty').addEventListener('input', e => {
+        if (!stateE.selected) return;
+        const q = parseInt(e.target.value,10);
+        const cm = stateE.selected.cm;
+        $('eQtyHint').innerHTML = (q && q < cm)
+            ? '<span style="color:var(--amber)">⚠ Bajo el mínimo de '+cm+'</span>'
+            : (cm>1 ? 'Mín. sugerida: '+cm : '&nbsp;');
+        $('eAdd').disabled = !(q > 0);
+    });
+    $('eQty').addEventListener('keydown', e => {
+        if (e.key === 'Enter' && !$('eAdd').disabled){ e.preventDefault(); $('eAdd').click(); }
+    });
+
+    $('eAdd').addEventListener('click', () => {
+        if (!stateE.selected) return;
+        const q = parseInt($('eQty').value,10) || 0;
+        if (!q) return;
+        const cur = CART[stateE.selected.id] ? CART[stateE.selected.id].qty : 0;
+        setQty(stateE.selected.id, cur + q);
+        toast('Agregado: '+stateE.selected.d.substring(0,28),'success');
+        pulseMini();
+        stateE.selected = null;
+        $('eCodeInput').value = '';
+        $('eCodeInput').classList.remove('has-value');
+        $('eQty').value = ''; $('eQty').disabled = true;
+        $('eAdd').disabled = true;
+        $('eQtyHint').innerHTML = '&nbsp;';
+        $('eSelected').className = 'selected-prod empty';
+        $('eSelected').textContent = 'Escribí código del próximo producto';
+        $('eCodeInput').focus();
+    });
+
+    // Grid search
+    $('eGridSearch').addEventListener('input', e => { stateE.gridSearch = e.target.value; eRenderGrid(); });
+
+    // Cards multi toggle
+    $('eCardsMultiToggle').addEventListener('click', () => {
+        stateE.cardsMulti = !stateE.cardsMulti;
+        const btn = $('eCardsMultiToggle');
+        btn.classList.toggle('on', stateE.cardsMulti);
+        btn.innerHTML = stateE.cardsMulti ? '☑ Selección múltiple' : '☐ Selección múltiple';
+        $('eBulkBar').style.display = stateE.cardsMulti ? 'flex' : 'none';
+        if (!stateE.cardsMulti) stateE.cardsSel.clear();
+        eRenderGrid();
+    });
+}
+
+function eSetFamily(f){
+    stateE.family = f;
+    stateE.selected = null;
+    stateE.cardsSel.clear();
+    stateE.gridSearch = '';
+    $('eFamilyInput').value = f;
+    $('eFamilyInput').classList.add('has-value');
+    $('eCodeInput').disabled = false;
+    $('eCodeInput').value = '';
+    $('eCodeInput').classList.remove('has-value');
+    $('eQty').disabled = true; $('eQty').value = '';
+    $('eAdd').disabled = true;
+    $('eQtyHint').innerHTML = '&nbsp;';
+    $('eSelected').className = 'selected-prod empty';
+    $('eSelected').textContent = 'Escribí código o elegí del catálogo abajo';
+    $('eCatalogTitle').textContent = '— ' + f;
+    $('eGridSearch').value = '';
+    $('eGridSearch').disabled = false;
+    $('eCardsMultiToggle').disabled = false;
+    eRenderGrid();
+}
+
+function eSelectProduct(item){
+    stateE.selected = item;
+    $('eCodeInput').value = item.n;
+    $('eCodeInput').classList.add('has-value');
+    $('eQty').disabled = false;
+    $('eQty').value = item.cm > 1 ? item.cm : 1;
+    $('eAdd').disabled = false;
+    $('eQtyHint').innerHTML = item.cm>1 ? 'Mín. sugerida: '+item.cm : '&nbsp;';
+    const sel = $('eSelected');
+    sel.className = 'selected-prod has';
+    sel.innerHTML = '<b>N° '+escapeHtml(item.n)+' — '+escapeHtml(item.d)+'</b><br>' +
+        'Cód. BS: <span style="font-family:ui-monospace,monospace">'+escapeHtml(item.c||'—')+'</span> · ' +
+        'Precio: <b style="color:var(--green-dark)">'+fmtMoney(netPrice(item.pl))+'</b>' +
+        (item.cm>1 ? ' · <span style="color:var(--amber);font-weight:700">Mín: '+item.cm+'</span>' : '');
+    setTimeout(() => { $('eQty').focus(); $('eQty').select(); }, 50);
+}
+
+function eRenderGrid(){
+    const grid = $('eGrid');
+    if (!stateE.family){
+        grid.innerHTML = '<div class="empty"><div class="empty-icon">📂</div><div class="empty-title">Elegí una familia</div><div style="font-size:13px">arriba para ver sus productos</div></div>';
+        return;
+    }
+    const qs = norm(stateE.gridSearch).split(/\s+/).filter(Boolean);
+    let list = DATA.filter(it => it.p === stateE.family).filter(it => {
+        if (!qs.length) return true;
+        return qs.every(t => it._n.startsWith(t) || it._all.includes(t));
+    });
+    if (qs.length){
+        list.sort((a,b) => {
+            const aS = qs.some(t => a._n.startsWith(t));
+            const bS = qs.some(t => b._n.startsWith(t));
+            if (aS && !bS) return -1;
+            if (bS && !aS) return 1;
+            return 0;
+        });
+    }
+    if (!list.length){
+        grid.innerHTML = '<div class="empty"><div class="empty-icon">🔍</div><div class="empty-title">Sin resultados</div></div>';
+    } else {
+        grid.innerHTML = list.map(it => {
+            let html = productCardHtml(it);
+            if (stateE.cardsMulti){
+                const checked = stateE.cardsSel.has(it.id);
+                html = html.replace(
+                    /^<div class="product-card([^"]*)"([^>]*)>/,
+                    '<div class="product-card$1'+(checked?' selected':'')+'"$2 onclick="eToggleCardSel(\''+it.id+'\',event)">' +
+                    '<div class="pc-chk">'+(checked?'✓':'')+'</div>'
+                );
+            }
+            return html;
+        }).join('');
+    }
+    grid.dataset.visibleIds = JSON.stringify(list.map(it => it.id));
+    eUpdateBulkUI();
+}
+
+function eToggleCardSel(id, ev){
+    if (ev && ev.target.closest('.stepper')) return;
+    if (ev && ev.target.closest('.cart-item-rm')) return;
+    if (stateE.cardsSel.has(id)) stateE.cardsSel.delete(id);
+    else stateE.cardsSel.add(id);
+    if ('ontouchstart' in window || navigator.maxTouchPoints > 0){
+        const a = document.activeElement; if (a && a.tagName === 'INPUT') a.blur();
+    }
+    eRenderGrid();
+}
+function eSelectVisible(){
+    const ids = JSON.parse($('eGrid').dataset.visibleIds || '[]');
+    ids.forEach(id => stateE.cardsSel.add(id));
+    eRenderGrid();
+}
+function eClearSelection(){ stateE.cardsSel.clear(); eRenderGrid(); }
+function eBulkAdd(){
+    if (!stateE.cardsSel.size) return;
+    const items = DATA.filter(it => stateE.cardsSel.has(it.id));
+    bulkAddItems(items, 'min');
+    stateE.cardsSel.clear();
+    eRenderGrid();
+}
+function eUpdateBulkUI(){
+    const n = stateE.cardsSel.size;
+    $('eSelCount').textContent = n;
+    $('eBulkAddBtn').disabled = !n;
+    $('eBulkAddBtn').textContent = n ? '+ Agregar '+n+' con mínimo' : '+ Agregar con mínimo';
+}
+
+/* =========================================================
+   HISTORIAL
+   ========================================================= */
+const HIST_KEY = 'maxifer_history';
+let HISTORY = [];
+
+function loadHistory(){
+    try {
+        const raw = localStorage.getItem(HIST_KEY);
+        if (raw) HISTORY = JSON.parse(raw);
+    } catch(e){ HISTORY = []; }
+    paintHistoryBadge();
+}
+function saveHistoryStorage(){
+    try { localStorage.setItem(HIST_KEY, JSON.stringify(HISTORY)); } catch(e){}
+    paintHistoryBadge();
+}
+function paintHistoryBadge(){
+    const b = $('historyBadge');
+    if (!b) return;
+    if (HISTORY.length){
+        b.style.display = 'inline-block';
+        b.textContent = HISTORY.length;
+    } else {
+        b.style.display = 'none';
+    }
+}
+function saveCurrentToHistory(via){
+    const items = Object.values(CART);
+    if (!items.length) return;
+    const order = {
+        date: new Date().toISOString(),
+        via: via || 'manual',
+        discount: DISCOUNT,
+        client: ($('fClient').value || PROFILE.biz || '').trim(),
+        notes: ($('fNotes').value || '').trim(),
+        profile: { name:PROFILE.name, biz:PROFILE.biz, exp:PROFILE.exp, ven:PROFILE.ven },
+        lines: cartLines(),
+        pieces: cartCount(),
+        subtotal: cartSubtotal(),
+        total: cartTotal(),
+        summary: buildSummary(),
+        items: items.map(e => ({
+            id:e.item.id, p:e.item.p, n:e.item.n, d:e.item.d, c:e.item.c,
+            pl:e.item.pl, cm:e.item.cm, qty:e.qty
+        }))
+    };
+    HISTORY.unshift(order);
+    // Cap at 50 entries
+    if (HISTORY.length > 50) HISTORY.length = 50;
+    saveHistoryStorage();
+}
+function openHistory(){
+    renderHistory();
+    $('historyBg').classList.add('visible');
+}
+function closeHistory(){ $('historyBg').classList.remove('visible'); }
+function clearHistory(){
+    if (!HISTORY.length) return;
+    if (!confirm('¿Borrar todo el historial?')) return;
+    HISTORY = [];
+    saveHistoryStorage();
+    renderHistory();
+}
+function renderHistory(){
+    const body = $('historyBody');
+    if (!HISTORY.length){
+        body.innerHTML = '<div class="hist-empty"><div class="icon">📭</div><div style="font-weight:700;color:var(--text);margin-bottom:4px">Todavía no enviaste pedidos</div><div style="font-size:13px">Cuando finalices un pedido por WhatsApp o email, aparecerá acá automáticamente.</div></div>';
+        return;
+    }
+    body.innerHTML = HISTORY.map((o,idx) => {
+        const dt = new Date(o.date);
+        const fecha = dt.toLocaleDateString('es-AR');
+        const hora = dt.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
+        const cliente = o.client ? ' · ' + escapeHtml(o.client) : '';
+        return '<details class="hist-item">'+
+            '<summary>'+
+                '<div>'+
+                    '<div class="h-date">'+fecha+' <span class="h-time">'+hora+'</span>'+cliente+'</div>'+
+                    '<div class="h-meta">'+o.lines+' modelos · '+o.pieces+' piezas'+(o.discount>0?' · -'+o.discount+'%':'')+(o.via?' · '+escapeHtml(o.via):'')+'</div>'+
+                '</div>'+
+                '<div class="h-total">'+fmtMoney(o.total)+'</div>'+
+            '</summary>'+
+            '<div class="h-body">'+
+                '<div class="h-summary">'+escapeHtml(o.summary)+'</div>'+
+                '<div class="h-actions">'+
+                    '<button onclick="repeatOrder('+idx+')">↺ Repetir pedido</button>'+
+                    '<button onclick="downloadHistCSV('+idx+')">⬇ CSV</button>'+
+                    '<button onclick="copyHistSummary('+idx+')">📋 Copiar</button>'+
+                    '<button class="del" onclick="deleteHistItem('+idx+')">✕ Borrar</button>'+
+                '</div>'+
+            '</div>'+
+        '</details>';
+    }).join('');
+}
+function repeatOrder(idx){
+    const o = HISTORY[idx]; if (!o) return;
+    if (cartLines() && !confirm('Esto va a reemplazar tu pedido actual. ¿Continuar?')) return;
+    CART = {};
+    o.items.forEach(it => {
+        const live = DATA.find(d => d.id === it.id);
+        if (live) CART[live.id] = { item: live, qty: it.qty };
+    });
+    saveCart();
+    renderAllCarts();
+    closeHistory();
+    toast('Pedido cargado al carrito','success');
+}
+function downloadHistCSV(idx){
+    const o = HISTORY[idx]; if (!o) return;
+    const rows = [['codigo_bs_gestion','cantidad']];
+    o.items.forEach(it => rows.push([it.c || '', it.qty]));
+    const csv = rows.map(r => r.map(c => {
+        const s = String(c);
+        return /[;,"\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s;
+    }).join(';')).join('\n');
+    const date = new Date(o.date).toISOString().slice(0,10);
+    const blob = new Blob(['﻿'+csv], { type:'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'pedido-maxifer-'+date+'-hist.csv';
+    document.body.appendChild(a); a.click();
+    setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 200);
+    toast('CSV descargado','success');
+}
+function copyHistSummary(idx){
+    const o = HISTORY[idx]; if (!o) return;
+    navigator.clipboard.writeText(o.summary).then(() => toast('Resumen copiado','success'),
+        () => toast('No se pudo copiar'));
+}
+function deleteHistItem(idx){
+    if (!confirm('¿Borrar este pedido del historial?')) return;
+    HISTORY.splice(idx,1);
+    saveHistoryStorage();
+    renderHistory();
 }
 
 function setDiscount(v){
@@ -1714,6 +2204,7 @@ function sendEmail(){
     body += '\n_Adjuntá el CSV que se descargó automáticamente._';
     // Strip whatsapp markdown asterisks/underscores for email plain text
     body = body.replace(/\*([^*]+)\*/g,'$1').replace(/_([^_]+)_/g,'$1');
+    saveCurrentToHistory('email');
     downloadCSV();
     setTimeout(() => {
         const url = 'mailto:' + EMAIL_TO +
@@ -1721,7 +2212,7 @@ function sendEmail(){
             '&body=' + encodeURIComponent(body);
         window.location.href = url;
     }, 300);
-    toast('Abriendo email · CSV descargado','success');
+    toast('Abriendo email · CSV descargado · guardado en historial','success');
 }
 
 /* =========================================================
@@ -1763,14 +2254,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     loadProfile();
+    loadHistory();
 
     try { await loadData(); }
     catch(e) { toast('Error cargando productos: '+e.message); return; }
 
     bInit();
     dInit();
+    eInit();
     renderAllCarts();
-    setTimeout(() => $('bFamilyInput').focus(), 100);
+    setTimeout(() => $('eFamilyInput').focus(), 100);
 });
 </script>
 </body>
