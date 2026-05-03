@@ -218,7 +218,104 @@ button,input,select{font-family:inherit;font-size:inherit;color:inherit}
 .mode.active{display:block}
 @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 
-.wrap{max-width:1100px;margin:0 auto;padding:14px 12px}
+.wrap{max-width:1500px;margin:0 auto;padding:14px 14px}
+
+/* ============ 3-COLUMN LAYOUT ============ */
+.layout{
+    display:grid;gap:14px;
+    grid-template-columns:240px minmax(0,1fr) 340px;
+    align-items:start;
+}
+@media(max-width:1200px){
+    .layout{grid-template-columns:minmax(0,1fr) 320px}
+    .col-user{grid-column:1/-1}
+    .col-user .panel{display:flex;align-items:center;gap:14px;padding:10px 14px}
+    .col-user .panel-head{padding:0;border:0;flex:1}
+    .col-user .panel-body{padding:0;display:flex;flex-wrap:wrap;gap:10px;font-size:12px}
+    .col-user .pf-row{display:inline-flex;gap:5px;padding:0;border:0}
+    .col-user .pf-empty{display:none}
+}
+@media(max-width:780px){
+    .layout{grid-template-columns:1fr;gap:12px}
+    .col-user .panel{flex-direction:column;align-items:flex-start}
+    .col-hist .panel-body{max-height:400px}
+}
+
+aside.col-user, aside.col-hist{position:sticky;top:74px;align-self:start}
+@media(max-width:1200px){aside.col-user{position:static}}
+@media(max-width:780px){aside.col-hist{position:static}}
+
+.panel{
+    background:var(--bg-card);border:1px solid var(--border);
+    border-radius:14px;box-shadow:var(--shadow-sm);overflow:hidden;
+}
+.panel-head{
+    padding:12px 14px;border-bottom:1px solid var(--border);
+    background:linear-gradient(180deg,#fff,var(--bg-soft));
+    display:flex;justify-content:space-between;align-items:center;gap:8px;
+}
+.panel-head h3{
+    font-family:'Montserrat',sans-serif;font-size:14px;color:var(--navy);
+    font-weight:800;display:flex;align-items:center;gap:6px;
+}
+.panel-edit{
+    background:transparent;border:1px solid var(--border-strong);
+    width:30px;height:30px;border-radius:8px;cursor:pointer;
+    color:var(--text-muted);display:flex;align-items:center;justify-content:center;
+    transition:all .15s;
+}
+.panel-edit:hover{border-color:var(--navy);color:var(--navy);background:#fff}
+.panel-body{padding:12px 14px;max-height:calc(100vh - 200px);overflow-y:auto}
+
+/* Profile inline rows */
+.pf-row{display:flex;flex-direction:column;gap:1px;padding:7px 0;border-bottom:1px dashed var(--border)}
+.pf-row:last-child{border-bottom:none}
+.pf-label{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;font-weight:700}
+.pf-value{font-size:13px;color:var(--navy);font-weight:600;line-height:1.3;word-break:break-word}
+.pf-empty{
+    text-align:center;padding:20px 8px;color:var(--text-muted);font-size:12px;line-height:1.5;
+}
+.pf-empty .icon{font-size:36px;opacity:.5;margin-bottom:8px}
+.pf-empty button{
+    margin-top:10px;padding:7px 14px;background:var(--navy);color:#fff;border:none;
+    border-radius:8px;font-weight:700;font-size:11px;cursor:pointer;text-transform:uppercase;letter-spacing:.05em;
+}
+
+/* History inline */
+.hist-count-pill{
+    background:var(--green);color:#fff;border-radius:100px;
+    padding:1px 8px;font-size:10px;margin-left:4px;
+}
+.hist-count-pill.zero{background:var(--border-strong);color:var(--text-muted)}
+.hist-row{
+    background:#fff;border:1px solid var(--border);border-radius:10px;
+    margin-bottom:8px;overflow:hidden;
+}
+.hist-row summary{
+    padding:10px 12px;cursor:pointer;list-style:none;
+    display:flex;justify-content:space-between;align-items:center;gap:8px;
+    transition:background .12s;
+}
+.hist-row summary::-webkit-details-marker{display:none}
+.hist-row summary:hover{background:var(--bg-soft)}
+.hist-row .hr-l{flex:1;min-width:0}
+.hist-row .hr-date{font-weight:700;color:var(--navy);font-size:12px;font-family:'Montserrat',sans-serif}
+.hist-row .hr-meta{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-top:2px}
+.hist-row .hr-total{font-family:'Montserrat',sans-serif;font-weight:900;color:var(--navy);font-size:14px;white-space:nowrap}
+.hist-row .hr-body{padding:10px 12px;border-top:1px solid var(--border);background:var(--bg-soft);font-size:11px}
+.hist-row .hr-summary{
+    background:#fff;padding:8px;border-radius:6px;border:1px solid var(--border);
+    font-family:ui-monospace,monospace;font-size:10.5px;line-height:1.5;
+    white-space:pre-wrap;word-break:break-word;max-height:200px;overflow-y:auto;
+}
+.hist-row .hr-actions{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.hist-row .hr-actions button{
+    flex:1;padding:6px 8px;border-radius:6px;border:1px solid var(--border-strong);
+    background:#fff;color:var(--text);font-size:11px;font-weight:700;cursor:pointer;
+    min-width:60px;
+}
+.hist-row .hr-actions button:hover{border-color:var(--navy);color:var(--navy)}
+.hist-row .hr-actions button.del:hover{border-color:var(--red);color:var(--red);background:rgba(200,16,46,.06)}
 
 /* SHARED */
 .search-input{
@@ -648,212 +745,105 @@ button,input,select{font-family:inherit;font-size:inherit;color:inherit}
             <img src="https://www.fabricamaxifer.com/favicon.ico" alt="MAXIFER" onerror="this.src='favicon.ico'">
             <div class="brand-text">MAXIFER<br>Pedido Faltantes</div>
         </a>
-        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
-            <button id="historyBtn" class="profile-btn" type="button" onclick="openHistory()" title="Historial de pedidos">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>
-                <span>Historial <span id="historyBadge" style="display:none;background:var(--green);color:#fff;border-radius:100px;padding:0 6px;font-size:10px;margin-left:2px"></span></span>
-            </button>
-            <button id="profileBtn" class="profile-btn" type="button" onclick="openProfile()" title="Mi cuenta">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                <span id="profileBtnLabel">Mi cuenta</span>
-            </button>
-            <div class="disc-pill">
-                <label>Desc.</label>
-                <input type="number" id="discInput" min="0" max="99" step="1" value="0">
-                <span class="pct">%</span>
-            </div>
+        <div class="disc-pill">
+            <label>Desc.</label>
+            <input type="number" id="discInput" min="0" max="99" step="1" value="0">
+            <span class="pct">%</span>
         </div>
-    </div>
-</div>
-
-<div class="tabs-bar">
-    <div class="tabs-inner">
-        <button class="tab" data-mode="b"><span class="tab-letter">B</span> Carga rápida</button>
-        <button class="tab" data-mode="d"><span class="tab-letter">D</span> Wizard guiado</button>
-        <button class="tab active" data-mode="e"><span class="tab-letter" style="background:var(--green);color:#fff">E</span> Combinado <span style="background:var(--green);color:#fff;font-size:9px;padding:2px 6px;border-radius:100px;margin-left:2px;letter-spacing:.05em">NUEVO</span></button>
     </div>
 </div>
 
 <div class="wrap">
+    <div class="layout">
 
-<!-- ============ MODE B ============ -->
-<section class="mode" id="mode-b">
-    <div class="form-card">
-        <h2><span class="step-num">1</span> Cargá un producto</h2>
-        <div class="form-grid">
-            <div class="field">
-                <label for="bFamilyInput">Familia</label>
-                <div class="cbx-wrap">
-                    <input type="text" id="bFamilyInput" class="cbx-input" placeholder="Escribí o elegí familia..." autocomplete="off">
-                    <button type="button" class="cbx-caret" id="bFamilyCaret" tabindex="-1" aria-label="Abrir lista">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
-                    </button>
-                    <div class="cbx-list" id="bFamilyList"></div>
-                </div>
-            </div>
-            <div class="field">
-                <label for="bCodeInput">
-                    Código / Número
-                    <button type="button" class="multi-toggle" id="bMultiToggle" title="Activar selección múltiple">☐ Multi</button>
-                </label>
-                <div class="cbx-wrap">
-                    <input type="text" id="bCodeInput" class="cbx-input" placeholder="N° o código BS..." autocomplete="off" disabled>
-                    <button type="button" class="cbx-caret" id="bCodeCaret" tabindex="-1" aria-label="Abrir lista">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
-                    </button>
-                    <div class="cbx-list" id="bCodeList"></div>
-                </div>
-            </div>
-            <div class="field">
-                <label for="bQty">Cantidad</label>
-                <input type="number" id="bQty" class="qty-input" min="1" step="1" placeholder="—" disabled>
-                <div class="field-hint" id="bQtyHint">&nbsp;</div>
-            </div>
-            <div class="field">
-                <label>&nbsp;</label>
-                <button class="btn-quick-add" id="bAdd" disabled>+ Agregar</button>
-            </div>
-        </div>
-        <div class="selected-prod empty" id="bSelected">Elegí familia y código para ver el producto</div>
-    </div>
-
-    <div class="preview">
-        <h3>
-            <span>Pedido en construcción</span>
-            <span id="bCartCount" class="muted">0 modelos</span>
-        </h3>
-        <div id="bCartList"></div>
-        <div id="bCartFoot" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
-            <div class="cart-total-row grand"><span>TOTAL</span><span id="bGrandTotal">$0</span></div>
-            <button class="btn btn-success" style="width:100%;justify-content:center;margin-top:10px" onclick="openFinalize()">Finalizar pedido →</button>
-        </div>
-    </div>
-</section>
-
-<!-- ============ MODE D ============ -->
-<section class="mode" id="mode-d">
-    <div class="wiz-steps">
-        <div class="wiz-step active" id="dStep1"><span class="num">1</span> Elegir familia</div>
-        <div class="wiz-step" id="dStep2"><span class="num">2</span> Cargar cantidades</div>
-        <div class="wiz-step" id="dStep3"><span class="num">3</span> Revisar y enviar</div>
-    </div>
-
-    <div class="wiz-pane active" id="dPane1">
-        <div class="pane1-head">
-            <h2>¿De qué familia querés cargar productos?</h2>
-            <div class="fam-search">
-                <div class="cbx-wrap">
-                    <input type="text" id="dFamilyInput" class="cbx-input" placeholder="🔎 Buscar familia... (↑↓ Enter)" autocomplete="off">
-                    <button type="button" class="cbx-caret clear" id="dFamilyClear" tabindex="-1" aria-label="Limpiar" style="display:none">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        <!-- ============ COLUMNA IZQ: USUARIO ============ -->
+        <aside class="col-user">
+            <div class="panel">
+                <div class="panel-head">
+                    <h3>👤 Mi cuenta</h3>
+                    <button class="panel-edit" onclick="openProfile()" title="Editar datos">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
                     </button>
                 </div>
+                <div class="panel-body" id="profileInline"></div>
             </div>
-        </div>
-        <div class="fam-grid" id="dFamGrid"></div>
-        <div class="wiz-nav">
-            <span></span>
-            <button class="btn btn-success" id="dGoFinal" disabled>Tengo todo, ir a revisar →</button>
-        </div>
-    </div>
+        </aside>
 
-    <div class="wiz-pane" id="dPane2">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:10px;flex-wrap:wrap">
-            <h2 style="font-family:'Montserrat',sans-serif;font-size:20px;color:var(--navy)" id="dPane2Title">Familia</h2>
-            <button class="btn btn-ghost" onclick="dGoStep(1)">← Cambiar familia</button>
-        </div>
-        <div class="search-wrap" style="margin-bottom:12px">
-            <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-            <input type="text" class="search-input" id="dSearch" placeholder="Filtrar dentro de la familia..." autocomplete="off">
-        </div>
-        <div style="padding:8px 4px;color:var(--text-muted);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
-            <span id="dInfo"></span>
-            <button type="button" id="dMultiToggle" class="multi-toggle">☐ Selección múltiple</button>
-        </div>
-        <div class="bulk-bar" id="dBulkBar" style="display:none">
-            <span class="info"><b id="dSelCount">0</b> seleccionados</span>
-            <button type="button" onclick="dSelectVisible()">Seleccionar visibles</button>
-            <button type="button" onclick="dClearSelection()">Limpiar</button>
-            <button type="button" class="primary" onclick="dBulkAdd()" id="dBulkAddBtn" disabled>+ Agregar con mínimo</button>
-        </div>
-        <div id="dResults" style="display:grid;gap:10px"></div>
-        <div class="wiz-nav">
-            <button class="btn btn-ghost" onclick="dGoStep(1)">← Otra familia</button>
-            <button class="btn btn-success" onclick="dGoStep(3)" id="dToReview">Revisar pedido →</button>
-        </div>
-    </div>
+        <!-- ============ COLUMNA CENTRO: CARGA + PEDIDO ============ -->
+        <main class="col-main">
+            <div class="form-card">
+                <h2><span class="step-num">⚡</span> Cargá un producto</h2>
+                <div class="form-grid">
+                    <div class="field">
+                        <label for="bFamilyInput">Familia</label>
+                        <div class="cbx-wrap">
+                            <input type="text" id="bFamilyInput" class="cbx-input" placeholder="Escribí o elegí familia..." autocomplete="off">
+                            <button type="button" class="cbx-caret" id="bFamilyCaret" tabindex="-1" aria-label="Abrir lista">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                            </button>
+                            <div class="cbx-list" id="bFamilyList"></div>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label for="bCodeInput">
+                            Código / Número
+                            <button type="button" class="multi-toggle" id="bMultiToggle" title="Activar selección múltiple">☐ Multi</button>
+                        </label>
+                        <div class="cbx-wrap">
+                            <input type="text" id="bCodeInput" class="cbx-input" placeholder="N° o código BS..." autocomplete="off" disabled>
+                            <button type="button" class="cbx-caret" id="bCodeCaret" tabindex="-1" aria-label="Abrir lista">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                            </button>
+                            <div class="cbx-list" id="bCodeList"></div>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label for="bQty">Cantidad</label>
+                        <input type="number" id="bQty" class="qty-input" min="1" step="1" placeholder="—" disabled>
+                        <div class="field-hint" id="bQtyHint">&nbsp;</div>
+                    </div>
+                    <div class="field">
+                        <label>&nbsp;</label>
+                        <button class="btn-quick-add" id="bAdd" disabled>+ Agregar</button>
+                    </div>
+                </div>
+                <div class="selected-prod empty" id="bSelected">Elegí familia y código para ver el producto</div>
+            </div>
 
-    <div class="wiz-pane" id="dPane3">
-        <h2 style="font-family:'Montserrat',sans-serif;font-size:20px;color:var(--navy);margin-bottom:14px">Revisá tu pedido</h2>
-        <div id="dReview"></div>
-        <div class="wiz-nav">
-            <button class="btn btn-ghost" onclick="dGoStep(1)">← Seguir agregando</button>
-            <button class="btn btn-success" onclick="openFinalize()">Enviar pedido →</button>
-        </div>
-    </div>
-</section>
-
-<!-- ============ MODE E (Combinado) ============ -->
-<section class="mode active" id="mode-e">
-    <div class="form-card" style="margin-bottom:14px">
-        <h2><span class="step-num">⚡</span> Carga rápida por código</h2>
-        <div class="form-grid">
-            <div class="field">
-                <label for="eFamilyInput">Familia</label>
-                <div class="cbx-wrap">
-                    <input type="text" id="eFamilyInput" class="cbx-input" placeholder="Escribí o elegí familia..." autocomplete="off">
-                    <button type="button" class="cbx-caret" id="eFamilyCaret" tabindex="-1"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></button>
-                    <div class="cbx-list" id="eFamilyList"></div>
+            <div class="preview">
+                <h3>
+                    <span>📋 Pedido actual</span>
+                    <span id="bCartCount" class="muted">0 modelos</span>
+                </h3>
+                <div id="bCartList"></div>
+                <div id="bCartFoot" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+                    <div class="cart-total-row"><span><b id="ipModels">0</b> modelos · <b id="ipPieces">0</b> piezas</span><span id="ipSubtotal">$0</span></div>
+                    <div class="cart-total-row" id="ipDiscRow" style="display:none"><span>Descuento</span><span class="green" id="ipDiscount">$0</span></div>
+                    <div class="cart-total-row grand"><span>TOTAL</span><span id="bGrandTotal">$0</span></div>
+                    <div style="display:flex;gap:8px;margin-top:10px">
+                        <button class="btn btn-ghost" onclick="if(cartLines() && confirm('¿Vaciar el pedido?')){CART={};saveCart();renderAllCarts();}" style="flex:1;justify-content:center">Vaciar</button>
+                        <button class="btn btn-success" style="flex:2;justify-content:center" onclick="openFinalize()">Finalizar →</button>
+                    </div>
                 </div>
             </div>
-            <div class="field">
-                <label for="eCodeInput">
-                    Código / Número
-                    <button type="button" class="multi-toggle" id="eMultiToggle" title="Selección múltiple">☐ Multi</button>
-                </label>
-                <div class="cbx-wrap">
-                    <input type="text" id="eCodeInput" class="cbx-input" placeholder="N° o código BS..." autocomplete="off" disabled>
-                    <button type="button" class="cbx-caret" id="eCodeCaret" tabindex="-1"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></button>
-                    <div class="cbx-list" id="eCodeList"></div>
+        </main>
+
+        <!-- ============ COLUMNA DER: HISTORIAL ============ -->
+        <aside class="col-hist">
+            <div class="panel">
+                <div class="panel-head">
+                    <h3>📜 Historial <span id="histCountInline" class="hist-count-pill">0</span></h3>
+                    <button class="panel-edit" onclick="clearHistory()" title="Vaciar historial" id="histClearBtn">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                    </button>
                 </div>
+                <div class="panel-body" id="historyInline"></div>
             </div>
-            <div class="field" id="eQtyField">
-                <label for="eQty">Cantidad</label>
-                <input type="number" id="eQty" class="qty-input" min="1" step="1" placeholder="—" disabled>
-                <div class="field-hint" id="eQtyHint">&nbsp;</div>
-            </div>
-            <div class="field" id="eAddField">
-                <label>&nbsp;</label>
-                <button class="btn-quick-add" id="eAdd" disabled>+ Agregar</button>
-            </div>
-        </div>
-        <div class="selected-prod empty" id="eSelected">Elegí familia para empezar</div>
-    </div>
+        </aside>
 
-    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:14px;box-shadow:var(--shadow-sm)">
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap">
-            <h3 style="font-family:'Montserrat',sans-serif;font-size:15px;color:var(--navy);display:flex;align-items:center;gap:6px">
-                📂 Catálogo <span style="color:var(--text-muted);font-size:12px;font-weight:600" id="eCatalogTitle">— elegí una familia arriba</span>
-            </h3>
-            <button type="button" id="eCardsMultiToggle" class="multi-toggle" disabled>☐ Selección múltiple</button>
-        </div>
-        <div class="search-wrap" style="margin-bottom:10px">
-            <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-            <input type="text" class="search-input" id="eGridSearch" placeholder="Filtrar dentro de la familia (prioriza N°)..." autocomplete="off" disabled>
-        </div>
-        <div class="bulk-bar" id="eBulkBar" style="display:none">
-            <span class="info"><b id="eSelCount">0</b> seleccionados</span>
-            <button type="button" onclick="eSelectVisible()">Seleccionar visibles</button>
-            <button type="button" onclick="eClearSelection()">Limpiar</button>
-            <button type="button" class="primary" onclick="eBulkAdd()" id="eBulkAddBtn" disabled>+ Agregar con mínimo</button>
-        </div>
-        <div id="eGrid" style="display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(280px,1fr))">
-            <div class="empty"><div class="empty-icon">📂</div><div class="empty-title">Elegí una familia</div><div style="font-size:13px">arriba para ver sus productos</div></div>
-        </div>
     </div>
-</section>
-
 </div>
+
 
 <!-- FLOATING MINI-CART -->
 <button class="mini-cart empty" id="miniCart" onclick="openCart()" type="button">
@@ -967,7 +957,6 @@ let DATA = [];
 let FAMS = [];
 let CART = {};
 let DISCOUNT = 0;
-let MODE = 'e';
 
 const _urlD = parseFloat(new URLSearchParams(location.search).get('d'));
 if (!isNaN(_urlD) && _urlD >= 0 && _urlD <= 99) DISCOUNT = _urlD;
@@ -1369,221 +1358,6 @@ function bRenderCart(){
     $('bGrandTotal').textContent = fmtMoney(cartTotal());
 }
 
-/* =========================================================
-   MODE D
-   ========================================================= */
-const stateD = { step:1, family:null, search:'', famQuery:'', famHl:-1, multi:false, multiSel:new Set() };
-
-function dInit(){
-    dRenderFamGrid();
-    $('dMultiToggle').addEventListener('click', () => {
-        stateD.multi = !stateD.multi;
-        const btn = $('dMultiToggle');
-        btn.classList.toggle('on', stateD.multi);
-        btn.innerHTML = stateD.multi ? '☑ Selección múltiple' : '☐ Selección múltiple';
-        $('dBulkBar').style.display = stateD.multi ? 'flex' : 'none';
-        if (!stateD.multi) stateD.multiSel.clear();
-        dRenderProducts();
-    });
-    const famInp = $('dFamilyInput');
-    famInp.addEventListener('input', () => {
-        stateD.famQuery = famInp.value;
-        stateD.famHl = famInp.value ? 0 : -1;
-        dRenderFamGrid();
-        $('dFamilyClear').style.display = famInp.value ? 'flex' : 'none';
-    });
-    famInp.addEventListener('keydown', e => {
-        const cards = Array.from($('dFamGrid').querySelectorAll('.fam-card'));
-        if (!cards.length) return;
-        if (e.key === 'ArrowDown'){
-            stateD.famHl = Math.min(cards.length - 1, Math.max(-1, stateD.famHl) + 1);
-            dPaintFamHl(cards);
-            e.preventDefault();
-        } else if (e.key === 'ArrowUp'){
-            stateD.famHl = Math.max(0, stateD.famHl - 1);
-            dPaintFamHl(cards);
-            e.preventDefault();
-        } else if (e.key === 'Enter'){
-            let i = stateD.famHl;
-            if (i < 0) i = 0;
-            const f = cards[i] && cards[i].dataset.fam;
-            if (f){ dPickFamily(f); e.preventDefault(); }
-        } else if (e.key === 'Escape'){
-            famInp.value = '';
-            stateD.famQuery = '';
-            stateD.famHl = -1;
-            dRenderFamGrid();
-            $('dFamilyClear').style.display = 'none';
-            e.preventDefault();
-        }
-    });
-    $('dFamilyClear').addEventListener('click', () => {
-        famInp.value = '';
-        stateD.famQuery = '';
-        stateD.famHl = -1;
-        dRenderFamGrid();
-        $('dFamilyClear').style.display = 'none';
-        famInp.focus();
-    });
-
-    $('dSearch').addEventListener('input', e => { stateD.search = e.target.value; dRenderProducts(); });
-    $('dGoFinal').onclick = () => dGoStep(3);
-}
-
-function dPaintFamHl(cards){
-    cards.forEach((c,i) => c.classList.toggle('hl', i === stateD.famHl));
-    if (cards[stateD.famHl]) cards[stateD.famHl].scrollIntoView({block:'nearest'});
-}
-
-function dRenderFamGrid(){
-    const counts = {};
-    DATA.forEach(it => { counts[it.p] = (counts[it.p]||0)+1; });
-    const inCartByFam = {};
-    Object.values(CART).forEach(e => { inCartByFam[e.item.p] = (inCartByFam[e.item.p]||0)+1; });
-
-    const nq = norm(stateD.famQuery || '');
-    const filtered = nq ? FAMS.filter(f => norm(f).includes(nq)) : FAMS;
-
-    if (!filtered.length){
-        $('dFamGrid').innerHTML = '<div class="empty" style="grid-column:1/-1"><div class="empty-title">Sin familias</div><div style="font-size:13px">Probá con otra búsqueda</div></div>';
-    } else {
-        $('dFamGrid').innerHTML = filtered.map((f,i) => {
-            const has = inCartByFam[f] || 0;
-            const hl = (i === stateD.famHl) ? ' hl' : '';
-            return '<button type="button" class="fam-card'+(has?' has-items':'')+hl+'" data-fam="'+escapeHtml(f)+'" onclick="dPickFamily(this.dataset.fam)">'+
-                '<div class="fam-card-name">'+escapeHtml(f)+'</div>'+
-                '<div class="fam-card-meta">'+(counts[f]||0)+' productos'+(has?' · <b>'+has+' en pedido</b>':'')+'</div>'+
-            '</button>';
-        }).join('');
-    }
-    $('dGoFinal').disabled = !cartLines();
-}
-
-function dPickFamily(f){
-    stateD.family = f;
-    stateD.search = '';
-    $('dSearch').value = '';
-    $('dPane2Title').textContent = f;
-    dRenderProducts();
-    dGoStep(2);
-}
-
-function dRenderProducts(){
-    if (!stateD.family) return;
-    const qs = norm(stateD.search).split(/\s+/).filter(Boolean);
-    let list = DATA.filter(it => it.p === stateD.family).filter(it => {
-        if (!qs.length) return true;
-        return qs.every(t => it._n.startsWith(t) || it._all.includes(t));
-    });
-    // Prioridad al número (los que startsWith primero)
-    if (qs.length){
-        list.sort((a,b) => {
-            const aS = qs.some(t => a._n.startsWith(t));
-            const bS = qs.some(t => b._n.startsWith(t));
-            if (aS && !bS) return -1;
-            if (bS && !aS) return 1;
-            return 0;
-        });
-    }
-    $('dInfo').textContent = list.length + ' productos en '+stateD.family;
-    if (!list.length){
-        $('dResults').innerHTML = '<div class="empty"><div class="empty-icon">🔍</div><div class="empty-title">Sin resultados</div></div>';
-    } else {
-        $('dResults').innerHTML = list.map(it => {
-            let html = productCardHtml(it);
-            if (stateD.multi){
-                const checked = stateD.multiSel.has(it.id);
-                // Add 'selected' class + onclick on the outer div
-                html = html.replace(
-                    /^<div class="product-card([^"]*)"([^>]*)>/,
-                    '<div class="product-card$1'+(checked?' selected':'')+'"$2 onclick="dToggleSel(\''+it.id+'\',event)">' +
-                    '<div class="pc-chk">'+(checked?'✓':'')+'</div>'
-                );
-            }
-            return html;
-        }).join('');
-    }
-    $('dToReview').disabled = !cartLines();
-    dUpdateBulkUI();
-    $('dResults').dataset.visibleIds = JSON.stringify(list.map(it => it.id));
-}
-
-function dToggleSel(id, ev){
-    // No togglear si el click fue en el stepper
-    if (ev && ev.target.closest('.stepper')) return;
-    if (ev && ev.target.closest('.cart-item-rm')) return;
-    if (stateD.multiSel.has(id)) stateD.multiSel.delete(id);
-    else stateD.multiSel.add(id);
-    // Hide mobile keyboard if open
-    if ('ontouchstart' in window || navigator.maxTouchPoints > 0){
-        const a = document.activeElement;
-        if (a && a.tagName === 'INPUT') a.blur();
-    }
-    dRenderProducts();
-}
-function dSelectVisible(){
-    const ids = JSON.parse($('dResults').dataset.visibleIds || '[]');
-    ids.forEach(id => stateD.multiSel.add(id));
-    dRenderProducts();
-}
-function dClearSelection(){
-    stateD.multiSel.clear();
-    dRenderProducts();
-}
-function dBulkAdd(){
-    if (!stateD.multiSel.size) return;
-    const items = DATA.filter(it => stateD.multiSel.has(it.id));
-    bulkAddItems(items, 'min');
-    stateD.multiSel.clear();
-    dRenderProducts();
-}
-function dUpdateBulkUI(){
-    const n = stateD.multiSel.size;
-    $('dSelCount').textContent = n;
-    $('dBulkAddBtn').disabled = !n;
-    $('dBulkAddBtn').textContent = n ? '+ Agregar '+n+' con mínimo' : '+ Agregar con mínimo';
-}
-
-function dRenderReview(){
-    const items = Object.values(CART);
-    if (!items.length){
-        $('dReview').innerHTML = '<div class="cart-empty"><div class="icon">📋</div><div>No agregaste productos todavía</div></div>';
-        return;
-    }
-    const byFam = {};
-    items.forEach(e => { (byFam[e.item.p] = byFam[e.item.p] || []).push(e); });
-    let html = '';
-    Object.keys(byFam).sort().forEach(fam => {
-        const subtotal = byFam[fam].reduce((a,e)=>a+lineTotal(e.item,e.qty),0);
-        html += '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px;box-shadow:var(--shadow-sm)">';
-        html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border)"><h3 style="font-family:Montserrat;font-size:14px;color:var(--navy)">'+escapeHtml(fam)+'</h3><span style="font-weight:800;color:var(--navy);font-family:Montserrat">'+fmtMoney(subtotal)+'</span></div>';
-        byFam[fam].forEach(e => {
-            const minWarn = e.qty < e.item.cm ? ' <span style="color:var(--amber);font-weight:700;font-size:11px">(min '+e.item.cm+')</span>' : '';
-            html += '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px dashed var(--border);font-size:13px;flex-wrap:wrap"><div style="flex:1;min-width:160px"><b>N°'+escapeHtml(e.item.n)+'</b> · '+escapeHtml(e.item.d)+minWarn+'</div>'+
-                stepperHtml(e.item)+
-                '<div style="min-width:90px;text-align:right;font-weight:700;color:var(--navy)">'+fmtMoney(lineTotal(e.item,e.qty))+'</div>'+
-                '<button class="cart-item-rm" onclick="setQty(\''+e.item.id+'\',0)" title="Quitar">✕</button>'+
-            '</div>';
-        });
-        html += '</div>';
-    });
-    html += '<div style="background:var(--navy);color:#fff;padding:14px 18px;border-radius:12px;display:flex;justify-content:space-between;align-items:center;font-family:Montserrat;flex-wrap:wrap;gap:6px"><span style="font-size:14px;text-transform:uppercase;letter-spacing:.06em">Total · '+cartLines()+' modelos · '+cartCount()+' piezas</span><span style="font-size:24px;font-weight:900">'+fmtMoney(cartTotal())+'</span></div>';
-    $('dReview').innerHTML = html;
-}
-
-function dGoStep(n){
-    stateD.step = n;
-    [1,2,3].forEach(i => {
-        const stepEl = $('dStep'+i);
-        const paneEl = $('dPane'+i);
-        stepEl.classList.toggle('active', i === n);
-        stepEl.classList.toggle('done', i < n);
-        paneEl.classList.toggle('active', i === n);
-    });
-    if (n === 1){ dRenderFamGrid(); setTimeout(()=>$('dFamilyInput').focus(), 80); }
-    if (n === 2){ dRenderProducts(); setTimeout(()=>$('dSearch').focus(), 80); }
-    if (n === 3){ dRenderReview(); }
-}
 
 /* =========================================================
    MINI-CART
@@ -1738,256 +1512,71 @@ function downloadCSV(){
    ========================================================= */
 function renderAllCarts(){
     bRenderCart();
-    if (stateD.step === 1) dRenderFamGrid();
-    if (stateD.step === 2) dRenderProducts();
-    if (stateD.step === 3) dRenderReview();
-    if (stateE.family) eRenderGrid();
     renderDrawer();
     renderMini();
+    renderProfileInline();
+    renderHistoryInline();
     if ($('modalBg').classList.contains('visible')) $('fSummary').textContent = buildSummary();
-    if ($('historyBg') && $('historyBg').classList.contains('visible')) renderHistory();
-}
-
-function switchMode(m){
-    MODE = m;
-    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.mode === m));
-    document.querySelectorAll('.mode').forEach(s => s.classList.toggle('active', s.id === 'mode-'+m));
-    closeCart();
-    if (m === 'b'){ setTimeout(()=>$('bFamilyInput').focus(), 80); }
-    if (m === 'd'){ dGoStep(stateD.step); }
-    if (m === 'e'){ setTimeout(()=>$('eFamilyInput').focus(), 80); }
 }
 
 /* =========================================================
-   MODE E (Combinado: carga rápida + catálogo familia)
+   INLINE PANELS (left = profile, right = history)
    ========================================================= */
-const stateE = { family:'', selected:null, multi:false, multiSel:new Set(),
-                 cardsMulti:false, cardsSel:new Set(), gridSearch:'' };
-let eCodeCbx;
-
-function eInit(){
-    makeCombobox({
-        input: $('eFamilyInput'),
-        listEl: $('eFamilyList'),
-        caretBtn: $('eFamilyCaret'),
-        getItems: (q) => {
-            const nq = norm(q);
-            const list = nq ? FAMS.filter(f => norm(f).includes(nq)) : FAMS.slice();
-            return list.map(f => ({ kind:'fam', value:f, label:f }));
-        },
-        renderItem: it => '<span class="num">📁</span><span class="desc">'+escapeHtml(it.label)+'</span>',
-        onSelect: it => { eSetFamily(it.value); $('eCodeInput').focus(); },
-    });
-
-    eCodeCbx = makeCombobox({
-        input: $('eCodeInput'),
-        listEl: $('eCodeList'),
-        caretBtn: $('eCodeCaret'),
-        getItems: (q) => {
-            if (!stateE.family) return [];
-            const nq = norm(q);
-            return DATA.filter(it => it.p === stateE.family).filter(it => {
-                if (!nq) return true;
-                return it._n.startsWith(nq) || it._n.includes(nq) || it._c.includes(nq) || it._d.includes(nq);
-            }).sort((a,b) => {
-                if (!nq) return 0;
-                const aS = a._n.startsWith(nq), bS = b._n.startsWith(nq);
-                if (aS && !bS) return -1;
-                if (bS && !aS) return 1;
-                return 0;
-            }).slice(0,80).map(it => ({ kind:'prod', item:it }));
-        },
-        renderItem: it => {
-            const x = it.item;
-            const cmI = x.cm > 1 ? ' · <span style="color:var(--amber);font-weight:700">mín '+x.cm+'</span>' : '';
-            return '<span class="num">N°'+escapeHtml(x.n)+'</span>'+
-                '<span class="desc">'+escapeHtml(x.d)+(x.c?'<small>'+escapeHtml(x.c)+cmI+'</small>': cmI ? '<small>'+cmI+'</small>' : '')+'</span>'+
-                '<span class="price">'+fmtMoney(netPrice(x.pl))+'</span>';
-        },
-        onSelect: it => { eSelectProduct(it.item); },
-        isMulti: () => stateE.multi,
-        isChecked: it => stateE.multiSel.has(it.item.id),
-        toggle: it => {
-            if (stateE.multiSel.has(it.item.id)) stateE.multiSel.delete(it.item.id);
-            else stateE.multiSel.add(it.item.id);
-        },
-        countSelected: () => stateE.multiSel.size,
-        bulkConfirm: () => {
-            if (!stateE.multiSel.size) return;
-            const items = DATA.filter(it => stateE.multiSel.has(it.id));
-            bulkAddItems(items, 'min');
-            stateE.multiSel.clear();
-            $('eCodeInput').value = '';
-            $('eCodeInput').focus();
-        }
-    });
-
-    $('eMultiToggle').addEventListener('click', () => {
-        stateE.multi = !stateE.multi;
-        const btn = $('eMultiToggle');
-        btn.classList.toggle('on', stateE.multi);
-        btn.innerHTML = stateE.multi ? '☑ Multi' : '☐ Multi';
-        if (!stateE.multi) stateE.multiSel.clear();
-        $('eQtyField').style.display = stateE.multi ? 'none' : '';
-        $('eAddField').style.display = stateE.multi ? 'none' : '';
-        $('eSelected').style.display = stateE.multi ? 'none' : '';
-        if (stateE.multi){ $('eCodeInput').focus(); eCodeCbx.refresh(); }
-    });
-
-    $('eQty').addEventListener('input', e => {
-        if (!stateE.selected) return;
-        const q = parseInt(e.target.value,10);
-        const cm = stateE.selected.cm;
-        $('eQtyHint').innerHTML = (q && q < cm)
-            ? '<span style="color:var(--amber)">⚠ Bajo el mínimo de '+cm+'</span>'
-            : (cm>1 ? 'Mín. sugerida: '+cm : '&nbsp;');
-        $('eAdd').disabled = !(q > 0);
-    });
-    $('eQty').addEventListener('keydown', e => {
-        if (e.key === 'Enter' && !$('eAdd').disabled){ e.preventDefault(); $('eAdd').click(); }
-    });
-
-    $('eAdd').addEventListener('click', () => {
-        if (!stateE.selected) return;
-        const q = parseInt($('eQty').value,10) || 0;
-        if (!q) return;
-        const cur = CART[stateE.selected.id] ? CART[stateE.selected.id].qty : 0;
-        setQty(stateE.selected.id, cur + q);
-        toast('Agregado: '+stateE.selected.d.substring(0,28),'success');
-        pulseMini();
-        stateE.selected = null;
-        $('eCodeInput').value = '';
-        $('eCodeInput').classList.remove('has-value');
-        $('eQty').value = ''; $('eQty').disabled = true;
-        $('eAdd').disabled = true;
-        $('eQtyHint').innerHTML = '&nbsp;';
-        $('eSelected').className = 'selected-prod empty';
-        $('eSelected').textContent = 'Escribí código del próximo producto';
-        $('eCodeInput').focus();
-    });
-
-    // Grid search
-    $('eGridSearch').addEventListener('input', e => { stateE.gridSearch = e.target.value; eRenderGrid(); });
-
-    // Cards multi toggle
-    $('eCardsMultiToggle').addEventListener('click', () => {
-        stateE.cardsMulti = !stateE.cardsMulti;
-        const btn = $('eCardsMultiToggle');
-        btn.classList.toggle('on', stateE.cardsMulti);
-        btn.innerHTML = stateE.cardsMulti ? '☑ Selección múltiple' : '☐ Selección múltiple';
-        $('eBulkBar').style.display = stateE.cardsMulti ? 'flex' : 'none';
-        if (!stateE.cardsMulti) stateE.cardsSel.clear();
-        eRenderGrid();
-    });
-}
-
-function eSetFamily(f){
-    stateE.family = f;
-    stateE.selected = null;
-    stateE.cardsSel.clear();
-    stateE.gridSearch = '';
-    $('eFamilyInput').value = f;
-    $('eFamilyInput').classList.add('has-value');
-    $('eCodeInput').disabled = false;
-    $('eCodeInput').value = '';
-    $('eCodeInput').classList.remove('has-value');
-    $('eQty').disabled = true; $('eQty').value = '';
-    $('eAdd').disabled = true;
-    $('eQtyHint').innerHTML = '&nbsp;';
-    $('eSelected').className = 'selected-prod empty';
-    $('eSelected').textContent = 'Escribí código o elegí del catálogo abajo';
-    $('eCatalogTitle').textContent = '— ' + f;
-    $('eGridSearch').value = '';
-    $('eGridSearch').disabled = false;
-    $('eCardsMultiToggle').disabled = false;
-    eRenderGrid();
-}
-
-function eSelectProduct(item){
-    stateE.selected = item;
-    $('eCodeInput').value = item.n;
-    $('eCodeInput').classList.add('has-value');
-    $('eQty').disabled = false;
-    $('eQty').value = item.cm > 1 ? item.cm : 1;
-    $('eAdd').disabled = false;
-    $('eQtyHint').innerHTML = item.cm>1 ? 'Mín. sugerida: '+item.cm : '&nbsp;';
-    const sel = $('eSelected');
-    sel.className = 'selected-prod has';
-    sel.innerHTML = '<b>N° '+escapeHtml(item.n)+' — '+escapeHtml(item.d)+'</b><br>' +
-        'Cód. BS: <span style="font-family:ui-monospace,monospace">'+escapeHtml(item.c||'—')+'</span> · ' +
-        'Precio: <b style="color:var(--green-dark)">'+fmtMoney(netPrice(item.pl))+'</b>' +
-        (item.cm>1 ? ' · <span style="color:var(--amber);font-weight:700">Mín: '+item.cm+'</span>' : '');
-    setTimeout(() => { $('eQty').focus(); $('eQty').select(); }, 50);
-}
-
-function eRenderGrid(){
-    const grid = $('eGrid');
-    if (!stateE.family){
-        grid.innerHTML = '<div class="empty"><div class="empty-icon">📂</div><div class="empty-title">Elegí una familia</div><div style="font-size:13px">arriba para ver sus productos</div></div>';
+function renderProfileInline(){
+    const el = $('profileInline');
+    if (!el) return;
+    const has = PROFILE.name || PROFILE.biz || PROFILE.exp || PROFILE.ven;
+    if (!has){
+        el.innerHTML = '<div class="pf-empty"><div class="icon">👤</div><div>Cargá tus datos una vez y se autocompletan en cada pedido.</div><button onclick="openProfile()">+ Cargar mis datos</button></div>';
         return;
     }
-    const qs = norm(stateE.gridSearch).split(/\s+/).filter(Boolean);
-    let list = DATA.filter(it => it.p === stateE.family).filter(it => {
-        if (!qs.length) return true;
-        return qs.every(t => it._n.startsWith(t) || it._all.includes(t));
-    });
-    if (qs.length){
-        list.sort((a,b) => {
-            const aS = qs.some(t => a._n.startsWith(t));
-            const bS = qs.some(t => b._n.startsWith(t));
-            if (aS && !bS) return -1;
-            if (bS && !aS) return 1;
-            return 0;
-        });
-    }
-    if (!list.length){
-        grid.innerHTML = '<div class="empty"><div class="empty-icon">🔍</div><div class="empty-title">Sin resultados</div></div>';
-    } else {
-        grid.innerHTML = list.map(it => {
-            let html = productCardHtml(it);
-            if (stateE.cardsMulti){
-                const checked = stateE.cardsSel.has(it.id);
-                html = html.replace(
-                    /^<div class="product-card([^"]*)"([^>]*)>/,
-                    '<div class="product-card$1'+(checked?' selected':'')+'"$2 onclick="eToggleCardSel(\''+it.id+'\',event)">' +
-                    '<div class="pc-chk">'+(checked?'✓':'')+'</div>'
-                );
-            }
-            return html;
-        }).join('');
-    }
-    grid.dataset.visibleIds = JSON.stringify(list.map(it => it.id));
-    eUpdateBulkUI();
+    const row = (lbl, val) => val ? '<div class="pf-row"><span class="pf-label">'+lbl+'</span><span class="pf-value">'+escapeHtml(val)+'</span></div>' : '';
+    el.innerHTML =
+        row('Nombre',  PROFILE.name) +
+        row('Negocio', PROFILE.biz) +
+        row('Expreso', PROFILE.exp) +
+        row('Vendedor',PROFILE.ven);
 }
 
-function eToggleCardSel(id, ev){
-    if (ev && ev.target.closest('.stepper')) return;
-    if (ev && ev.target.closest('.cart-item-rm')) return;
-    if (stateE.cardsSel.has(id)) stateE.cardsSel.delete(id);
-    else stateE.cardsSel.add(id);
-    if ('ontouchstart' in window || navigator.maxTouchPoints > 0){
-        const a = document.activeElement; if (a && a.tagName === 'INPUT') a.blur();
+function renderHistoryInline(){
+    const el = $('historyInline');
+    if (!el) return;
+    const pill = $('histCountInline');
+    if (pill){
+        pill.textContent = HISTORY.length;
+        pill.classList.toggle('zero', HISTORY.length === 0);
     }
-    eRenderGrid();
-}
-function eSelectVisible(){
-    const ids = JSON.parse($('eGrid').dataset.visibleIds || '[]');
-    ids.forEach(id => stateE.cardsSel.add(id));
-    eRenderGrid();
-}
-function eClearSelection(){ stateE.cardsSel.clear(); eRenderGrid(); }
-function eBulkAdd(){
-    if (!stateE.cardsSel.size) return;
-    const items = DATA.filter(it => stateE.cardsSel.has(it.id));
-    bulkAddItems(items, 'min');
-    stateE.cardsSel.clear();
-    eRenderGrid();
-}
-function eUpdateBulkUI(){
-    const n = stateE.cardsSel.size;
-    $('eSelCount').textContent = n;
-    $('eBulkAddBtn').disabled = !n;
-    $('eBulkAddBtn').textContent = n ? '+ Agregar '+n+' con mínimo' : '+ Agregar con mínimo';
+    const clearBtn = $('histClearBtn');
+    if (clearBtn) clearBtn.style.display = HISTORY.length ? '' : 'none';
+
+    if (!HISTORY.length){
+        el.innerHTML = '<div class="pf-empty"><div class="icon">📭</div><div>Acá vas a ver los pedidos enviados.<br>Se guardan automáticamente al enviar por WhatsApp o email.</div></div>';
+        return;
+    }
+    el.innerHTML = HISTORY.map((o,idx) => {
+        const dt = new Date(o.date);
+        const fecha = dt.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'2-digit'});
+        const hora = dt.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
+        const cli = o.client ? ' · ' + escapeHtml(o.client.substring(0,18)) : '';
+        return '<details class="hist-row">'+
+            '<summary>'+
+                '<div class="hr-l">'+
+                    '<div class="hr-date">'+fecha+' '+hora+cli+'</div>'+
+                    '<div class="hr-meta">'+o.lines+' mod · '+o.pieces+' pz'+(o.discount>0?' · -'+o.discount+'%':'')+'</div>'+
+                '</div>'+
+                '<div class="hr-total">'+fmtMoney(o.total)+'</div>'+
+            '</summary>'+
+            '<div class="hr-body">'+
+                '<div class="hr-summary">'+escapeHtml(o.summary)+'</div>'+
+                '<div class="hr-actions">'+
+                    '<button onclick="repeatOrder('+idx+')" title="Cargar al carrito">↺ Repetir</button>'+
+                    '<button onclick="downloadHistCSV('+idx+')">⬇ CSV</button>'+
+                    '<button onclick="copyHistSummary('+idx+')">📋 Copiar</button>'+
+                    '<button class="del" onclick="deleteHistItem('+idx+')">✕</button>'+
+                '</div>'+
+            '</div>'+
+        '</details>';
+    }).join('');
 }
 
 /* =========================================================
@@ -2008,14 +1597,8 @@ function saveHistoryStorage(){
     paintHistoryBadge();
 }
 function paintHistoryBadge(){
-    const b = $('historyBadge');
-    if (!b) return;
-    if (HISTORY.length){
-        b.style.display = 'inline-block';
-        b.textContent = HISTORY.length;
-    } else {
-        b.style.display = 'none';
-    }
+    // Now rendered inline (right column)
+    if (typeof renderHistoryInline === 'function') renderHistoryInline();
 }
 function saveCurrentToHistory(via){
     const items = Object.values(CART);
@@ -2153,10 +1736,7 @@ function loadProfile(){
     paintProfileBtn();
 }
 function paintProfileBtn(){
-    const btn = $('profileBtn'), lbl = $('profileBtnLabel');
-    const has = PROFILE.name || PROFILE.biz || PROFILE.ven;
-    btn.classList.toggle('has-data', !!has);
-    lbl.textContent = PROFILE.ven || PROFILE.name || PROFILE.biz || 'Mi cuenta';
+    if (typeof renderProfileInline === 'function') renderProfileInline();
 }
 function openProfile(){
     $('pfName').value = PROFILE.name || '';
@@ -2241,9 +1821,6 @@ function bulkAddItems(items, mode){
 document.addEventListener('DOMContentLoaded', async () => {
     $('discInput').value = DISCOUNT;
     $('discInput').addEventListener('input', e => setDiscount(e.target.value));
-    document.querySelectorAll('.tab').forEach(t => {
-        t.addEventListener('click', () => switchMode(t.dataset.mode));
-    });
     ['fClient','fNotes'].forEach(id => {
         const el = $(id);
         if (el) el.addEventListener('input', () => $('fSummary').textContent = buildSummary());
@@ -2260,10 +1837,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     catch(e) { toast('Error cargando productos: '+e.message); return; }
 
     bInit();
-    dInit();
-    eInit();
     renderAllCarts();
-    setTimeout(() => $('eFamilyInput').focus(), 100);
+    setTimeout(() => $('bFamilyInput').focus(), 100);
 });
 </script>
 </body>
