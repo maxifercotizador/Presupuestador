@@ -537,7 +537,7 @@ body{
     position:absolute;top:100%;left:0;right:0;margin-top:2px;
     background:#fff;border:1px solid var(--border-strong);
     border-radius:10px;max-height:300px;overflow-y:auto;
-    z-index:60;box-shadow:var(--shadow-lg);display:none;
+    z-index:45;box-shadow:var(--shadow-lg);display:none;
 }
 .cbx-list.visible{display:block}
 .cbx-item{
@@ -932,7 +932,7 @@ body{
             <img src="img/favicon-192.png" alt="MAXIFER" onerror="this.src='favicon.ico'">
             <div class="brand-text">MAXIFER<br>Pedido Faltantes</div>
         </a>
-        <span class="ver-chip" id="verChip">v12</span>
+        <span class="ver-chip" id="verChip">v13</span>
         <div class="top-actions">
             <button id="userChip" class="top-chip" type="button" onclick="openProfile()" title="Mi cuenta">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -1714,7 +1714,18 @@ function bRenderCart(){
     });
     list.innerHTML = html;
     $('bCartFoot').style.display = 'block';
-    $('bGrandTotal').textContent = fmtMoney(cartTotal());
+    const sub = cartSubtotal();
+    const tot = cartTotal();
+    $('ipModels').textContent = cartLines();
+    $('ipPieces').textContent = cartCount();
+    $('ipSubtotal').textContent = fmtMoney(sub);
+    if (DISCOUNT > 0){
+        $('ipDiscRow').style.display = 'flex';
+        $('ipDiscount').textContent = '−' + fmtMoney(sub - tot);
+    } else {
+        $('ipDiscRow').style.display = 'none';
+    }
+    $('bGrandTotal').textContent = fmtMoney(tot);
 
     // Update bulk bar count
     const n = cartState.sel.size;
