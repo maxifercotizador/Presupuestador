@@ -527,6 +527,8 @@ body{
 .cbx-input:focus{border-color:var(--green);background:#fff;box-shadow:0 0 0 3px rgba(78,168,62,.12)}
 .cbx-input:disabled{background:var(--bg-soft);color:var(--text-dim);cursor:not-allowed;border-color:var(--border)}
 .cbx-input.has-value{font-weight:600;color:var(--navy)}
+/* Cuando hay tanto search como caret, hay que dar mas padding-right */
+.cbx-wrap:has(.cbx-search) .cbx-input{padding-right:64px}
 .cbx-caret{
     position:absolute;right:8px;top:50%;transform:translateY(-50%);
     background:transparent;border:none;color:var(--text-muted);
@@ -535,6 +537,17 @@ body{
 }
 .cbx-caret:hover{background:var(--bg-soft);color:var(--navy)}
 .cbx-caret.clear:hover{color:var(--red)}
+/* Boton 'Tipear' (lapicito) — solo en touch devices, pq desktop usa teclado fisico */
+.cbx-search{
+    position:absolute;right:38px;top:50%;transform:translateY(-50%);
+    background:transparent;border:none;color:var(--text-muted);
+    width:28px;height:28px;border-radius:6px;cursor:pointer;
+    display:none;align-items:center;justify-content:center;
+}
+.cbx-search:hover{background:var(--bg-soft);color:var(--navy)}
+@media (pointer:coarse){
+    .cbx-search{display:flex}
+}
 .cbx-list{
     position:absolute;top:100%;left:0;right:0;margin-top:2px;
     background:#fff;border:1px solid var(--border-strong);
@@ -856,6 +869,36 @@ body{
     max-height:280px;overflow-y:auto;border:1px solid var(--border);
 }
 
+/* WARNING BANNER en modal Finalize */
+.warning-banner{
+    background:linear-gradient(180deg, rgba(217,119,6,.10), rgba(217,119,6,.05));
+    border:1px solid rgba(217,119,6,.35);
+    border-radius:10px;padding:12px 14px;margin-bottom:14px;
+    color:var(--amber);font-size:13px;line-height:1.45;
+}
+.warning-banner ul{color:var(--text);margin-top:4px}
+.warning-banner li{margin-bottom:2px}
+
+/* GLOBAL SEARCH (arriba del form) */
+.global-search{
+    background:var(--bg-card);border:1px solid var(--border);
+    border-radius:14px;padding:12px;margin-bottom:14px;
+    box-shadow:var(--shadow-sm);position:relative;
+}
+.global-search::before{
+    content:'';position:absolute;top:0;left:0;right:0;height:3px;
+    background:linear-gradient(90deg,var(--orange),var(--green));
+    border-top-left-radius:14px;border-top-right-radius:14px;
+}
+.global-search .gs-icon{
+    position:absolute;left:24px;top:50%;transform:translateY(-50%);
+    font-size:16px;pointer-events:none;
+}
+.global-search .gs-input{
+    padding-left:42px !important;
+    background:#fff;
+}
+
 /* TOAST */
 .toast{
     position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);
@@ -879,7 +922,7 @@ body{
             <img src="img/favicon-192.png" alt="MAXIFER" onerror="this.src='favicon.ico'">
             <div class="brand-text">MAXIFER<br>Pedido Faltantes</div>
         </a>
-        <span class="ver-chip" id="verChip">v15</span>
+        <span class="ver-chip" id="verChip">v16</span>
         <div class="top-actions">
             <button id="userChip" class="top-chip" type="button" onclick="openProfile()" title="Mi cuenta">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -904,13 +947,27 @@ body{
 
         <!-- ============ COLUMNA FORM ============ -->
         <main class="col-main">
+            <div class="global-search">
+                <div class="cbx-wrap">
+                    <span class="gs-icon">🔍</span>
+                    <input type="text" id="globalSearchInput" class="cbx-input gs-input" placeholder="Buscá lo que sea (sin elegir familia)..." autocomplete="off" inputmode="none">
+                    <button type="button" class="cbx-search" id="globalSearchEdit" tabindex="-1" aria-label="Tipear">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                    </button>
+                    <div class="cbx-list" id="globalSearchList"></div>
+                </div>
+            </div>
+
             <div class="form-card">
                 <h2><span class="step-num">⚡</span> Cargá un producto</h2>
                 <div class="form-grid">
                     <div class="field">
                         <label for="bFamilyInput">Familia</label>
                         <div class="cbx-wrap">
-                            <input type="text" id="bFamilyInput" class="cbx-input" placeholder="Escribí o elegí familia..." autocomplete="off">
+                            <input type="text" id="bFamilyInput" class="cbx-input" placeholder="Tocá para elegir familia..." autocomplete="off" inputmode="none">
+                            <button type="button" class="cbx-search" id="bFamilyEdit" tabindex="-1" aria-label="Tipear">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                            </button>
                             <button type="button" class="cbx-caret" id="bFamilyCaret" tabindex="-1" aria-label="Abrir lista">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
                             </button>
@@ -923,7 +980,10 @@ body{
                             <button type="button" class="multi-toggle" id="bMultiToggle" title="Elegí familia primero" disabled>Multi</button>
                         </label>
                         <div class="cbx-wrap">
-                            <input type="text" id="bCodeInput" class="cbx-input" placeholder="N° o código BS..." autocomplete="off" disabled>
+                            <input type="text" id="bCodeInput" class="cbx-input" placeholder="N° o código BS..." autocomplete="off" disabled inputmode="none">
+                            <button type="button" class="cbx-search" id="bCodeEdit" tabindex="-1" aria-label="Tipear">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                            </button>
                             <button type="button" class="cbx-caret" id="bCodeCaret" tabindex="-1" aria-label="Abrir lista">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
                             </button>
@@ -1029,6 +1089,7 @@ body{
             <button class="drawer-close" onclick="closeFinalize()" aria-label="Cerrar">✕</button>
         </div>
         <div class="modal-body">
+            <div id="fWarnings" class="warning-banner" style="display:none"></div>
             <div class="field-block">
                 <label>Cliente / razón social (opcional)</label>
                 <input type="text" id="fClient" placeholder="Ej: Ferretería Pérez">
@@ -1073,6 +1134,36 @@ body{
     </div>
 </div>
 
+<!-- MODAL POST-SEND -->
+<div class="modal-bg" id="postSendBg" onclick="if(event.target===this)closePostSend()">
+    <div class="modal" style="max-width:400px">
+        <div style="padding:28px 22px 8px;text-align:center">
+            <div style="font-size:54px;margin-bottom:8px;color:var(--green)">✓</div>
+            <h2 style="font-family:'Montserrat',sans-serif;font-size:20px;color:var(--navy);margin-bottom:8px">Pedido enviado</h2>
+            <p style="color:var(--text-muted);font-size:14px;line-height:1.4;padding:0 8px">¿Querés empezar otro pedido o mantener este para revisarlo / reenviar?</p>
+        </div>
+        <div class="modal-foot" style="justify-content:space-between;padding:16px 22px">
+            <button class="btn btn-ghost" onclick="closePostSend()">Mantener</button>
+            <button class="btn btn-success" onclick="newOrderAfterSend()">+ Empezar otro</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL OLD DRAFT -->
+<div class="modal-bg" id="oldDraftBg" onclick="if(event.target===this)dismissOldDraft()">
+    <div class="modal" style="max-width:400px">
+        <div style="padding:24px 22px 8px;text-align:center">
+            <div style="font-size:48px;margin-bottom:8px">📦</div>
+            <h2 style="font-family:'Montserrat',sans-serif;font-size:18px;color:var(--navy);margin-bottom:6px">Tenés un pedido pendiente</h2>
+            <p style="color:var(--text-muted);font-size:14px;line-height:1.45;padding:0 8px">Estabas armando un pedido hace <b id="draftAge">unos días</b>. ¿Querés seguir con ese o empezar uno nuevo?</p>
+        </div>
+        <div class="modal-foot" style="justify-content:space-between;padding:16px 22px">
+            <button class="btn btn-ghost" onclick="clearOldDraftAndStart()">Vaciar y empezar nuevo</button>
+            <button class="btn btn-success" onclick="dismissOldDraft()">Seguir con este</button>
+        </div>
+    </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -1103,6 +1194,7 @@ function saveCart(){
             pl: e.item.pl, cm: e.item.cm
         }));
         localStorage.setItem('maxifer_cart', JSON.stringify(snap));
+        localStorage.setItem('maxifer_cart_ts', Date.now().toString());
     } catch(e){}
 }
 function loadCartFromStorage(){
@@ -1318,7 +1410,12 @@ function makeCombobox(opts){
             });
         }
     }
-    function close(){ list.classList.remove('visible'); hl = -1; }
+    function close(){
+        list.classList.remove('visible'); hl = -1;
+        // Si el input tiene atributo data-keyboard-default, lo respetamos.
+        // Sino, lo dejamos en 'none' para que la proxima vez no salte el teclado.
+        if (opts.searchBtn) inp.setAttribute('inputmode', 'none');
+    }
     function paintHl(){
         list.querySelectorAll('.cbx-item').forEach((el,i) => el.classList.toggle('hl', i === hl));
         const el = list.querySelector('.cbx-item.hl');
@@ -1410,6 +1507,24 @@ function makeCombobox(opts){
         });
     }
 
+    // Boton 'Tipear' (lapicito): permite que aparezca el teclado virtual.
+    // Por defecto los inputs tienen inputmode='none' asi no salta el teclado
+    // al tocarlos. Tocando este boton, el usuario opta in.
+    if (opts.searchBtn){
+        opts.searchBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            inp.setAttribute('inputmode', 'text');
+            // Forzar re-foco para que el teclado salga
+            if (document.activeElement === inp){
+                inp.blur();
+                setTimeout(() => inp.focus(), 50);
+            } else {
+                inp.focus();
+            }
+            open();
+        });
+    }
+
     // Click/tap afuera del dropdown lo cierra — pero solo si fue un TAP real,
     // no un scroll. Comparamos posicion en pointerdown vs pointerup y
     // verificamos que el movimiento sea minimo. Tambien usamos composedPath()
@@ -1450,6 +1565,7 @@ function bInit(){
         input: $('bFamilyInput'),
         listEl: $('bFamilyList'),
         caretBtn: $('bFamilyCaret'),
+        searchBtn: $('bFamilyEdit'),
         getItems: (q) => {
             const nq = norm(q);
             const list = nq ? FAMS.filter(f => norm(f).includes(nq)) : FAMS.slice();
@@ -1463,6 +1579,7 @@ function bInit(){
         input: $('bCodeInput'),
         listEl: $('bCodeList'),
         caretBtn: $('bCodeCaret'),
+        searchBtn: $('bCodeEdit'),
         getItems: (q) => {
             if (!stateB.family) return [];
             const nq = norm(q);
@@ -1848,6 +1965,25 @@ function openFinalize(){
     closeCart();
     if (!$('fClient').value && PROFILE.biz) $('fClient').value = PROFILE.biz;
     $('fSummary').textContent = buildSummary();
+
+    // Warnings: items por debajo del minimo sugerido
+    const belowMin = Object.values(CART).filter(e => e.qty < e.item.cm);
+    const warnEl = $('fWarnings');
+    if (belowMin.length){
+        let html = '<strong>⚠ ' + belowMin.length + ' item' + (belowMin.length===1?' está':'s están') +
+                   ' por debajo del mínimo sugerido:</strong><ul style="margin:6px 0 0 18px;font-size:12px;color:var(--text)">';
+        belowMin.slice(0,5).forEach(e => {
+            html += '<li>N°' + escapeHtml(e.item.n) + ' ' + escapeHtml(e.item.d.substring(0,40)) +
+                    ' — <b>' + e.qty + 'u</b> (mín ' + e.item.cm + ')</li>';
+        });
+        if (belowMin.length > 5) html += '<li>... y ' + (belowMin.length-5) + ' más</li>';
+        html += '</ul>';
+        warnEl.innerHTML = html;
+        warnEl.style.display = 'block';
+    } else {
+        warnEl.style.display = 'none';
+    }
+
     $('modalBg').classList.add('visible');
 }
 function closeFinalize(){ $('modalBg').classList.remove('visible'); }
@@ -1856,7 +1992,8 @@ function sendWhatsApp(){
     const txt = encodeURIComponent(buildSummary());
     saveCurrentToHistory('whatsapp');
     window.open('https://wa.me/?text=' + txt, '_blank');
-    toast('Pedido enviado y guardado en historial','success');
+    closeFinalize();
+    setTimeout(showPostSend, 400);
 }
 
 function downloadCSV(){
@@ -2131,7 +2268,8 @@ function sendEmail(){
             '&body=' + encodeURIComponent(body);
         window.location.href = url;
     }, 300);
-    toast('Abriendo email · CSV descargado · guardado en historial','success');
+    closeFinalize();
+    setTimeout(showPostSend, 800);
 }
 
 /* =========================================================
@@ -2224,6 +2362,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     catch(e) { toast('Error cargando productos: '+e.message); return; }
 
     bInit();
+    globalSearchInit();
     renderAllCarts();
     loadFormState();
 
@@ -2233,8 +2372,111 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (el) el.addEventListener('input', saveFormState);
     });
 
+    // Detectar borrador viejo (>2 dias)
+    setTimeout(checkOldDraft, 300);
+
     setTimeout(() => $('bFamilyInput').focus(), 100);
 });
+
+/* =========================================================
+   POST-SEND DIALOG (Feature 1)
+   ========================================================= */
+function showPostSend(){
+    const el = $('postSendBg'); if (el) el.classList.add('visible');
+}
+function closePostSend(){
+    const el = $('postSendBg'); if (el) el.classList.remove('visible');
+}
+function newOrderAfterSend(){
+    CART = {};
+    saveCart();
+    renderAllCarts();
+    closePostSend();
+    closeFinalize();
+    // Resetear form
+    if ($('bCodeInput')) { $('bCodeInput').value = ''; $('bCodeInput').classList.remove('has-value'); }
+    if ($('bQty')) { $('bQty').value = ''; $('bQty').disabled = true; }
+    if ($('bAdd')) $('bAdd').disabled = true;
+    if ($('bQtyHint')) $('bQtyHint').innerHTML = '&nbsp;';
+    if ($('bSelected')) {
+        $('bSelected').className = 'selected-prod empty';
+        $('bSelected').textContent = stateB.family ? 'Escribí código del próximo producto' : 'Elegí familia y código para ver el producto';
+    }
+    if (typeof stateB !== 'undefined') stateB.selected = null;
+    if (typeof clearFormState === 'function') clearFormState();
+    toast('Listo — empezá tu nuevo pedido','success');
+    setTimeout(() => $('bFamilyInput') && $('bFamilyInput').focus(), 100);
+}
+
+/* =========================================================
+   OLD DRAFT DETECTION (Feature 7)
+   ========================================================= */
+function checkOldDraft(){
+    if (!cartLines()) return;
+    const ts = parseInt(localStorage.getItem('maxifer_cart_ts')||'0', 10);
+    if (!ts) return;
+    const days = Math.floor((Date.now() - ts) / (1000*60*60*24));
+    if (days >= 2) showOldDraftModal(days);
+}
+function showOldDraftModal(days){
+    const ageEl = $('draftAge');
+    if (ageEl) ageEl.textContent = days === 1 ? '1 día' : days + ' días';
+    const bg = $('oldDraftBg');
+    if (bg) bg.classList.add('visible');
+}
+function dismissOldDraft(){
+    const bg = $('oldDraftBg'); if (bg) bg.classList.remove('visible');
+}
+function clearOldDraftAndStart(){
+    CART = {};
+    saveCart();
+    renderAllCarts();
+    dismissOldDraft();
+    if (typeof clearFormState === 'function') clearFormState();
+    toast('Listo — empezá tu nuevo pedido','success');
+}
+
+/* =========================================================
+   GLOBAL SEARCH (Feature 4)
+   Buscador que mira en todas las familias. Click → llena familia + codigo.
+   ========================================================= */
+function globalSearchInit(){
+    const inp = $('globalSearchInput');
+    if (!inp) return;
+    makeCombobox({
+        input: inp,
+        listEl: $('globalSearchList'),
+        searchBtn: $('globalSearchEdit'),
+        getItems: (q) => {
+            const nq = norm(q);
+            if (!nq || nq.length < 2) return [];
+            return DATA.filter(it => {
+                return it._n.startsWith(nq) || it._all.includes(nq);
+            }).sort((a,b) => {
+                const aS = a._n.startsWith(nq), bS = b._n.startsWith(nq);
+                if (aS && !bS) return -1;
+                if (bS && !aS) return 1;
+                return 0;
+            }).slice(0, 60).map(it => ({ kind:'global', item: it }));
+        },
+        renderItem: it => {
+            const x = it.item;
+            const cmI = x.cm > 1 ? ' · <span style="color:var(--amber);font-weight:700">mín '+x.cm+'</span>' : '';
+            return '<span class="num">N°'+escapeHtml(x.n)+'</span>'+
+                '<span class="desc">'+escapeHtml(x.d)+
+                    '<small><b style="color:var(--navy)">'+escapeHtml(x.p)+'</b>'+(x.c?' · '+escapeHtml(x.c):'')+cmI+'</small>'+
+                '</span>'+
+                '<span class="price">'+fmtMoney(netPrice(x.pl))+'</span>';
+        },
+        onSelect: it => {
+            const item = it.item;
+            bSetFamily(item.p);
+            bSelectProduct(item);
+            inp.value = '';
+            inp.classList.remove('has-value');
+        }
+    });
+}
 </script>
 </body>
 </html>
