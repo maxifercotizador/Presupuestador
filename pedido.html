@@ -1188,12 +1188,17 @@ function makeCombobox(opts){
         const el = list.querySelector('.cbx-item.hl');
         if (el) el.scrollIntoView({block:'nearest'});
     }
+    let _suppressBlurClose = false;
     function pick(i){
         if (i < 0 || i >= items.length) return;
         if (multi && opts.isMulti()){
-            // Toggle without closing. Blur the input on touch devices so the keyboard hides.
+            // Toggle without closing. Blur the input on touch devices so the keyboard hides,
+            // pero suprimimos el cierre automatico para que el dropdown no se cierre solo.
             opts.toggle(items[i]);
-            if ('ontouchstart' in window || navigator.maxTouchPoints > 0) inp.blur();
+            if ('ontouchstart' in window || navigator.maxTouchPoints > 0){
+                _suppressBlurClose = true;
+                inp.blur();
+            }
             open();
             return;
         }
@@ -1203,7 +1208,12 @@ function makeCombobox(opts){
 
     inp.addEventListener('input', () => { hl = items.length ? 0 : -1; open(); });
     inp.addEventListener('focus', () => { open(); });
-    inp.addEventListener('blur', () => { setTimeout(close, 150); });
+    inp.addEventListener('blur', () => {
+        setTimeout(() => {
+            if (_suppressBlurClose){ _suppressBlurClose = false; return; }
+            close();
+        }, 200);
+    });
     inp.addEventListener('keydown', e => {
         if (e.key === 'ArrowDown'){
             if (!list.classList.contains('visible')) open();
@@ -1237,6 +1247,15 @@ function makeCombobox(opts){
             else { inp.focus(); open(); }
         });
     }
+
+    // Click afuera del dropdown lo cierra (importante para multi mode
+    // cuando el input ya esta blurreado y el blur listener no dispara).
+    document.addEventListener('mousedown', (e) => {
+        if (!list.classList.contains('visible')) return;
+        if (list.contains(e.target) || inp.contains(e.target)) return;
+        if (opts.caretBtn && opts.caretBtn.contains(e.target)) return;
+        close();
+    });
 
     return { open, close, refresh: open };
 }
