@@ -18,16 +18,19 @@
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
-    --navy:#1e2c5b; --navy-dark:#131e42; --navy-light:#2a3d75;
+    /* Paleta MAXIFER (alineada con fabricamaxifer.com) */
+    --navy:#1a3a7a; --navy-dark:#13295a; --navy-light:#2151a8;
+    --navy-pale:#e8eef8;
     --green:#4ea83e; --green-dark:#3d8a30; --green-light:#6bc35a;
     --red:#c8102e; --red-dark:#a00d24;
+    --orange:#e8510a; --orange-light:#f26920;
     --amber:#d97706; --amber-bg:#fef3c7;
     --bg:#f5f7fb; --bg-soft:#eef1f7; --bg-card:#fff;
     --border:#dde3ee; --border-strong:#c5cee0;
     --text:#1a2238; --text-muted:#5a6685; --text-dim:#8a94ae;
-    --shadow-sm:0 1px 2px rgba(30,44,91,.06),0 1px 3px rgba(30,44,91,.04);
-    --shadow:0 4px 12px rgba(30,44,91,.08),0 2px 4px rgba(30,44,91,.05);
-    --shadow-lg:0 16px 36px -8px rgba(30,44,91,.18),0 8px 16px -4px rgba(30,44,91,.1);
+    --shadow-sm:0 1px 2px rgba(26,58,122,.08),0 1px 3px rgba(26,58,122,.05);
+    --shadow:0 4px 12px rgba(26,58,122,.10),0 2px 4px rgba(26,58,122,.06);
+    --shadow-lg:0 16px 36px -8px rgba(26,58,122,.20),0 8px 16px -4px rgba(26,58,122,.12);
 }
 *{
     box-sizing:border-box;margin:0;padding:0;
@@ -165,17 +168,34 @@ body{
     .profile-btn{padding:7px 10px}
 }
 
-/* MULTI-SELECT */
+/* MULTI-SELECT toggle (refinado, no Win98) */
 .multi-toggle{
-    display:inline-flex;align-items:center;gap:5px;
-    padding:3px 8px;border-radius:6px;
-    background:transparent;border:1px solid var(--border-strong);
-    color:var(--text-muted);font-size:10px;font-weight:700;
-    cursor:pointer;text-transform:uppercase;letter-spacing:.05em;
+    display:inline-flex;align-items:center;gap:6px;
+    padding:6px 12px;border-radius:100px;
+    background:linear-gradient(180deg,#fff,var(--bg-soft));
+    border:1px solid var(--border-strong);
+    color:var(--navy);font-size:11px;font-weight:700;
+    cursor:pointer;text-transform:uppercase;letter-spacing:.06em;
     margin-left:8px;transition:all .15s;vertical-align:middle;
+    box-shadow:0 1px 0 rgba(26,58,122,.05),inset 0 1px 0 #fff;
+    line-height:1;
 }
-.multi-toggle:hover{border-color:var(--navy);color:var(--navy)}
-.multi-toggle.on{background:var(--green);color:#fff;border-color:var(--green)}
+.multi-toggle::before{
+    content:'';width:14px;height:14px;border-radius:4px;
+    border:1.5px solid var(--border-strong);background:#fff;
+    display:inline-block;flex-shrink:0;transition:all .15s;
+}
+.multi-toggle:hover{border-color:var(--navy);color:var(--navy);transform:translateY(-1px)}
+.multi-toggle.on{
+    background:linear-gradient(180deg,var(--green-light),var(--green));
+    color:#fff;border-color:var(--green-dark);
+    box-shadow:0 2px 6px rgba(78,168,62,.35),inset 0 1px 0 rgba(255,255,255,.2);
+}
+.multi-toggle.on::before{
+    background:#fff;border-color:#fff;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%234ea83e' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='20 6 9 17 4 12'/></svg>");
+    background-size:10px 10px;background-repeat:no-repeat;background-position:center;
+}
 
 .cbx-item .cbx-chk{
     width:18px;height:18px;border:2px solid var(--border-strong);
@@ -525,63 +545,92 @@ body{
 .cbx-empty{padding:14px;text-align:center;color:var(--text-muted);font-size:13px;font-style:italic}
 
 /* ============ MODE B ============ */
-#mode-b .form-card{
-    background:var(--bg-card);border:1px solid var(--border);border-radius:14px;
-    padding:18px;box-shadow:var(--shadow);margin-bottom:18px;
+.form-card{
+    background:var(--bg-card);border:1px solid var(--border);border-radius:18px;
+    padding:22px;box-shadow:var(--shadow);margin-bottom:18px;
+    position:relative;overflow:hidden;
 }
-#mode-b .form-card h2{
-    font-family:'Montserrat',sans-serif;font-size:16px;color:var(--navy);
-    margin-bottom:14px;font-weight:800;display:flex;align-items:center;gap:8px;
+.form-card::before{
+    content:'';position:absolute;top:0;left:0;right:0;height:4px;
+    background:linear-gradient(90deg,var(--green),var(--navy));
 }
-#mode-b .form-card h2 .step-num{
-    background:var(--green);color:#fff;width:24px;height:24px;border-radius:50%;
-    display:inline-flex;align-items:center;justify-content:center;font-size:13px;
+.form-card h2{
+    font-family:'Montserrat',sans-serif;font-size:18px;color:var(--navy);
+    margin-bottom:16px;font-weight:800;display:flex;align-items:center;gap:10px;
+    letter-spacing:-.01em;
 }
-#mode-b .form-grid{
+.form-card h2 .step-num{
+    background:linear-gradient(135deg,var(--green-light),var(--green-dark));
+    color:#fff;width:30px;height:30px;border-radius:8px;
+    display:inline-flex;align-items:center;justify-content:center;font-size:16px;
+    box-shadow:0 2px 6px rgba(78,168,62,.35);
+    font-style:normal;
+}
+.form-grid{
     display:grid;gap:12px;grid-template-columns:2fr 2fr 1fr auto;align-items:end;
 }
-@media(max-width:760px){#mode-b .form-grid{grid-template-columns:1fr}}
-#mode-b .field label{
+@media(max-width:760px){.form-grid{grid-template-columns:1fr}}
+.field label{
     display:block;font-size:11px;font-weight:700;color:var(--text-muted);
     text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;
 }
-#mode-b .field input.qty-input{
+.field input.qty-input{
     width:100%;padding:11px 12px;border:1px solid var(--border-strong);
     border-radius:8px;background:var(--bg-soft);outline:none;font-size:14px;font-weight:600;
     transition:all .15s;text-align:center;
 }
-#mode-b .field input.qty-input:focus{border-color:var(--green);background:#fff;box-shadow:0 0 0 3px rgba(78,168,62,.12)}
-#mode-b .field input.qty-input:disabled{color:var(--text-dim);cursor:not-allowed}
-#mode-b .field-hint{font-size:11px;color:var(--text-muted);margin-top:4px;min-height:14px}
-#mode-b .selected-prod{
+.field input.qty-input:focus{border-color:var(--green);background:#fff;box-shadow:0 0 0 3px rgba(78,168,62,.12)}
+.field input.qty-input:disabled{color:var(--text-dim);cursor:not-allowed}
+.field-hint{font-size:11px;color:var(--text-muted);margin-top:4px;min-height:14px}
+.selected-prod{
     margin-top:12px;padding:12px;background:var(--bg-soft);border-radius:10px;
     border:1px dashed var(--border-strong);font-size:13px;line-height:1.5;
 }
-#mode-b .selected-prod.empty{color:var(--text-dim);font-style:italic;text-align:center}
-#mode-b .selected-prod.has{border-color:var(--green);background:rgba(78,168,62,.05);border-style:solid}
-#mode-b .selected-prod b{color:var(--navy)}
-#mode-b .btn-quick-add{
-    padding:11px 18px;background:var(--green);color:#fff;border:none;
-    border-radius:8px;font-weight:800;font-size:14px;cursor:pointer;
+.selected-prod.empty{color:var(--text-dim);font-style:italic;text-align:center}
+.selected-prod.has{border-color:var(--green);background:rgba(78,168,62,.05);border-style:solid}
+.selected-prod b{color:var(--navy)}
+.btn-quick-add{
+    padding:14px 20px;
+    background:linear-gradient(180deg,var(--green-light),var(--green));
+    color:#fff;border:none;
+    border-radius:10px;font-weight:800;font-size:14px;cursor:pointer;
     display:inline-flex;align-items:center;gap:6px;transition:all .15s;
-    text-transform:uppercase;letter-spacing:.05em;width:100%;justify-content:center;
+    text-transform:uppercase;letter-spacing:.06em;width:100%;justify-content:center;
+    box-shadow:0 4px 12px -2px rgba(78,168,62,.45),inset 0 1px 0 rgba(255,255,255,.2);
+    line-height:1;
 }
-#mode-b .btn-quick-add:hover{background:var(--green-dark);transform:translateY(-1px)}
-#mode-b .btn-quick-add:disabled{opacity:.4;cursor:not-allowed;transform:none}
-#mode-b .preview{
-    background:var(--bg-card);border:1px solid var(--border);border-radius:14px;
-    padding:16px;box-shadow:var(--shadow-sm);
+.btn-quick-add:hover{
+    background:linear-gradient(180deg,var(--green),var(--green-dark));
+    transform:translateY(-1px);
+    box-shadow:0 6px 16px -2px rgba(78,168,62,.55),inset 0 1px 0 rgba(255,255,255,.2);
 }
-#mode-b .preview h3{
-    font-family:'Montserrat',sans-serif;font-size:14px;color:var(--navy);
-    margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;
+.btn-quick-add:active{transform:translateY(0)}
+.btn-quick-add:disabled{
+    background:var(--border-strong);color:var(--text-dim);
+    box-shadow:none;cursor:not-allowed;transform:none;
 }
-#mode-b .kbd-hint{
+.preview{
+    background:var(--bg-card);border:1px solid var(--border);border-radius:18px;
+    padding:20px;box-shadow:var(--shadow);position:relative;overflow:hidden;
+}
+.preview::before{
+    content:'';position:absolute;top:0;left:0;right:0;height:4px;
+    background:linear-gradient(90deg,var(--navy),var(--orange));
+}
+.preview h3{
+    font-family:'Montserrat',sans-serif;font-size:16px;color:var(--navy);
+    margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;
+    flex-wrap:wrap;gap:10px;letter-spacing:-.01em;
+}
+.preview h3 .preview-actions{
+    display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap;
+}
+.kbd-hint{
     margin-top:10px;padding:8px 12px;background:rgba(30,44,91,.04);
     border-radius:8px;font-size:11.5px;color:var(--text-muted);
     display:flex;flex-wrap:wrap;gap:14px;align-items:center;
 }
-#mode-b .kbd-hint .kbd{
+.kbd-hint .kbd{
     display:inline-block;padding:1px 6px;background:#fff;border:1px solid var(--border-strong);
     border-radius:4px;font-family:ui-monospace,monospace;font-size:10px;font-weight:700;
     box-shadow:0 1px 0 var(--border-strong);color:var(--navy);margin:0 2px;
@@ -741,9 +790,43 @@ body{
     box-shadow:0 -4px 12px rgba(30,44,91,.06);
 }
 
+/* Cart family header */
+.cart-fam-head{
+    display:flex;justify-content:space-between;align-items:center;
+    font-size:11px;text-transform:uppercase;letter-spacing:.06em;
+    color:var(--navy);font-weight:800;margin:14px 0 8px;
+    padding-bottom:6px;border-bottom:1px solid var(--border);
+}
+.cart-fam-head:first-child{margin-top:6px}
+.cart-fam-name{font-family:'Montserrat',sans-serif}
+.cart-fam-del{
+    background:transparent;border:1px solid var(--border-strong);
+    color:var(--text-muted);width:30px;height:30px;border-radius:8px;
+    display:inline-flex;align-items:center;justify-content:center;cursor:pointer;
+    transition:all .15s;
+}
+.cart-fam-del:hover{
+    border-color:var(--red);color:var(--red);background:rgba(200,16,46,.06);
+}
+
+/* Cart item checkbox visual */
+.cart-chk{
+    position:absolute;top:12px;left:12px;
+    width:22px;height:22px;border:2px solid var(--border-strong);
+    border-radius:6px;background:#fff;
+    display:flex;align-items:center;justify-content:center;
+    color:#fff;font-size:14px;font-weight:900;transition:all .12s;
+}
+.cart-item.selected .cart-chk{background:var(--red);border-color:var(--red)}
+.cart-item.selected{
+    border-color:var(--red);background:rgba(200,16,46,.04);
+}
+.cart-item.selected .cart-item-info{padding-left:34px}
+
 .cart-item{
-    background:#fff;border:1px solid var(--border);border-radius:10px;
-    padding:12px;margin-bottom:8px;
+    background:#fff;border:1px solid var(--border);border-radius:12px;
+    padding:14px;margin-bottom:10px;position:relative;
+    transition:all .15s;
 }
 .cart-item-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px}
 .cart-item-info{flex:1;min-width:0}
@@ -752,11 +835,14 @@ body{
 .cart-item-desc{font-size:13px;color:var(--text);line-height:1.35;margin-top:2px}
 .cart-item-fam{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-top:3px}
 .cart-item-rm{
-    background:transparent;border:none;color:var(--text-dim);cursor:pointer;
-    width:28px;height:28px;border-radius:50%;font-size:16px;
+    background:var(--bg-soft);border:1px solid var(--border);
+    color:var(--text-muted);cursor:pointer;
+    width:34px;height:34px;border-radius:8px;flex-shrink:0;
     display:flex;align-items:center;justify-content:center;
+    transition:all .15s;
 }
-.cart-item-rm:hover{background:rgba(200,16,46,.1);color:var(--red)}
+.cart-item-rm:hover{background:rgba(200,16,46,.1);color:var(--red);border-color:var(--red)}
+.cart-item-rm:active{transform:scale(.92)}
 .cart-item-bottom{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px}
 .cart-item-sub{font-weight:800;color:var(--navy);font-family:'Montserrat',sans-serif;font-size:15px}
 
@@ -835,7 +921,7 @@ body{
             <img src="img/favicon-192.png" alt="MAXIFER" onerror="this.src='favicon.ico'">
             <div class="brand-text">MAXIFER<br>Pedido Faltantes</div>
         </a>
-        <span class="ver-chip" id="verChip">v10</span>
+        <span class="ver-chip" id="verChip">v11</span>
         <div class="top-actions">
             <button id="userChip" class="top-chip" type="button" onclick="openProfile()" title="Mi cuenta">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -876,7 +962,7 @@ body{
                     <div class="field">
                         <label for="bCodeInput">
                             Código / Número
-                            <button type="button" class="multi-toggle" id="bMultiToggle" title="Activar selección múltiple">☐ Multi</button>
+                            <button type="button" class="multi-toggle" id="bMultiToggle" title="Activar selección múltiple">Multi</button>
                         </label>
                         <div class="cbx-wrap">
                             <input type="text" id="bCodeInput" class="cbx-input" placeholder="N° o código BS..." autocomplete="off" disabled>
@@ -905,8 +991,17 @@ body{
             <div class="preview" style="position:sticky;top:74px">
                 <h3>
                     <span>📋 Pedido actual</span>
-                    <span id="bCartCount" class="muted">0 modelos</span>
+                    <span class="preview-actions">
+                        <span id="bCartCount" class="muted">0 modelos</span>
+                        <button type="button" class="multi-toggle" id="cartMultiToggle" title="Seleccionar varios para borrar" style="display:none">Seleccionar</button>
+                    </span>
                 </h3>
+                <div class="bulk-bar" id="cartBulkBar" style="display:none;background:rgba(200,16,46,.06);border-color:rgba(200,16,46,.25)">
+                    <span class="info"><b id="cartSelCount">0</b> seleccionados</span>
+                    <button type="button" onclick="cartSelectAll()">Todos</button>
+                    <button type="button" onclick="cartClearSel()">Limpiar</button>
+                    <button type="button" onclick="cartBulkDelete()" id="cartBulkDelBtn" style="background:var(--red);color:#fff;border-color:var(--red)" disabled>🗑 Borrar</button>
+                </div>
                 <div id="bCartList"></div>
                 <div id="bCartFoot" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
                     <div class="cart-total-row"><span><b id="ipModels">0</b> modelos · <b id="ipPieces">0</b> piezas</span><span id="ipSubtotal">$0</span></div>
@@ -1455,7 +1550,7 @@ function bInit(){
         stateB.multi = !stateB.multi;
         const btn = $('bMultiToggle');
         btn.classList.toggle('on', stateB.multi);
-        btn.innerHTML = stateB.multi ? '☑ Multi' : '☐ Multi';
+        btn.innerHTML = 'Multi';
         // Reset multi selection when turning off
         if (!stateB.multi) stateB.multiSel.clear();
         // Single mode requires qty input; multi mode hides it
@@ -1543,32 +1638,64 @@ function bSelectProduct(item){
     setTimeout(() => { $('bQty').focus(); $('bQty').select(); }, 50);
 }
 
+/* Cart selection state for multi-delete */
+const cartState = { selMode:false, sel:new Set() };
+
 function bRenderCart(){
     const list = $('bCartList');
     const items = Object.values(CART);
+    const toggle = $('cartMultiToggle');
+    const bulkBar = $('cartBulkBar');
+
     $('bCartCount').textContent = items.length + ' modelos · ' + cartCount() + ' u.';
+
     if (!items.length){
         list.innerHTML = '<div class="cart-empty"><div class="icon">📋</div><div>Todavía no agregaste productos</div></div>';
         $('bCartFoot').style.display = 'none';
+        if (toggle) toggle.style.display = 'none';
+        if (bulkBar) bulkBar.style.display = 'none';
+        cartState.selMode = false; cartState.sel.clear();
         return;
     }
+    if (toggle) toggle.style.display = '';
+    if (toggle) toggle.classList.toggle('on', cartState.selMode);
+    if (bulkBar) bulkBar.style.display = cartState.selMode ? 'flex' : 'none';
+
     const byFam = {};
     items.forEach(e => { (byFam[e.item.p] = byFam[e.item.p] || []).push(e); });
+
     let html = '';
     Object.keys(byFam).sort().forEach(fam => {
-        html += '<div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--navy);font-weight:800;margin:10px 0 6px">'+escapeHtml(fam)+'</div>';
-        byFam[fam].forEach(e => {
+        const famItems = byFam[fam];
+        const famIds = famItems.map(e => e.item.id);
+        // Family header con boton borrar familia
+        html += '<div class="cart-fam-head">' +
+            '<span class="cart-fam-name">'+escapeHtml(fam)+'</span>' +
+            '<button type="button" class="cart-fam-del" onclick="cartDeleteFamily(\''+fam.replace(/'/g,"\\'")+'\')" title="Borrar toda la familia">' +
+                '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>' +
+            '</button>' +
+        '</div>';
+
+        famItems.forEach(e => {
             const sub = lineTotal(e.item, e.qty);
-            html += '<div class="cart-item">'+
+            const isSel = cartState.sel.has(e.item.id);
+            const selClass = cartState.selMode && isSel ? ' selected' : '';
+            html += '<div class="cart-item'+selClass+'" data-id="'+e.item.id+'"'+
+                (cartState.selMode ? ' onclick="cartToggleSel(\''+e.item.id+'\',event)"' : '')+'>'+
+                (cartState.selMode ? '<div class="cart-chk">'+(isSel?'✓':'')+'</div>' : '')+
                 '<div class="cart-item-top">'+
                     '<div class="cart-item-info">'+
                         '<div class="cart-item-num">N° <strong>'+escapeHtml(e.item.n)+'</strong></div>'+
                         '<div class="cart-item-desc">'+escapeHtml(e.item.d)+'</div>'+
                     '</div>'+
-                    '<button class="cart-item-rm" onclick="setQty(\''+e.item.id+'\',0)" title="Quitar">✕</button>'+
+                    (cartState.selMode ? '' :
+                        '<button class="cart-item-rm" onclick="setQty(\''+e.item.id+'\',0)" title="Quitar">' +
+                            '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
+                        '</button>'
+                    )+
                 '</div>'+
                 '<div class="cart-item-bottom">'+
-                    stepperHtml(e.item)+
+                    (cartState.selMode ? '<div style="font-size:12px;color:var(--text-muted)">'+e.qty+' u.</div>' : stepperHtml(e.item))+
                     '<div class="cart-item-sub">'+fmtMoney(sub)+'</div>'+
                 '</div>'+
             '</div>';
@@ -1577,6 +1704,57 @@ function bRenderCart(){
     list.innerHTML = html;
     $('bCartFoot').style.display = 'block';
     $('bGrandTotal').textContent = fmtMoney(cartTotal());
+
+    // Update bulk bar count
+    const n = cartState.sel.size;
+    const cnt = $('cartSelCount'); if (cnt) cnt.textContent = n;
+    const btn = $('cartBulkDelBtn');
+    if (btn){ btn.disabled = !n; btn.innerHTML = n ? '🗑 Borrar '+n : '🗑 Borrar'; }
+}
+
+/* Cart multi-select / family-delete actions */
+function cartToggleSelMode(){
+    cartState.selMode = !cartState.selMode;
+    if (!cartState.selMode) cartState.sel.clear();
+    bRenderCart();
+}
+function cartToggleSel(id, ev){
+    if (ev && ev.target.closest('.cart-item-rm')) return;
+    if (cartState.sel.has(id)) cartState.sel.delete(id);
+    else cartState.sel.add(id);
+    if ('ontouchstart' in window || navigator.maxTouchPoints > 0){
+        const a = document.activeElement;
+        if (a && a.tagName === 'INPUT') a.blur();
+    }
+    bRenderCart();
+}
+function cartSelectAll(){
+    Object.keys(CART).forEach(id => cartState.sel.add(id));
+    bRenderCart();
+}
+function cartClearSel(){
+    cartState.sel.clear();
+    bRenderCart();
+}
+function cartBulkDelete(){
+    const n = cartState.sel.size;
+    if (!n) return;
+    if (!confirm('¿Borrar ' + n + ' item' + (n===1?'':'s') + ' del pedido?')) return;
+    cartState.sel.forEach(id => { delete CART[id]; });
+    cartState.sel.clear();
+    cartState.selMode = false;
+    saveCart();
+    renderAllCarts();
+    toast('Borrados ' + n + ' del pedido', 'success');
+}
+function cartDeleteFamily(fam){
+    const items = Object.values(CART).filter(e => e.item.p === fam);
+    if (!items.length) return;
+    if (!confirm('¿Borrar los ' + items.length + ' items de ' + fam + '?')) return;
+    items.forEach(e => { delete CART[e.item.id]; });
+    saveCart();
+    renderAllCarts();
+    toast('Familia ' + fam + ' borrada', 'success');
 }
 
 
@@ -2064,6 +2242,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!cartLines()) return;
         if (confirm('¿Vaciar el pedido completo?')){ CART = {}; saveCart(); renderAllCarts(); }
     });
+    const cartT = $('cartMultiToggle');
+    if (cartT) cartT.addEventListener('click', cartToggleSelMode);
 
     loadProfile();
     loadHistory();
