@@ -835,7 +835,7 @@ body{
             <img src="img/favicon-192.png" alt="MAXIFER" onerror="this.src='favicon.ico'">
             <div class="brand-text">MAXIFER<br>Pedido Faltantes</div>
         </a>
-        <span class="ver-chip" id="verChip">v8</span>
+        <span class="ver-chip" id="verChip">v9</span>
         <div class="top-actions">
             <button id="userChip" class="top-chip" type="button" onclick="openProfile()" title="Mi cuenta">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -1248,9 +1248,9 @@ function makeCombobox(opts){
         list.innerHTML = html;
         list.classList.add('visible');
         list.querySelectorAll('.cbx-item').forEach(el => {
-            // pointerdown unifica mouse/touch/pen y es mas confiable en iOS
-            // que mousedown (que se sintetiza con delay despues de touchend).
-            el.addEventListener('pointerdown', e => {
+            // 'click' (no pointerdown) para que el navegador distinga scroll de tap.
+            // Si el usuario desliza el dedo para hacer scroll, click NO se dispara.
+            el.addEventListener('click', e => {
                 e.preventDefault();
                 pick(parseInt(el.dataset.i, 10));
             });
@@ -1258,7 +1258,7 @@ function makeCombobox(opts){
         });
         const confirmBtn = list.querySelector('[data-confirm-multi]');
         if (confirmBtn){
-            confirmBtn.addEventListener('pointerdown', e => {
+            confirmBtn.addEventListener('click', e => {
                 e.preventDefault();
                 opts.bulkConfirm();
                 close();
@@ -1352,17 +1352,27 @@ function makeCombobox(opts){
         });
     }
 
-    // Click/tap afuera del dropdown lo cierra. Usamos composedPath() porque
-    // captura la ruta del evento AL MOMENTO DEL DISPATCH (antes de que
-    // cualquier mutacion del DOM detache al target). Si chequeamos
-    // list.contains(target) despues de un rebuild, falla.
+    // Click/tap afuera del dropdown lo cierra — pero solo si fue un TAP real,
+    // no un scroll. Comparamos posicion en pointerdown vs pointerup y
+    // verificamos que el movimiento sea minimo. Tambien usamos composedPath()
+    // (capturado al momento del dispatch) para que sobreviva a mutaciones DOM.
+    let _docDownX = 0, _docDownY = 0, _docDownPath = null;
     document.addEventListener('pointerdown', (e) => {
+        _docDownX = e.clientX || 0;
+        _docDownY = e.clientY || 0;
+        _docDownPath = (typeof e.composedPath === 'function') ? e.composedPath() : [e.target];
+    });
+    document.addEventListener('pointerup', (e) => {
         if (!list.classList.contains('visible')) return;
-        const path = (typeof e.composedPath === 'function') ? e.composedPath() : [];
+        const dx = Math.abs((e.clientX || 0) - _docDownX);
+        const dy = Math.abs((e.clientY || 0) - _docDownY);
+        // Si se movio mas de 10px fue scroll, no tap — no cerramos
+        if (dx > 10 || dy > 10) return;
+        const path = _docDownPath || [];
         if (path.indexOf(list) !== -1) return;
         if (path.indexOf(inp) !== -1) return;
         if (opts.caretBtn && path.indexOf(opts.caretBtn) !== -1) return;
-        // Fallback por si composedPath no esta disponible
+        // Fallback por si composedPath no estaba disponible
         if (list.contains(e.target) || inp.contains(e.target)) return;
         if (opts.caretBtn && opts.caretBtn.contains(e.target)) return;
         close();
