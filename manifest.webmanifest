@@ -1,7 +1,7 @@
 {
-  "name": "MAXIFER · Pedido de Faltantes",
-  "short_name": "Pedido MAXIFER",
-  "description": "Armá tu pedido de faltantes MAXIFER. Funciona offline.",
+  "name": "MAXIFER · Pedido Reposición",
+  "short_name": "Pedido Reposición",
+  "description": "Pedido de Reposición MAXIFER. Armá y enviá tu pedido por WhatsApp.",
   "lang": "es-AR",
   "dir": "ltr",
   "start_url": "/pedido.html",
@@ -9,7 +9,7 @@
   "display": "standalone",
   "orientation": "any",
   "background_color": "#f5f7fb",
-  "theme_color": "#1e2c5b",
+  "theme_color": "#1a3a7a",
   "icons": [
     { "src": "/img/favicon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "/img/favicon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
