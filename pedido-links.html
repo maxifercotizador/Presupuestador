@@ -145,6 +145,29 @@ button,input,select{font-family:inherit;font-size:inherit;color:inherit}
 }
 .disc-custom input:focus{border-color:var(--green)}
 
+/* Toggle "sin precios" */
+.noprice-toggle{
+    display:flex;align-items:center;gap:10px;
+    margin-top:14px;padding:12px 14px;
+    background:rgba(232,81,10,.06);
+    border:1px solid rgba(232,81,10,.25);
+    border-radius:10px;cursor:pointer;
+    transition:all .15s;user-select:none;
+}
+.noprice-toggle:hover{background:rgba(232,81,10,.1);border-color:rgba(232,81,10,.4)}
+.noprice-toggle input{
+    width:18px;height:18px;cursor:pointer;accent-color:var(--orange);
+    flex-shrink:0;
+}
+.noprice-toggle .nt-text{flex:1;font-size:13px;line-height:1.4}
+.noprice-toggle .nt-title{font-weight:700;color:var(--text);display:block}
+.noprice-toggle .nt-hint{font-size:11px;color:var(--text-muted);margin-top:2px;display:block}
+.noprice-toggle.on{background:rgba(232,81,10,.12);border-color:var(--orange)}
+.noprice-toggle.on .nt-title{color:var(--orange)}
+
+/* Cuando "sin precios" está activo, atenuamos las opciones de descuento */
+.disc-options.disabled{opacity:.4;pointer-events:none;filter:grayscale(.6)}
+
 /* Link preview */
 .link-card{
     background:linear-gradient(135deg,var(--navy-dark),var(--navy));
@@ -270,6 +293,14 @@ button,input,select{font-family:inherit;font-size:inherit;color:inherit}
             </div>
         </div>
 
+        <label class="noprice-toggle" id="noPriceToggle" for="noPriceCheck">
+            <input type="checkbox" id="noPriceCheck">
+            <span class="nt-text">
+                <span class="nt-title">🚫 Sin precios (modo catálogo)</span>
+                <span class="nt-hint">El cliente arma el pedido pero no ve importes ni totales. Útil para mandarlo antes de cotizar o para clientes que sólo eligen modelos.</span>
+            </span>
+        </label>
+
         <div class="link-card">
             <div class="link-label">
                 <span>Link generado</span>
@@ -309,11 +340,18 @@ function getBase(){
     return location.origin + location.pathname.replace(/[^/]+$/, '') + 'pedido.html';
 }
 
-let state = { vendor: 'Maxi', desc: 'lista' };
+let state = { vendor: 'Maxi', desc: 'lista', noPrice: false };
 
-function buildLink(vendor, desc){
+function buildLink(vendor, desc, noPrice){
     const base = getBase();
-    return base + '#wa=' + encodeURIComponent(vendor) + '&desc=' + encodeURIComponent(desc);
+    let hash = 'wa=' + encodeURIComponent(vendor);
+    if (noPrice){
+        // En modo "sin precios" no enviamos descuento (no aplica)
+        hash += '&noprice=1';
+    } else {
+        hash += '&desc=' + encodeURIComponent(desc);
+    }
+    return base + '#' + hash;
 }
 
 function descLabel(d){
@@ -322,9 +360,10 @@ function descLabel(d){
 }
 
 function render(){
-    const link = buildLink(state.vendor, state.desc);
+    const link = buildLink(state.vendor, state.desc, state.noPrice);
     document.getElementById('linkUrl').textContent = link;
-    document.getElementById('linkTag').textContent = state.vendor + ' · ' + descLabel(state.desc);
+    const tagDesc = state.noPrice ? 'Sin precios' : descLabel(state.desc);
+    document.getElementById('linkTag').textContent = state.vendor + ' · ' + tagDesc;
 
     // Pintar chip activo
     document.querySelectorAll('.disc-chip').forEach(c => {
@@ -336,25 +375,43 @@ function render(){
         document.getElementById('discCustom').value = state.desc;
     }
 
+    // Toggle "sin precios": atenúa selector de descuento
+    document.getElementById('discOptions').classList.toggle('disabled', state.noPrice);
+    document.getElementById('noPriceToggle').classList.toggle('on', state.noPrice);
+    document.getElementById('noPriceCheck').checked = state.noPrice;
+
     // Cheatsheet del vendor
     const cs = document.getElementById('cheatsheet');
     document.getElementById('cheatVendor').textContent = state.vendor;
-    cs.innerHTML = COMMON_DISCS.map(d => {
-        const l = buildLink(state.vendor, d);
-        const cls = d === 'lista' ? 'lista' : '';
-        return '<div class="cs-row">' +
-            '<span class="cs-pct ' + cls + '">' + descLabel(d) + '</span>' +
+    if (state.noPrice){
+        // En modo sin precios solo hay un link posible por vendedor
+        const l = buildLink(state.vendor, 'lista', true);
+        cs.innerHTML = '<div class="cs-row">' +
+            '<span class="cs-pct" style="background:rgba(232,81,10,.15);color:var(--orange);border-color:var(--orange)">Sin $</span>' +
             '<span class="cs-link">' + l + '</span>' +
             '<span class="cs-actions">' +
                 '<button class="cs-btn" onclick="quickCopy(\'' + l + '\')">📋</button>' +
                 '<button class="cs-btn" onclick="window.open(\'' + l + '\',\'_blank\')">👁</button>' +
             '</span>' +
         '</div>';
-    }).join('');
+    } else {
+        cs.innerHTML = COMMON_DISCS.map(d => {
+            const l = buildLink(state.vendor, d, false);
+            const cls = d === 'lista' ? 'lista' : '';
+            return '<div class="cs-row">' +
+                '<span class="cs-pct ' + cls + '">' + descLabel(d) + '</span>' +
+                '<span class="cs-link">' + l + '</span>' +
+                '<span class="cs-actions">' +
+                    '<button class="cs-btn" onclick="quickCopy(\'' + l + '\')">📋</button>' +
+                    '<button class="cs-btn" onclick="window.open(\'' + l + '\',\'_blank\')">👁</button>' +
+                '</span>' +
+            '</div>';
+        }).join('');
+    }
 }
 
 function copyLink(){
-    const link = buildLink(state.vendor, state.desc);
+    const link = buildLink(state.vendor, state.desc, state.noPrice);
     quickCopy(link);
 }
 function quickCopy(text){
@@ -368,16 +425,18 @@ function quickCopy(text){
     });
 }
 function testLink(){
-    window.open(buildLink(state.vendor, state.desc), '_blank');
+    window.open(buildLink(state.vendor, state.desc, state.noPrice), '_blank');
 }
 function sendByWa(){
     const v = VENDEDORES[state.vendor];
     if (!v) return;
-    const link = buildLink(state.vendor, state.desc);
+    const link = buildLink(state.vendor, state.desc, state.noPrice);
+    const nota = state.noPrice
+        ? '(Es modo catálogo, sin precios. Cuando termines, le das a "Finalizar" y me llega por acá.)'
+        : '(Tiene tu descuento ya aplicado. Cuando termines, le das a "Finalizar" y me llega por acá.)';
     const txt = encodeURIComponent(
         'Hola! Te paso el link para que cargues tu pedido de faltantes MAXIFER.\n\n' +
-        link + '\n\n' +
-        '(Tiene tu descuento ya aplicado. Cuando termines, le das a "Finalizar" y me llega por acá.)'
+        link + '\n\n' + nota
     );
     // Abre WhatsApp para que el vendedor reenvie ese mensaje al cliente
     window.open('https://wa.me/?text=' + txt, '_blank');
@@ -400,6 +459,10 @@ document.getElementById('discCustom').addEventListener('input', e => {
         state.desc = v;
         render();
     }
+});
+document.getElementById('noPriceCheck').addEventListener('change', e => {
+    state.noPrice = e.target.checked;
+    render();
 });
 
 render();

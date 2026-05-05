@@ -759,6 +759,26 @@ body{
     margin-top:2px;letter-spacing:-.01em;
 }
 .mini-cart.empty .mini-total{color:var(--text-dim);font-size:14px;font-weight:700}
+
+/* ============ MODO SIN PRECIOS (catálogo) ============
+   Activado cuando el link incluye #noprice=1.
+   Oculta todos los importes, descuentos y totales. */
+body.no-prices .disc-pill,
+body.no-prices .vendor-pill .vp-disc,
+body.no-prices .pc-prices,
+body.no-prices .cbx-item .price,
+body.no-prices .cart-item-sub,
+body.no-prices #ipSubtotal,
+body.no-prices #drSubtotal,
+body.no-prices #drTotal,
+body.no-prices #bGrandTotal,
+body.no-prices #ipDiscRow,
+body.no-prices #drDiscRow,
+body.no-prices .cart-total-row.grand,
+body.no-prices .hr-total,
+body.no-prices .mini-cart:not(.empty) .mini-total{
+    display:none !important;
+}
 .mini-cta{
     background:var(--green);color:#fff;
     width:36px;height:36px;border-radius:8px;
@@ -962,7 +982,7 @@ body{
             <img src="img/favicon-192.png" alt="MAXIFER" onerror="this.src='favicon.ico'">
             <div class="brand-text">MAXIFER<br>Pedido Faltantes</div>
         </a>
-        <span class="ver-chip" id="verChip">v20</span>
+        <span class="ver-chip" id="verChip">v21</span>
         <div class="top-actions">
             <button id="userChip" class="top-chip" type="button" onclick="openProfile()" title="Mi cuenta">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -1299,6 +1319,17 @@ if (_rawDesc === 'lista' || _rawDesc === 'sin'){
     URL_LOCKED = true;
 }
 if (VENDOR_FROM_LINK) URL_LOCKED = true;
+
+/* Modo "sin precios" (catálogo): #noprice=1 / #sp=1.
+   Oculta importes, descuentos y totales en toda la app. */
+const NO_PRICES = (function(){
+    const v = String(URL_PARAMS.noprice != null ? URL_PARAMS.noprice : URL_PARAMS.sp || '').toLowerCase().trim();
+    return v === '1' || v === 'true' || v === 'si' || v === 'yes';
+})();
+if (NO_PRICES){
+    DISCOUNT = 0;       // sin precios → sin descuento (no aplica)
+    URL_LOCKED = true;  // cliente no puede cambiar nada
+}
 
 /* Persistencia: guardamos snapshot completo asi el carrito se renderiza
    sin depender de productos.json (importante en offline / sin red). */
@@ -1828,8 +1859,8 @@ function bSelectProduct(item){
     sel.className = 'selected-prod has';
     sel.innerHTML =
         '<b>N° '+escapeHtml(item.n)+' — '+escapeHtml(item.d)+'</b><br>'+
-        'Cód. BS: <span style="font-family:ui-monospace,monospace">'+escapeHtml(item.c||'—')+'</span> · '+
-        'Precio: <b style="color:var(--green-dark)">'+fmtMoney(netPrice(item.pl))+'</b>'+
+        'Cód. BS: <span style="font-family:ui-monospace,monospace">'+escapeHtml(item.c||'—')+'</span>'+
+        (NO_PRICES ? '' : ' · Precio: <b style="color:var(--green-dark)">'+fmtMoney(netPrice(item.pl))+'</b>')+
         (item.cm>1 ? ' · <span style="color:var(--amber);font-weight:700">Mín: '+item.cm+'</span>' : '');
     setTimeout(() => { $('bQty').focus(); $('bQty').select(); }, 50);
 }
@@ -2052,7 +2083,7 @@ function buildSummary(){
     const notes = ($('fNotes').value || '').trim();
     let txt = '*MAXIFER · Pedido de Faltantes*\n' + today;
     if (cliente) txt += ' · Cliente: ' + cliente;
-    if (DISCOUNT > 0) txt += ' · Lista con -' + DISCOUNT + '%';
+    if (DISCOUNT > 0 && !NO_PRICES) txt += ' · Lista con -' + DISCOUNT + '%';
     txt += '\n';
     // Lineas: solo N° y cantidad, sin descripcion ni precio (formato limpio)
     Object.keys(byFam).sort().forEach(fam => {
@@ -2061,8 +2092,8 @@ function buildSummary(){
             txt += '  N°' + e.item.n + ' - ' + e.qty + '\n';
         });
     });
-    // Total al final
-    txt += '\n*TOTAL: ' + fmtMoney(cartTotal()) + '*';
+    // Total al final (oculto en modo sin precios)
+    if (!NO_PRICES) txt += '\n*TOTAL: ' + fmtMoney(cartTotal()) + '*';
     txt += '\n(' + cartLines() + ' modelos · ' + cartCount() + ' piezas)';
     if (notes) txt += '\n\n_Notas: ' + notes + '_';
     // Datos del cliente desde el perfil
@@ -2467,6 +2498,8 @@ if ('serviceWorker' in navigator){
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+    if (NO_PRICES) document.body.classList.add('no-prices');
+
     $('discInput').value = DISCOUNT;
     $('discInput').addEventListener('input', e => setDiscount(e.target.value));
 
@@ -2483,7 +2516,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const nm = $('vendorPillName');
             if (nm) nm.textContent = 'Cliente';
         }
-        if (DISCOUNT > 0){
+        if (DISCOUNT > 0 && !NO_PRICES){
             $('vendorPillDisc').style.display = 'inline-block';
             $('vendorPillDiscNum').textContent = DISCOUNT;
         }
