@@ -243,6 +243,32 @@ button,input,select{font-family:inherit;font-size:inherit;color:inherit}
     font-size:11px;font-weight:700;cursor:pointer;
 }
 .cs-btn:hover{background:#fff;border-color:var(--navy);color:var(--navy)}
+
+/* Selector de módulo */
+.module-tabs{
+    display:flex;gap:6px;margin-bottom:18px;
+    background:var(--bg-soft);border:1px solid var(--border);
+    border-radius:14px;padding:6px;
+    box-shadow:var(--shadow-sm);
+}
+.mod-tab{
+    flex:1;padding:12px 10px;border:none;background:transparent;
+    border-radius:10px;font-weight:800;font-size:13px;color:var(--text-muted);
+    cursor:pointer;transition:all .15s;
+    display:inline-flex;align-items:center;justify-content:center;gap:6px;
+    text-transform:uppercase;letter-spacing:.04em;
+    font-family:inherit;
+}
+.mod-tab:hover{color:var(--navy)}
+.mod-tab.on{
+    background:#fff;color:var(--navy);
+    box-shadow:0 2px 8px rgba(26,58,122,.15);
+}
+@media (max-width:560px){
+    .mod-tab{font-size:11px;padding:10px 6px;letter-spacing:0}
+}
+
+.hidden{display:none !important}
 </style>
 </head>
 <body>
@@ -258,15 +284,21 @@ button,input,select{font-family:inherit;font-size:inherit;color:inherit}
 </div>
 
 <div class="wrap">
-    <div class="intro">
+    <div class="module-tabs" id="moduleTabs">
+        <button type="button" class="mod-tab on" data-m="pedido">🛒 Pedido</button>
+        <button type="button" class="mod-tab" data-m="catalogo">📕 Catálogo</button>
+        <button type="button" class="mod-tab" data-m="listas">📑 Listas</button>
+    </div>
+
+    <div class="intro" id="intro">
         Generá links personalizados para cada cliente. El cliente abre el link, ya tiene el descuento aplicado y al enviar el pedido por WhatsApp va directo al número del vendedor. <b>El cliente no puede cambiar el descuento.</b>
     </div>
 
     <div class="card">
-        <h2><span class="step">1</span> Elegí vendedor y descuento</h2>
+        <h2><span class="step">1</span> <span id="cardTitle">Elegí vendedor y descuento</span></h2>
 
         <div class="field-grid">
-            <div class="field">
+            <div class="field" id="vendorField">
                 <label for="selVendor">Vendedor</label>
                 <select id="selVendor" class="select">
                     <option value="Maxi">Maxi (Maximiliano Gordillo)</option>
@@ -296,8 +328,8 @@ button,input,select{font-family:inherit;font-size:inherit;color:inherit}
         <label class="noprice-toggle" id="noPriceToggle" for="noPriceCheck">
             <input type="checkbox" id="noPriceCheck">
             <span class="nt-text">
-                <span class="nt-title">🚫 Sin precios (modo catálogo)</span>
-                <span class="nt-hint">El cliente arma el pedido pero no ve importes ni totales. Útil para mandarlo antes de cotizar o para clientes que sólo eligen modelos.</span>
+                <span class="nt-title" id="noPriceTitle">🚫 Sin precios (modo catálogo)</span>
+                <span class="nt-hint" id="noPriceHint">El cliente arma el pedido pero no ve importes ni totales. Útil para mandarlo antes de cotizar o para clientes que sólo eligen modelos.</span>
             </span>
         </label>
 
@@ -316,7 +348,7 @@ button,input,select{font-family:inherit;font-size:inherit;color:inherit}
     </div>
 
     <div class="card">
-        <h2><span class="step">📋</span> Todos los descuentos para <span id="cheatVendor" style="color:var(--green-dark)">Maxi</span></h2>
+        <h2><span class="step">📋</span> <span id="cheatTitle">Todos los descuentos para</span> <span id="cheatVendor" style="color:var(--green-dark)">Maxi</span></h2>
         <div class="cheatsheet" id="cheatsheet"></div>
     </div>
 </div>
@@ -335,24 +367,83 @@ const VENDEDORES = {
 
 const COMMON_DISCS = ['lista', 20, 30, 40, 46, 50];
 
-// Detecta el base URL automaticamente: usa el dominio actual + /pedido.html
-function getBase(){
-    return location.origin + location.pathname.replace(/[^/]+$/, '') + 'pedido.html';
+// Resuelve un path relativo desde la URL actual a una URL absoluta.
+function resolveUrl(rel){
+    return new URL(rel, location.href).toString();
 }
 
-let state = { vendor: 'Maxi', desc: 'lista', noPrice: false };
-
-function buildLink(vendor, desc, noPrice){
-    const base = getBase();
-    let hash = 'wa=' + encodeURIComponent(vendor);
-    if (noPrice){
-        // En modo "sin precios" no enviamos descuento (no aplica)
-        hash += '&noprice=1';
-    } else {
-        hash += '&desc=' + encodeURIComponent(desc);
+const MODULES = {
+    pedido: {
+        label: '🛒 Pedido',
+        intro: 'Generá links personalizados para cada cliente. El cliente abre el link, ya tiene el descuento aplicado y al enviar el pedido por WhatsApp va directo al número del vendedor. <b>El cliente no puede cambiar el descuento.</b>',
+        cardTitle: 'Elegí vendedor y descuento',
+        target: 'pedido.html',
+        hasVendor: true,
+        hasNoPrice: true,
+        noPriceTitle: '🚫 Sin precios (modo catálogo)',
+        noPriceHint: 'El cliente arma el pedido pero no ve importes ni totales. Útil para mandarlo antes de cotizar o para clientes que sólo eligen modelos.',
+        cheatTitle: 'Todos los descuentos para',
+        buildLink(vendor, desc, noPrice){
+            const base = resolveUrl(this.target);
+            let h = 'wa=' + encodeURIComponent(vendor);
+            if (noPrice) h += '&noprice=1';
+            else h += '&desc=' + encodeURIComponent(desc);
+            return base + '#' + h;
+        },
+        waText(link, vendor, desc, noPrice){
+            const nota = noPrice
+                ? '(Es modo catálogo, sin precios. Cuando termines, le das a "Finalizar" y me llega por acá.)'
+                : '(Tiene tu descuento ya aplicado. Cuando termines, le das a "Finalizar" y me llega por acá.)';
+            return 'Hola! Te paso el link para que cargues tu pedido de faltantes MAXIFER.\n\n' + link + '\n\n' + nota;
+        }
+    },
+    catalogo: {
+        label: '📕 Catálogo',
+        intro: 'Generá un link al <b>catálogo MAXIFER</b> ya configurado para el cliente: descuento y vendedor aplicados, con botón flotante de WhatsApp del vendedor. <b>El cliente no puede cambiar el descuento.</b>',
+        cardTitle: 'Elegí vendedor y descuento',
+        target: '../Flyers-Catalogo/catalogo_actualizado.html',
+        hasVendor: true,
+        hasNoPrice: true,
+        noPriceTitle: '🚫 Sin precios',
+        noPriceHint: 'El catálogo se abre sin mostrar importes. El cliente solo ve modelos y fotos.',
+        cheatTitle: 'Todos los descuentos para',
+        buildLink(vendor, desc, noPrice){
+            const base = resolveUrl(this.target);
+            let h = 'wa=' + encodeURIComponent(vendor);
+            if (noPrice) h += '&precio=sin';
+            else if (desc === 'lista' || +desc === 0) h += '&precio=lista';
+            else h += '&desc=' + encodeURIComponent(desc);
+            return base + '#' + h;
+        },
+        waText(link, vendor, desc, noPrice){
+            const nota = noPrice
+                ? '(Es el catálogo MAXIFER, modo sin precios.)'
+                : '(El catálogo MAXIFER ya tiene tu precio aplicado.)';
+            return 'Hola! Te paso el catálogo MAXIFER.\n\n' + link + '\n\n' + nota;
+        }
+    },
+    listas: {
+        label: '📑 Listas',
+        intro: 'Generá un link a las <b>Listas de Precios MAXIFER</b> (PDFs y consultor de precios) con el descuento ya aplicado. <b>El cliente no puede cambiar el descuento.</b>',
+        cardTitle: 'Elegí descuento',
+        target: 'listas.html',
+        hasVendor: false,
+        hasNoPrice: false,
+        cheatTitle: 'Todos los descuentos',
+        buildLink(vendor, desc, noPrice){
+            const base = resolveUrl(this.target);
+            if (desc === 'lista' || +desc === 0) return base;
+            return base + '?d=' + encodeURIComponent(desc);
+        },
+        waText(link){
+            return 'Hola! Te paso las listas de precios MAXIFER.\n\n' + link + '\n\n(El descuento ya viene aplicado.)';
+        }
     }
-    return base + '#' + hash;
-}
+};
+
+let state = { module: 'pedido', vendor: 'Maxi', desc: 'lista', noPrice: false };
+
+function currentMod(){ return MODULES[state.module]; }
 
 function descLabel(d){
     if (d === 'lista' || d === 0 || d === '0') return 'Lista';
@@ -360,32 +451,65 @@ function descLabel(d){
 }
 
 function render(){
-    const link = buildLink(state.vendor, state.desc, state.noPrice);
-    document.getElementById('linkUrl').textContent = link;
-    const tagDesc = state.noPrice ? 'Sin precios' : descLabel(state.desc);
-    document.getElementById('linkTag').textContent = state.vendor + ' · ' + tagDesc;
+    const mod = currentMod();
 
-    // Pintar chip activo
+    // Tabs
+    document.querySelectorAll('.mod-tab').forEach(t => {
+        t.classList.toggle('on', t.dataset.m === state.module);
+    });
+
+    // Textos del módulo
+    document.getElementById('intro').innerHTML = mod.intro;
+    document.getElementById('cardTitle').textContent = mod.cardTitle;
+    document.getElementById('cheatTitle').textContent = mod.cheatTitle;
+
+    // Mostrar / ocultar campos según módulo
+    document.getElementById('vendorField').classList.toggle('hidden', !mod.hasVendor);
+    document.getElementById('noPriceToggle').classList.toggle('hidden', !mod.hasNoPrice);
+    if (mod.hasNoPrice){
+        document.getElementById('noPriceTitle').textContent = mod.noPriceTitle;
+        document.getElementById('noPriceHint').textContent = mod.noPriceHint;
+    } else {
+        state.noPrice = false;
+    }
+
+    const link = mod.buildLink(state.vendor, state.desc, state.noPrice);
+    document.getElementById('linkUrl').textContent = link;
+
+    // Tag del link
+    const tagDesc = state.noPrice ? 'Sin precios' : descLabel(state.desc);
+    const tag = mod.hasVendor ? (state.vendor + ' · ' + tagDesc) : tagDesc;
+    document.getElementById('linkTag').textContent = tag;
+
+    // Chip activo
     document.querySelectorAll('.disc-chip').forEach(c => {
         c.classList.toggle('on', String(c.dataset.d) === String(state.desc));
     });
-    // Si el desc actual es uno custom, marcar el input
     const isCommon = COMMON_DISCS.some(d => String(d) === String(state.desc));
     if (!isCommon && state.desc !== 'lista'){
         document.getElementById('discCustom').value = state.desc;
     }
 
-    // Toggle "sin precios": atenúa selector de descuento
+    // Toggle "sin precios"
     document.getElementById('discOptions').classList.toggle('disabled', state.noPrice);
     document.getElementById('noPriceToggle').classList.toggle('on', state.noPrice);
     document.getElementById('noPriceCheck').checked = state.noPrice;
 
-    // Cheatsheet del vendor
+    // Botón WhatsApp solo cuando hay vendedor (o lo dejamos siempre, para reenviar texto genérico)
+    // Lo dejamos siempre visible: en listas el vendedor reenvía el mensaje al cliente igual.
+
+    // Cheatsheet
     const cs = document.getElementById('cheatsheet');
-    document.getElementById('cheatVendor').textContent = state.vendor;
-    if (state.noPrice){
-        // En modo sin precios solo hay un link posible por vendedor
-        const l = buildLink(state.vendor, 'lista', true);
+    const cheatVendorEl = document.getElementById('cheatVendor');
+    if (mod.hasVendor){
+        cheatVendorEl.style.display = '';
+        cheatVendorEl.textContent = state.vendor;
+    } else {
+        cheatVendorEl.style.display = 'none';
+    }
+
+    if (state.noPrice && mod.hasNoPrice){
+        const l = mod.buildLink(state.vendor, 'lista', true);
         cs.innerHTML = '<div class="cs-row">' +
             '<span class="cs-pct" style="background:rgba(232,81,10,.15);color:var(--orange);border-color:var(--orange)">Sin $</span>' +
             '<span class="cs-link">' + l + '</span>' +
@@ -396,7 +520,7 @@ function render(){
         '</div>';
     } else {
         cs.innerHTML = COMMON_DISCS.map(d => {
-            const l = buildLink(state.vendor, d, false);
+            const l = mod.buildLink(state.vendor, d, false);
             const cls = d === 'lista' ? 'lista' : '';
             return '<div class="cs-row">' +
                 '<span class="cs-pct ' + cls + '">' + descLabel(d) + '</span>' +
@@ -410,38 +534,37 @@ function render(){
     }
 }
 
-function copyLink(){
-    const link = buildLink(state.vendor, state.desc, state.noPrice);
-    quickCopy(link);
+function currentLink(){
+    return currentMod().buildLink(state.vendor, state.desc, state.noPrice);
 }
+function copyLink(){ quickCopy(currentLink()); }
 function quickCopy(text){
     navigator.clipboard.writeText(text).then(() => {
         const t = document.getElementById('copiedToast');
         t.classList.add('visible');
         setTimeout(() => t.classList.remove('visible'), 1800);
     }, () => {
-        // fallback: prompt
         prompt('Copiá el link:', text);
     });
 }
 function testLink(){
-    window.open(buildLink(state.vendor, state.desc, state.noPrice), '_blank');
+    window.open(currentLink(), '_blank');
 }
 function sendByWa(){
-    const v = VENDEDORES[state.vendor];
-    if (!v) return;
-    const link = buildLink(state.vendor, state.desc, state.noPrice);
-    const nota = state.noPrice
-        ? '(Es modo catálogo, sin precios. Cuando termines, le das a "Finalizar" y me llega por acá.)'
-        : '(Tiene tu descuento ya aplicado. Cuando termines, le das a "Finalizar" y me llega por acá.)';
-    const txt = encodeURIComponent(
-        'Hola! Te paso el link para que cargues tu pedido de faltantes MAXIFER.\n\n' +
-        link + '\n\n' + nota
-    );
-    // Abre WhatsApp para que el vendedor reenvie ese mensaje al cliente
+    const mod = currentMod();
+    const link = currentLink();
+    const txt = encodeURIComponent(mod.waText(link, state.vendor, state.desc, state.noPrice));
     window.open('https://wa.me/?text=' + txt, '_blank');
 }
 
+document.querySelectorAll('.mod-tab').forEach(t => {
+    t.addEventListener('click', () => {
+        state.module = t.dataset.m;
+        // Si el nuevo módulo no soporta noPrice, lo apagamos
+        if (!MODULES[state.module].hasNoPrice) state.noPrice = false;
+        render();
+    });
+});
 document.getElementById('selVendor').addEventListener('change', e => {
     state.vendor = e.target.value;
     render();
