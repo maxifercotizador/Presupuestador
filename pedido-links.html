@@ -207,6 +207,8 @@ button,input,select{font-family:inherit;font-size:inherit;color:inherit}
 .btn-test:hover{background:var(--green-dark);transform:translateY(-1px)}
 .btn-wa{background:#25d366;color:#fff}
 .btn-wa:hover{background:#1ebe57;transform:translateY(-1px)}
+.btn-pdf{background:var(--red);color:#fff}
+.btn-pdf:hover{background:#a30d24;transform:translateY(-1px)}
 
 .copied-toast{
     position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(20px);
@@ -343,6 +345,7 @@ button,input,select{font-family:inherit;font-size:inherit;color:inherit}
                 <button class="btn btn-copy" onclick="copyLink()">📋 Copiar link</button>
                 <button class="btn btn-test" onclick="testLink()">👁 Probar link</button>
                 <button class="btn btn-wa" onclick="sendByWa()">💬 Enviar por WhatsApp</button>
+                <button class="btn btn-pdf hidden" id="btnPdf" onclick="descargarPdf()">📥 Descargar PDF</button>
             </div>
         </div>
     </div>
@@ -399,11 +402,13 @@ const MODULES = {
     },
     catalogo: {
         label: '📕 Catálogo',
-        intro: 'Generá un link al <b>catálogo MAXIFER</b> ya configurado para el cliente: descuento y vendedor aplicados, con botón flotante de WhatsApp del vendedor. <b>El cliente no puede cambiar el descuento.</b>',
+        intro: 'Generá un link al <b>catálogo MAXIFER</b> ya configurado para el cliente: descuento y vendedor aplicados, con botón flotante de WhatsApp del vendedor. <b>El cliente no puede cambiar el descuento.</b> También podés <b>descargar el PDF imprimible</b> con esa misma configuración.',
         cardTitle: 'Elegí vendedor y descuento',
         target: '../Flyers-Catalogo/catalogo_actualizado.html',
+        pdfTarget: '../Flyers-Catalogo/catalogo_pdf.html',
         hasVendor: true,
         hasNoPrice: true,
+        hasPdf: true,
         noPriceTitle: '🚫 Sin precios',
         noPriceHint: 'El catálogo se abre sin mostrar importes. El cliente solo ve modelos y fotos.',
         cheatTitle: 'Todos los descuentos para',
@@ -413,6 +418,16 @@ const MODULES = {
             if (noPrice) h += '&precio=sin';
             else if (desc === 'lista' || +desc === 0) h += '&precio=lista';
             else h += '&desc=' + encodeURIComponent(desc);
+            return base + '#' + h;
+        },
+        // Link al PDF imprimible. Si autodl=true, dispara descarga automática al abrir.
+        buildPdfLink(vendor, desc, noPrice, autodl){
+            const base = resolveUrl(this.pdfTarget);
+            let h = 'wa=' + encodeURIComponent(vendor);
+            if (noPrice) h += '&precio=sin';
+            else if (desc === 'lista' || +desc === 0) h += '&precio=lista';
+            else h += '&desc=' + encodeURIComponent(desc);
+            if (autodl) h += '&autodl=1';
             return base + '#' + h;
         },
         waText(link, vendor, desc, noPrice){
@@ -466,6 +481,7 @@ function render(){
     // Mostrar / ocultar campos según módulo
     document.getElementById('vendorField').classList.toggle('hidden', !mod.hasVendor);
     document.getElementById('noPriceToggle').classList.toggle('hidden', !mod.hasNoPrice);
+    document.getElementById('btnPdf').classList.toggle('hidden', !mod.hasPdf);
     if (mod.hasNoPrice){
         document.getElementById('noPriceTitle').textContent = mod.noPriceTitle;
         document.getElementById('noPriceHint').textContent = mod.noPriceHint;
@@ -555,6 +571,13 @@ function sendByWa(){
     const link = currentLink();
     const txt = encodeURIComponent(mod.waText(link, state.vendor, state.desc, state.noPrice));
     window.open('https://wa.me/?text=' + txt, '_blank');
+}
+// Abre el catálogo imprimible y dispara descarga automática (módulo Catálogo).
+function descargarPdf(){
+    const mod = currentMod();
+    if (!mod.buildPdfLink) return;
+    const link = mod.buildPdfLink(state.vendor, state.desc, state.noPrice, true);
+    window.open(link, '_blank');
 }
 
 document.querySelectorAll('.mod-tab').forEach(t => {
