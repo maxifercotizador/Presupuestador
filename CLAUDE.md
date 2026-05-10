@@ -125,45 +125,65 @@ Idioma: español (Argentina).
 
 ### Apps con dependencias externas importantes
 
+
+<!-- BEGIN auto-sync-from-graph (no editar a mano — se regenera desde dependency-graph.json) -->
+
+_Generado automáticamente desde `architecture-map/dependency-graph.json` (26 servicios externos detectados)._
+
 #### 🔄 Sincronización SharePoint → GitHub
 
-- **⚡ Power Automate (Microsoft 365)** — flujo automático. Hace 2 cosas:
-  1. Sube Excels editados a GitHub (commits "auto: actualiza X desde SharePoint" autoreados como `maxifercotizador <info@fabricamaxifer.com>`).
-  2. **Genera los JSONs financieros derivados** (`financiero_facturacion.json`, `financiero_gastos.json`, `financiero_resumen.json`, `ventas_monday.json`, `sur_data.json`, `pendientes_data.json`) y los commitea en el mismo push.
-  
-  **Excels que sincroniza**: `Listas Maxifer.xlsx`, `Precio Surtidos.xlsx` (Presupuestador); `01 COMPRAS - COSTOS - FABRICAS.xlsm`, `03 Pedidos Fabricas.xlsm`, `Control de ingresos y gastos.xlsm`, `Gastos Fijos.xlsx` (Proyecto-Privado).
-
-- **☁️ SharePoint (Microsoft 365)** — fuente upstream donde Maxi edita los Excels maestros.
+- **☁️ SharePoint (Microsoft 365)** — Carpeta SharePoint donde Maxi edita los Excels maestros. Power Automate los sincroniza a GitHub al cambiar.
+- **⚡ Power Automate** — Flujo automático en Microsoft Power Automate. Cuando Maxi edita un Excel en SharePoint: (1) sube el Excel a GitHub; (2) procesa el Excel y genera los JSONs derivados (financiero_*.json, ventas_monday, sur_data, pendientes_data); (3) commitea todo con mensaje 'auto: actualiza X desde SharePoint'.
 
 #### 🔥 Bases de datos / sync cloud
 
-- **Firebase Firestore** (project `presupuestador-maxifer`) — base de datos NoSQL que espeja claves de localStorage de las apps (last-write-wins). Sirve para que los datos sincronicen entre celulares de Maxi. La usan vía `firebase-sync.js`: `Presupuestador/compras.html`, `Temporales/{Notas_Pendientes,Prospectos,VIAJE_SUR,postventa_monday}.html`. Config Firebase pública (es estándar en clientes web).
+- **🔥 Firebase Firestore** — Project Firebase 'presupuestador-maxifer'. Base de datos NoSQL que espeja claves de localStorage (last-write-wins). Sirve como cloud-sync entre celulares de Maxi. La usan vía firebase-sync.js: compras.html, Notas_Pendientes.html, Prospectos.html, VIAJE_SUR.html, postventa_monday.html. **Lo usan**: `firebase-sync.js`. [https://console.firebase.google.com/project/presupuestador-maxifer](https://console.firebase.google.com/project/presupuestador-maxifer).
 
 #### ⚡ Backends Vercel (serverless)
 
-- **`presupuestador-eight.vercel.app`** — deployment del repo Presupuestador con 2 functions:
-  - `/api/sheets.js` → proxy a **Google Apps Script** (macro de Google que probablemente lee/escribe a una Google Sheet).
-  - `/api/transcribir.js` → proxy a **API de Anthropic (Claude)**, usa secret `ANTHROPIC_API_KEY`. Lo usa `3en1.html` y `index_presupuestador.html` para **transcribir fotos de pedidos manuscritos** (empleado saca foto del papel → Claude lee la imagen → devuelve texto del pedido). **Factura por tokens vía Anthropic Console — separada de la suscripción a Claude.ai.**
-- **mcp-asistente.vercel.app** — servidor MCP (Python). Conecta los datos de MAXIFER a Claude.ai: lee JSONs financieros, surtidos, productos, despachos vía GitHub raw y los expone como tools. Permite preguntar en Claude "¿cuánto facturé este mes?" o "¿qué le entregué a Casa Blanco?". Es **lector**, no escritor.
+- **▲ Vercel: presupuestador-eight** — Deployment Vercel del repo Presupuestador (presupuestador-eight.vercel.app). Hostea 2 serverless functions: api/sheets.js (proxy a Google Apps Script) y api/transcribir.js (proxy a Anthropic API). También sirve listas.html como vista pública. **Lo usan**: `Presupuestador/listas.html`, `Proyecto-Privado/🤖 mcp-asistente (servidor MCP)`. [https://presupuestador-eight.vercel.app](https://presupuestador-eight.vercel.app).
+- **🤖 mcp-asistente (servidor MCP)** — Servidor MCP en Vercel que conecta los datos de MAXIFER a Claude.ai. Lee los JSONs financieros, surtidos, productos, despachos y los expone como tools. Permite preguntar en Claude '¿cuánto facturé este mes?' o '¿qué le entregué a Casa Blanco?'.
+
+#### 🤖 APIs de IA
+
+- **🤖 Claude API (Anthropic)** — API de Anthropic (api.anthropic.com/v1/messages) — usada para TRANSCRIBIR FOTOS DE PEDIDOS MANUSCRITOS. El empleado saca foto del papel del pedido en Presupuestador/3en1.html (función transcribeAllImages) o index_presupuestador.html, la app la manda al Vercel proxy api/transcribir.js, que llama a Claude con la imagen + prompt; Claude lee el pape... **Lo usan**: `Presupuestador/index_presupuestador.html`, `Presupuestador/transcribir.js`. **Secret**: `ANTHROPIC_API_KEY`. [https://docs.anthropic.com](https://docs.anthropic.com).
+
+#### 📊 Google Workspace
+
+- **Google Drive (6ac30698)** — Archivo o carpeta en Google Drive. **Lo usan**: `Proyecto-Privado/Pedidos_a_Fabrica.html`, `Proyecto-Privado/index.html`. [https://drive.google.com/uc?export=download&id=](https://drive.google.com/uc?export=download&id=). 🔍 _Auto-detectado por el scan — descripción puede mejorarse en `_manual_nodes.json`._
+- **Google Drive (e1711511)** — Archivo o carpeta en Google Drive. **Lo usan**: `Proyecto-Privado/Pedidos_a_Fabrica.html`. [https://drive.google.com/file/d/...](https://drive.google.com/file/d/...). 🔍 _Auto-detectado por el scan — descripción puede mejorarse en `_manual_nodes.json`._
+- **📊 Google Apps Script** — Macro Google Apps Script (URL .../macros/s/AKfycb.../exec). Backend serverless probablemente conectado a una Google Sheet. Se accede vía Vercel proxy api/sheets.js (Presupuestador) que agrega CORS. **Lo usan**: `Presupuestador/3en1.html`, `Presupuestador/sheets.js`.
 
 #### 📈 Analytics
 
-- **Google Analytics 4** — 2 properties:
-  - `G-K8QLJVZT4X` en páginas públicas (`listas.html` del Presupuestador + `Flyers-Catalogo`).
-  - `G-LMXG9MDKGC` en `firebase-sync.js` (apps internas con sync).
+- **📈 GA4 (apps internas)** — Google Analytics 4 G-LMXG9MDKGC. Configurada en firebase-sync.js — trackea uso de apps internas con sync. **Lo usan**: `firebase-sync.js`.
+- **📈 GA4 (público)** — Google Analytics 4 G-K8QLJVZT4X. Trackea visitas a páginas públicas: Presupuestador/listas.html, Flyers-Catalogo/index.html y catalogo_actualizado.html. **Lo usan**: `Flyers-Catalogo/Catálogo Interactivo`, `Flyers-Catalogo/index.html`, `Presupuestador/listas.html`.
 
 #### 📊 Monday.com
 
-- `Temporales/Prospectos.html` (board `18410539555` "Seguimiento Prospectos")
-- `Temporales/postventa_monday.html` (board `7212937829` "Equipo MAXIFER")
-- `Temporales/VIAJE_SUR.html` (board `8921412317`)
-- `Proyecto-Privado/surtidos.html`
-
-Token Monday guardado en `localStorage` del navegador (nunca commiteado).
+- **Monday board 18410539555** — Board de Monday.com (ID 18410539555). **Lo usan**: `Temporales/Prospectos.html`. [https://maxifercotizador.monday.com/boards/18410539555](https://maxifercotizador.monday.com/boards/18410539555).
+- **Monday board 18410539771** — Board de Monday.com (ID 18410539771). **Lo usan**: `Temporales/Prospectos.html`. [https://maxifercotizador.monday.com/boards/18410539771](https://maxifercotizador.monday.com/boards/18410539771).
+- **Monday board 8921412317** — Board de Monday.com (ID 8921412317). **Lo usan**: `Temporales/VIAJE_SUR.html`. [https://maxifercotizador.monday.com/boards/8921412317](https://maxifercotizador.monday.com/boards/8921412317).
+- **Monday — Equipo MAXIFER** — Board de Monday con tareas y agenda del equipo MAXIFER. **Lo usan**: `Proyecto-Privado/surtidos.html`, `Temporales/VIAJE_SUR.html`, `Temporales/postventa_monday.html`. [https://maxifercotizador.monday.com/boards/7212937829](https://maxifercotizador.monday.com/boards/7212937829).
+- **Monday.com API** — Endpoint genérico de Monday.com (api.monday.com/v2). **Lo usan**: `Proyecto-Privado/surtidos.html`, `Temporales/Prospectos.html`, `Temporales/VIAJE_SUR.html`, `Temporales/postventa_monday.html`. [https://api.monday.com/v2](https://api.monday.com/v2). 🔍 _Auto-detectado por el scan — descripción puede mejorarse en `_manual_nodes.json`._
 
 #### 📱 WhatsApp
 
-- Links `wa.me/<numero>?text=...` desde `Temporales/Prospectos.html` y otras. **NO automatizado** — el usuario tiene que tocar enviar.
+- **WhatsApp** — Apertura de chat en WhatsApp. **Lo usan**: `Flyers-Catalogo/Catálogo Interactivo`, `Flyers-Catalogo/catalogo-app.js`, `Flyers-Catalogo/index.html`, `Flyers-Catalogo/maxifer_flyer_v2.html`, `Flyers-Catalogo/maxifer_landing_v4.html`, `Presupuestador/compras.html`, +3 más. [https://wa.me/?text=](https://wa.me/?text=). 🔍 _Auto-detectado por el scan — descripción puede mejorarse en `_manual_nodes.json`._
+
+#### 🌐 Otros servicios externos
+
+- **api.github.com** — Servicio externo detectado automáticamente (api.github.com). Para enriquecer la descripción, agregá un override con el mismo ID en _manual_nodes.json — o usá metadata.aliases para mergear con un nodo manual existente. **Lo usan**: `Proyecto-Privado/Analisis_de_Costos.html`, `Proyecto-Privado/Analisis_de_Gastos.html`, `Proyecto-Privado/Pedidos_a_Fabrica.html`, `Proyecto-Privado/index.html`, `Proyecto-Privado/surtidos.html`, `Temporales/Index_general.html`, +1 más. [https://api.github.com/repos/](https://api.github.com/repos/). 🔍 _Auto-detectado por el scan — descripción puede mejorarse en `_manual_nodes.json`._
+- **fabricamaxifer.com** — Sitio público fabricamaxifer.com. **Lo usan**: `Flyers-Catalogo/Catálogo Interactivo`. [https://www.fabricamaxifer.com](https://www.fabricamaxifer.com).
+- **nominatim.openstreetmap.org** — Servicio externo detectado automáticamente (nominatim.openstreetmap.org). Para enriquecer la descripción, agregá un override con el mismo ID en _manual_nodes.json — o usá metadata.aliases para mergear con un nodo manual existente. **Lo usan**: `Temporales/postventa_monday.html`. [https://nominatim.openstreetmap.org/search?format=json&limit=1&q=](https://nominatim.openstreetmap.org/search?format=json&limit=1&q=). 🔍 _Auto-detectado por el scan — descripción puede mejorarse en `_manual_nodes.json`._
+- **www.facebook.com** — Servicio externo detectado automáticamente (www.facebook.com). Para enriquecer la descripción, agregá un override con el mismo ID en _manual_nodes.json — o usá metadata.aliases para mergear con un nodo manual existente. **Lo usan**: `Flyers-Catalogo/Catálogo Interactivo`. [https://www.facebook.com/profile.php?id=100011140833984](https://www.facebook.com/profile.php?id=100011140833984). 🔍 _Auto-detectado por el scan — descripción puede mejorarse en `_manual_nodes.json`._
+- **www.google.com** — Servicio externo detectado automáticamente (www.google.com). Para enriquecer la descripción, agregá un override con el mismo ID en _manual_nodes.json — o usá metadata.aliases para mergear con un nodo manual existente. **Lo usan**: `Temporales/VIAJE_SUR.html`. [https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(c.dir)}](https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(c.dir)}). 🔍 _Auto-detectado por el scan — descripción puede mejorarse en `_manual_nodes.json`._
+- **www.instagram.com** — Servicio externo detectado automáticamente (www.instagram.com). Para enriquecer la descripción, agregá un override con el mismo ID en _manual_nodes.json — o usá metadata.aliases para mergear con un nodo manual existente. **Lo usan**: `Flyers-Catalogo/Catálogo Interactivo`. [https://www.instagram.com/fabrica.maxifer](https://www.instagram.com/fabrica.maxifer). 🔍 _Auto-detectado por el scan — descripción puede mejorarse en `_manual_nodes.json`._
+- **www.openstreetmap.org** — Servicio externo detectado automáticamente (www.openstreetmap.org). Para enriquecer la descripción, agregá un override con el mismo ID en _manual_nodes.json — o usá metadata.aliases para mergear con un nodo manual existente. **Lo usan**: `Temporales/VIAJE_SUR.html`. [https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat},${lng}](https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat},${lng}). 🔍 _Auto-detectado por el scan — descripción puede mejorarse en `_manual_nodes.json`._
+- **www.tiktok.com** — Servicio externo detectado automáticamente (www.tiktok.com). Para enriquecer la descripción, agregá un override con el mismo ID en _manual_nodes.json — o usá metadata.aliases para mergear con un nodo manual existente. **Lo usan**: `Flyers-Catalogo/Catálogo Interactivo`. [https://www.tiktok.com/@fabrica.maxifer](https://www.tiktok.com/@fabrica.maxifer). 🔍 _Auto-detectado por el scan — descripción puede mejorarse en `_manual_nodes.json`._
+- **www.youtube.com** — Servicio externo detectado automáticamente (www.youtube.com). Para enriquecer la descripción, agregá un override con el mismo ID en _manual_nodes.json — o usá metadata.aliases para mergear con un nodo manual existente. **Lo usan**: `Flyers-Catalogo/index.html`. [https://www.youtube.com/embed/YOUTUBE_ID](https://www.youtube.com/embed/YOUTUBE_ID). 🔍 _Auto-detectado por el scan — descripción puede mejorarse en `_manual_nodes.json`._
+
+<!-- END auto-sync-from-graph -->
 
 
 ### Convenciones de commits y branches
