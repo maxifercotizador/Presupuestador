@@ -97,10 +97,22 @@ Idioma: español (Argentina).
 
 ### Apps con dependencias externas importantes
 
-- **Monday.com**: `Temporales/Prospectos.html` (board `18410539555`), `Temporales/postventa_monday.html`, `Proyecto-Privado/surtidos.html`. Todas usan token Monday guardado en `localStorage` del navegador del usuario (nunca commiteado).
-- **OneDrive**: alimenta varios Excels (Maxi los sube manualmente al repo Presupuestador).
-- **Vercel functions**: `Presupuestador/api/sheets.js`, `Presupuestador/api/transcribir.js`, `Proyecto-Privado/mcp-asistente/` (servidor MCP).
+- **⚡ Power Automate (Microsoft 365)** — flujo automático que sincroniza Excels desde SharePoint a GitHub. **Hace 2 cosas**:
+  1. Sube los Excels editados a GitHub (commits "auto: actualiza X desde SharePoint" autoreados como `maxifercotizador <info@fabricamaxifer.com>`).
+  2. **Genera los JSONs derivados financieros** (`financiero_facturacion.json`, `financiero_gastos.json`, `financiero_resumen.json`, `ventas_monday.json`, `sur_data.json`, `pendientes_data.json` — todos en `Proyecto-Privado/`) y los commitea en el mismo push.
+  
+  **Excels que sincroniza**: `Listas Maxifer.xlsx` y `Precio Surtidos.xlsx` (Presupuestador); `01 COMPRAS - COSTOS - FABRICAS.xlsm`, `03 Pedidos Fabricas.xlsm`, `Control de ingresos y gastos.xlsm`, `Gastos Fijos.xlsx` (Proyecto-Privado).
+
+- **☁️ SharePoint (Microsoft 365)** — donde Maxi edita los Excels maestros. Es la fuente de verdad upstream.
+
+- **🤖 mcp-asistente** (`Proyecto-Privado/mcp-asistente/api/mcp.py`) — servidor MCP en Vercel que **lee** los JSONs financieros vía GitHub raw y los expone como tools a Claude.ai. Permite preguntar en chats "¿cuánto facturé este mes?", "¿qué le entregué a Casa Blanco?", etc. **Es lector, no escritor** — los JSONs los genera Power Automate.
+
+- **Monday.com**: `Temporales/Prospectos.html` (board `18410539555`), `Temporales/postventa_monday.html` (board `7212937829`), `Temporales/VIAJE_SUR.html` (board `8921412317`), `Proyecto-Privado/surtidos.html`. Token Monday guardado en `localStorage` del navegador (nunca commiteado).
+
+- **Vercel functions**: `Presupuestador/api/sheets.js`, `Presupuestador/api/transcribir.js`, y el `mcp-asistente` mencionado arriba (los 3 deployados en Vercel).
+
 - **WhatsApp**: links `wa.me/<numero>?text=...` desde `Temporales/Prospectos.html` y otras apps. NO automatizado — el usuario tiene que tocar enviar.
+
 
 ### Convenciones de commits y branches
 
