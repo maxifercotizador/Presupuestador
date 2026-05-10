@@ -2495,7 +2495,7 @@ function openCatalog(f) {
     currentPdf = { file: f.url, title: f.title, desc: f.desc, isCatalog: true, url: f.url };
     $('modalTitle').textContent = f.title;
     $('modalSubtitle').textContent = f.desc;
-    $('searchInListBtn').style.display = 'none';
+    $('searchInListBtn').style.display = '';
     $('downloadBtn').style.display = 'none';
     $('catalogDownloadBtn').style.display = '';
 
@@ -2911,19 +2911,62 @@ function descargarCatalogoDesdeIframe() {
     const btn = win && win.document && win.document.getElementById('btnDescargar');
     if (win && btn && !btn.disabled && typeof win.descargarPDF === 'function') {
         win.descargarPDF();
-        toast('Generando PDF…');
+        toast('Generando PDF en vivo (puede tardar)');
     } else {
         toast('El catálogo todavía está cargando, probá en unos segundos');
     }
 }
 
+const CATALOG_STATIC_PDF_URL = 'https://maxifercotizador.github.io/Flyers-Catalogo/catalogo_lista.pdf';
+
+function descargarCatalogoEstatico() {
+    fetch(CATALOG_STATIC_PDF_URL, { method: 'HEAD', cache: 'no-store' })
+        .then(r => {
+            if (r.ok) {
+                const a = document.createElement('a');
+                a.href = CATALOG_STATIC_PDF_URL + '?t=' + Date.now();
+                a.download = 'MAXIFER_Catalogo_Lista.pdf';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                toast('Descargando catálogo');
+            } else {
+                toast('PDF estático no disponible, generando en vivo…');
+                descargarCatalogoDesdeIframe();
+            }
+        })
+        .catch(() => {
+            toast('Generando en vivo…');
+            descargarCatalogoDesdeIframe();
+        });
+}
+
+function buscarEnCatalogo() {
+    const win = $('pdfFrame').contentWindow;
+    if (!win || !win.document) {
+        toast('El catálogo todavía está cargando');
+        return;
+    }
+    const query = prompt('Buscar surtido (código o nombre):');
+    if (!query) return;
+    const q = query.toLowerCase().trim();
+    const pages = win.document.querySelectorAll('#book .page');
+    for (const page of pages) {
+        if (page.textContent.toLowerCase().includes(q)) {
+            page.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            return;
+        }
+    }
+    toast('Sin resultados para "' + query + '"');
+}
+
 $('downloadBtn').addEventListener('click', () => {
     if (!currentPdf) return;
-    if (currentPdf.isCatalog) { descargarCatalogoDesdeIframe(); return; }
+    if (currentPdf.isCatalog) { descargarCatalogoEstatico(); return; }
     downloadPdf(currentPdf);
 });
 
-$('catalogDownloadBtn').addEventListener('click', descargarCatalogoDesdeIframe);
+$('catalogDownloadBtn').addEventListener('click', descargarCatalogoEstatico);
 
 $('newTabBtn').addEventListener('click', () => {
     if (!currentPdf) return;
@@ -2934,7 +2977,8 @@ $('newTabBtn').addEventListener('click', () => {
 });
 
 $('searchInListBtn').addEventListener('click', () => {
-    if (!currentPdf || currentPdf.isCatalog) return;
+    if (!currentPdf) return;
+    if (currentPdf.isCatalog) { buscarEnCatalogo(); return; }
     const file = currentPdf.file;
     const fam = currentPdf._originFamily || Object.keys(FAMILY_TO_PDF).find(k => FAMILY_TO_PDF[k] === file);
 
