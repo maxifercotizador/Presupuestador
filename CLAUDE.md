@@ -97,21 +97,45 @@ Idioma: español (Argentina).
 
 ### Apps con dependencias externas importantes
 
-- **⚡ Power Automate (Microsoft 365)** — flujo automático que sincroniza Excels desde SharePoint a GitHub. **Hace 2 cosas**:
-  1. Sube los Excels editados a GitHub (commits "auto: actualiza X desde SharePoint" autoreados como `maxifercotizador <info@fabricamaxifer.com>`).
-  2. **Genera los JSONs derivados financieros** (`financiero_facturacion.json`, `financiero_gastos.json`, `financiero_resumen.json`, `ventas_monday.json`, `sur_data.json`, `pendientes_data.json` — todos en `Proyecto-Privado/`) y los commitea en el mismo push.
+#### 🔄 Sincronización SharePoint → GitHub
+
+- **⚡ Power Automate (Microsoft 365)** — flujo automático. Hace 2 cosas:
+  1. Sube Excels editados a GitHub (commits "auto: actualiza X desde SharePoint" autoreados como `maxifercotizador <info@fabricamaxifer.com>`).
+  2. **Genera los JSONs financieros derivados** (`financiero_facturacion.json`, `financiero_gastos.json`, `financiero_resumen.json`, `ventas_monday.json`, `sur_data.json`, `pendientes_data.json`) y los commitea en el mismo push.
   
-  **Excels que sincroniza**: `Listas Maxifer.xlsx` y `Precio Surtidos.xlsx` (Presupuestador); `01 COMPRAS - COSTOS - FABRICAS.xlsm`, `03 Pedidos Fabricas.xlsm`, `Control de ingresos y gastos.xlsm`, `Gastos Fijos.xlsx` (Proyecto-Privado).
+  **Excels que sincroniza**: `Listas Maxifer.xlsx`, `Precio Surtidos.xlsx` (Presupuestador); `01 COMPRAS - COSTOS - FABRICAS.xlsm`, `03 Pedidos Fabricas.xlsm`, `Control de ingresos y gastos.xlsm`, `Gastos Fijos.xlsx` (Proyecto-Privado).
 
-- **☁️ SharePoint (Microsoft 365)** — donde Maxi edita los Excels maestros. Es la fuente de verdad upstream.
+- **☁️ SharePoint (Microsoft 365)** — fuente upstream donde Maxi edita los Excels maestros.
 
-- **🤖 mcp-asistente** (`Proyecto-Privado/mcp-asistente/api/mcp.py`) — servidor MCP en Vercel que **lee** los JSONs financieros vía GitHub raw y los expone como tools a Claude.ai. Permite preguntar en chats "¿cuánto facturé este mes?", "¿qué le entregué a Casa Blanco?", etc. **Es lector, no escritor** — los JSONs los genera Power Automate.
+#### 🔥 Bases de datos / sync cloud
 
-- **Monday.com**: `Temporales/Prospectos.html` (board `18410539555`), `Temporales/postventa_monday.html` (board `7212937829`), `Temporales/VIAJE_SUR.html` (board `8921412317`), `Proyecto-Privado/surtidos.html`. Token Monday guardado en `localStorage` del navegador (nunca commiteado).
+- **Firebase Firestore** (project `presupuestador-maxifer`) — base de datos NoSQL que espeja claves de localStorage de las apps (last-write-wins). Sirve para que los datos sincronicen entre celulares de Maxi. La usan vía `firebase-sync.js`: `Presupuestador/compras.html`, `Temporales/{Notas_Pendientes,Prospectos,VIAJE_SUR,postventa_monday}.html`. Config Firebase pública (es estándar en clientes web).
 
-- **Vercel functions**: `Presupuestador/api/sheets.js`, `Presupuestador/api/transcribir.js`, y el `mcp-asistente` mencionado arriba (los 3 deployados en Vercel).
+#### ⚡ Backends Vercel (serverless)
 
-- **WhatsApp**: links `wa.me/<numero>?text=...` desde `Temporales/Prospectos.html` y otras apps. NO automatizado — el usuario tiene que tocar enviar.
+- **`presupuestador-eight.vercel.app`** — deployment del repo Presupuestador con 2 functions:
+  - `/api/sheets.js` → proxy a **Google Apps Script** (macro de Google que probablemente lee/escribe a una Google Sheet).
+  - `/api/transcribir.js` → proxy a **API de Anthropic (Claude)**, usa secret `ANTHROPIC_API_KEY` (env var en Vercel). Probablemente para transcripción de audio.
+- **mcp-asistente.vercel.app** — servidor MCP (Python). Conecta los datos de MAXIFER a Claude.ai: lee JSONs financieros, surtidos, productos, despachos vía GitHub raw y los expone como tools. Permite preguntar en Claude "¿cuánto facturé este mes?" o "¿qué le entregué a Casa Blanco?". Es **lector**, no escritor.
+
+#### 📈 Analytics
+
+- **Google Analytics 4** — 2 properties:
+  - `G-K8QLJVZT4X` en páginas públicas (`listas.html` del Presupuestador + `Flyers-Catalogo`).
+  - `G-LMXG9MDKGC` en `firebase-sync.js` (apps internas con sync).
+
+#### 📊 Monday.com
+
+- `Temporales/Prospectos.html` (board `18410539555` "Seguimiento Prospectos")
+- `Temporales/postventa_monday.html` (board `7212937829` "Equipo MAXIFER")
+- `Temporales/VIAJE_SUR.html` (board `8921412317`)
+- `Proyecto-Privado/surtidos.html`
+
+Token Monday guardado en `localStorage` del navegador (nunca commiteado).
+
+#### 📱 WhatsApp
+
+- Links `wa.me/<numero>?text=...` desde `Temporales/Prospectos.html` y otras. **NO automatizado** — el usuario tiene que tocar enviar.
 
 
 ### Convenciones de commits y branches
