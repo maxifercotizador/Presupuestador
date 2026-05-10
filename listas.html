@@ -1241,6 +1241,17 @@ mark { background: rgba(78,168,62,0.25); color: var(--green-dark); padding: 0 2p
     color: var(--navy);
 }
 
+.toolbar-btn-download {
+    background: #16a34a;
+    color: #fff;
+    border-color: #16a34a;
+}
+.toolbar-btn-download:hover {
+    background: #15803d;
+    border-color: #15803d;
+    color: #fff;
+}
+
 .modal-body {
     flex: 1;
     background: #6b7280;
@@ -1902,6 +1913,14 @@ mark { background: rgba(78,168,62,0.25); color: var(--green-dark); padding: 0 2p
             </svg>
             Compartir
         </button>
+        <button class="toolbar-btn toolbar-btn-download" id="catalogDownloadBtn" style="display:none">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            Descargar PDF
+        </button>
         <button class="toolbar-btn" id="searchInListBtn">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <circle cx="11" cy="11" r="8"></circle>
@@ -2477,10 +2496,22 @@ function openCatalog(f) {
     $('modalTitle').textContent = f.title;
     $('modalSubtitle').textContent = f.desc;
     $('searchInListBtn').style.display = 'none';
+    $('downloadBtn').style.display = 'none';
+    $('catalogDownloadBtn').style.display = '';
 
     clearMobilePdfViewer();
-    $('pdfFrame').style.display = 'block';
-    $('pdfFrame').src = f.url;
+    const frame = $('pdfFrame');
+    frame.style.display = 'block';
+    frame.onload = () => {
+        try {
+            const doc = frame.contentDocument;
+            if (!doc) return;
+            const style = doc.createElement('style');
+            style.textContent = '.toolbar{display:none !important}@media(max-width:900px){html{zoom:.65}}';
+            doc.head.appendChild(style);
+        } catch (e) { /* cross-origin u otro */ }
+    };
+    frame.src = f.url;
 
     $('modal').classList.add('active');
     document.body.style.overflow = 'hidden';
@@ -2779,6 +2810,9 @@ function openPdf(lista) {
     $('modalTitle').textContent = lista.title;
     $('modalSubtitle').textContent = lista.desc;
     $('searchInListBtn').style.display = '';
+    $('downloadBtn').style.display = '';
+    $('catalogDownloadBtn').style.display = 'none';
+    $('pdfFrame').onload = null;
 
     if (isMobile()) {
         $('pdfFrame').src = 'about:blank';
@@ -2809,6 +2843,9 @@ function openPdfByFamily(family) {
         $('modalTitle').textContent = lista.title;
         $('modalSubtitle').textContent = lista.desc;
         $('searchInListBtn').style.display = '';
+        $('downloadBtn').style.display = '';
+        $('catalogDownloadBtn').style.display = 'none';
+        $('pdfFrame').onload = null;
 
         if (isMobile()) {
             $('pdfFrame').src = 'about:blank';
@@ -2869,20 +2906,24 @@ document.addEventListener('keydown', e => {
     if (e.key === 'Escape' && $('modal').classList.contains('active')) closeModal();
 });
 
+function descargarCatalogoDesdeIframe() {
+    const win = $('pdfFrame').contentWindow;
+    const btn = win && win.document && win.document.getElementById('btnDescargar');
+    if (win && btn && !btn.disabled && typeof win.descargarPDF === 'function') {
+        win.descargarPDF();
+        toast('Generando PDF…');
+    } else {
+        toast('El catálogo todavía está cargando, probá en unos segundos');
+    }
+}
+
 $('downloadBtn').addEventListener('click', () => {
     if (!currentPdf) return;
-    if (currentPdf.isCatalog) {
-        const win = $('pdfFrame').contentWindow;
-        if (win && typeof win.descargarPDF === 'function') {
-            win.descargarPDF();
-            toast('Generando PDF…');
-        } else {
-            toast('El catálogo todavía está cargando, probá en unos segundos');
-        }
-        return;
-    }
+    if (currentPdf.isCatalog) { descargarCatalogoDesdeIframe(); return; }
     downloadPdf(currentPdf);
 });
+
+$('catalogDownloadBtn').addEventListener('click', descargarCatalogoDesdeIframe);
 
 $('newTabBtn').addEventListener('click', () => {
     if (!currentPdf) return;
