@@ -115,7 +115,7 @@ Idioma: español (Argentina).
 
 - **`presupuestador-eight.vercel.app`** — deployment del repo Presupuestador con 2 functions:
   - `/api/sheets.js` → proxy a **Google Apps Script** (macro de Google que probablemente lee/escribe a una Google Sheet).
-  - `/api/transcribir.js` → proxy a **API de Anthropic (Claude)**, usa secret `ANTHROPIC_API_KEY` (env var en Vercel). Probablemente para transcripción de audio.
+  - `/api/transcribir.js` → proxy a **API de Anthropic (Claude)**, usa secret `ANTHROPIC_API_KEY`. Lo usa `3en1.html` y `index_presupuestador.html` para **transcribir fotos de pedidos manuscritos** (empleado saca foto del papel → Claude lee la imagen → devuelve texto del pedido). **Factura por tokens vía Anthropic Console — separada de la suscripción a Claude.ai.**
 - **mcp-asistente.vercel.app** — servidor MCP (Python). Conecta los datos de MAXIFER a Claude.ai: lee JSONs financieros, surtidos, productos, despachos vía GitHub raw y los expone como tools. Permite preguntar en Claude "¿cuánto facturé este mes?" o "¿qué le entregué a Casa Blanco?". Es **lector**, no escritor.
 
 #### 📈 Analytics
