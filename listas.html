@@ -2492,6 +2492,41 @@ function debounced(fn, ms = 80) {
 let listasFilter = '';
 
 function openCatalog(f) {
+    // Intentar primero el PDF estático (visor nativo del browser → zoom + búsqueda).
+    // Si todavía no se generó (404), caer al HTML preview interactivo.
+    fetch(CATALOG_STATIC_PDF_URL, { method: 'HEAD', cache: 'no-store' })
+        .then(r => r.ok ? openCatalogPdf(f) : openCatalogHtml(f))
+        .catch(() => openCatalogHtml(f));
+}
+
+function openCatalogPdf(f) {
+    currentPdf = { file: f.url, title: f.title, desc: f.desc, isCatalog: true, isCatalogPdf: true, url: f.url };
+    $('modalTitle').textContent = f.title;
+    $('modalSubtitle').textContent = f.desc;
+    $('searchInListBtn').style.display = 'none';  // visor PDF tiene búsqueda nativa
+    $('downloadBtn').style.display = 'none';
+    $('catalogDownloadBtn').style.display = '';
+
+    clearMobilePdfViewer();
+    const frame = $('pdfFrame');
+    frame.style.display = 'block';
+    frame.onload = null;
+    // #view=FitH = ajustar al ancho. Cache-buster por timestamp para no servir versión vieja.
+    frame.src = CATALOG_STATIC_PDF_URL + '?t=' + Date.now() + '#view=FitH';
+
+    $('modal').classList.add('active');
+    document.body.style.overflow = 'hidden';
+
+    if (typeof gtag === 'function') {
+        gtag('event', 'abrir_catalogo_maxifer', { vendedor: 'Maxi', precio: 'lista', modo: 'pdf' });
+    }
+
+    if (!_suppressPush) {
+        history.pushState({ view: 'modal' }, '', '');
+    }
+}
+
+function openCatalogHtml(f) {
     currentPdf = { file: f.url, title: f.title, desc: f.desc, isCatalog: true, url: f.url };
     $('modalTitle').textContent = f.title;
     $('modalSubtitle').textContent = f.desc;
@@ -2517,7 +2552,7 @@ function openCatalog(f) {
     document.body.style.overflow = 'hidden';
 
     if (typeof gtag === 'function') {
-        gtag('event', 'abrir_catalogo_maxifer', { vendedor: 'Maxi', precio: 'lista' });
+        gtag('event', 'abrir_catalogo_maxifer', { vendedor: 'Maxi', precio: 'lista', modo: 'html' });
     }
 
     if (!_suppressPush) {
