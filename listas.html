@@ -894,7 +894,7 @@ mark { background: rgba(78,168,62,0.25); color: var(--green-dark); padding: 0 2p
 /* TARJETAS DESTACADAS */
 .featured-row {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 14px;
     margin-bottom: 24px;
 }
@@ -925,6 +925,11 @@ mark { background: rgba(78,168,62,0.25); color: var(--green-dark); padding: 0 2p
     border-color: rgba(78,168,62,0.3);
 }
 
+.feature-card.catalog {
+    background: linear-gradient(135deg, rgba(30,44,91,0.10), rgba(30,44,91,0.02));
+    border-color: rgba(30,44,91,0.3);
+}
+
 .feature-card:hover {
     transform: translateY(-2px);
     box-shadow: var(--shadow-lg);
@@ -932,6 +937,7 @@ mark { background: rgba(78,168,62,0.25); color: var(--green-dark); padding: 0 2p
 
 .feature-card.pdf:hover { border-color: var(--red); }
 .feature-card.xlsx:hover { border-color: var(--green); }
+.feature-card.catalog:hover { border-color: var(--navy); }
 
 .feature-icon {
     width: 52px;
@@ -946,6 +952,7 @@ mark { background: rgba(78,168,62,0.25); color: var(--green-dark); padding: 0 2p
 
 .feature-card.pdf .feature-icon { background: var(--red); }
 .feature-card.xlsx .feature-icon { background: var(--green); }
+.feature-card.catalog .feature-icon { background: var(--navy); }
 
 .feature-content {
     flex: 1;
@@ -970,6 +977,80 @@ mark { background: rgba(78,168,62,0.25); color: var(--green-dark); padding: 0 2p
 .feature-arrow { flex-shrink: 0; }
 .feature-card.pdf .feature-arrow { color: var(--red); }
 .feature-card.xlsx .feature-arrow { color: var(--green); }
+.feature-card.catalog .feature-arrow { color: var(--navy); }
+
+/* OVERLAY descarga catálogo PDF */
+.catalog-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: rgba(15, 23, 50, 0.55);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+.catalog-overlay.active { display: flex; }
+.catalog-overlay-card {
+    background: #fff;
+    border-radius: 18px;
+    padding: 28px 26px 22px;
+    max-width: 380px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 18px 50px rgba(0,0,0,0.25);
+}
+.catalog-overlay-spinner {
+    width: 44px;
+    height: 44px;
+    border: 4px solid rgba(30,44,91,0.15);
+    border-top-color: var(--navy);
+    border-radius: 50%;
+    margin: 0 auto 18px;
+    animation: spin 0.9s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.catalog-overlay-title {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 800;
+    font-size: 17px;
+    color: var(--navy);
+    margin-bottom: 8px;
+}
+.catalog-overlay-text {
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.5;
+    margin-bottom: 18px;
+}
+.catalog-overlay-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: stretch;
+}
+.catalog-overlay-btn-secondary,
+.catalog-overlay-btn-fallback {
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 13px;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: #fff;
+    color: var(--text-muted);
+    text-decoration: none;
+    text-align: center;
+}
+.catalog-overlay-btn-fallback {
+    background: var(--navy);
+    color: #fff;
+    border-color: var(--navy);
+}
+.catalog-overlay-btn-secondary:hover { color: var(--navy); border-color: var(--navy); }
 
 /* GRID DE LISTAS */
 .grid {
@@ -1942,6 +2023,22 @@ mark { background: rgba(78,168,62,0.25); color: var(--green-dark); padding: 0 2p
     </div>
 </div>
 
+<!-- Overlay descarga catálogo PDF (carga catalogo_pdf.html en iframe oculto) -->
+<div class="catalog-overlay" id="catalogOverlay" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="catalog-overlay-card">
+        <div class="catalog-overlay-spinner"></div>
+        <div class="catalog-overlay-title">Generando catálogo MAXIFER…</div>
+        <div class="catalog-overlay-text">
+            Estamos armando el PDF con el precio de lista actualizado.<br>
+            Puede tardar entre 20 y 40 segundos. La descarga comienza sola.
+        </div>
+        <div class="catalog-overlay-actions">
+            <button class="catalog-overlay-btn-secondary" id="catalogCloseBtn" type="button">Cerrar</button>
+            <a class="catalog-overlay-btn-fallback" id="catalogFallbackBtn" target="_blank" rel="noopener" style="display:none">Si no se descargó, abrir en pestaña</a>
+        </div>
+    </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -2064,6 +2161,12 @@ const FEATURED = [
         title: "Lista MAXIFER 2026 (Excel)",
         desc: "Archivo Excel completo con todos los productos",
         type: "xlsx"
+    },
+    {
+        title: "Catálogo MAXIFER 2026 (PDF)",
+        desc: "Catálogo de surtidos con fotos, composición y precio de lista",
+        type: "catalog",
+        url: "https://maxifercotizador.github.io/Flyers-Catalogo/catalogo_pdf.html#wa=Maxi&precio=lista&autodl=1"
     }
 ];
 
@@ -2098,7 +2201,7 @@ let currentPdf = null;
 let consultorReady = false;
 
 const $ = id => document.getElementById(id);
-const norm = s => (s||'').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+const norm = s => (s||'').toString().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
 const fmtMoney = v => '$' + v.toLocaleString('es-AR', {minimumFractionDigits:2, maximumFractionDigits:2});
 const escapeHtml = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const thumbName = file => file.replace(/\.pdf$/i, '.jpg');
@@ -2458,12 +2561,61 @@ function debounced(fn, ms = 80) {
 /* LISTAS */
 let listasFilter = '';
 
+/* Descarga del Catálogo MAXIFER (PDF generado al vuelo en flyers-catalogo).
+   Carga la app Flyers-Catalogo en un iframe oculto con autodl=1; cuando termina
+   de renderizar, jsPDF dispara pdf.save() y el navegador inicia la descarga
+   sin abrir pestaña. El overlay informa al usuario y ofrece un fallback en
+   caso de que el navegador bloquee la descarga cross-origin. */
+let _catalogTimer = null;
+function descargarCatalogoMaxifer(url, title) {
+    const overlay = $('catalogOverlay');
+    const fallback = $('catalogFallbackBtn');
+    fallback.style.display = 'none';
+    fallback.href = url;
+    overlay.classList.add('active');
+    overlay.setAttribute('aria-hidden', 'false');
+
+    // Iframe oculto: cargar el generador con autodl=1 → dispara descarga sola.
+    const prev = document.getElementById('catalogIframe');
+    if (prev) prev.remove();
+    const iframe = document.createElement('iframe');
+    iframe.id = 'catalogIframe';
+    iframe.setAttribute('aria-hidden', 'true');
+    iframe.style.cssText = 'position:fixed;width:1px;height:1px;left:-9999px;top:-9999px;border:0;visibility:hidden';
+    iframe.src = url;
+    document.body.appendChild(iframe);
+
+    toast('Generando catálogo MAXIFER…');
+    if (typeof gtag === 'function') {
+        gtag('event', 'descargar_catalogo_maxifer', { vendedor: 'Maxi', precio: 'lista' });
+    }
+
+    // Si después de 30s no se descargó (algunos navegadores bloquean
+    // descargas cross-origin desde iframes), mostramos botón fallback.
+    if (_catalogTimer) clearTimeout(_catalogTimer);
+    _catalogTimer = setTimeout(() => { fallback.style.display = 'inline-flex'; }, 30000);
+}
+
+function cerrarCatalogOverlay() {
+    const overlay = $('catalogOverlay');
+    overlay.classList.remove('active');
+    overlay.setAttribute('aria-hidden', 'true');
+    const iframe = document.getElementById('catalogIframe');
+    if (iframe) iframe.remove();
+    if (_catalogTimer) { clearTimeout(_catalogTimer); _catalogTimer = null; }
+}
+
 function renderListas() {
     // Tarjetas destacadas (PDF + XLSX)
     $('featuredRow').innerHTML = FEATURED.map(f => {
-        const iconSvg = f.type === 'xlsx'
-            ? '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/><line x1="10" y1="9" x2="14" y2="9"/></svg>'
-            : '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>';
+        let iconSvg;
+        if (f.type === 'xlsx') {
+            iconSvg = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/><line x1="10" y1="9" x2="14" y2="9"/></svg>';
+        } else if (f.type === 'catalog') {
+            iconSvg = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>';
+        } else {
+            iconSvg = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>';
+        }
         return `
             <div class="feature-card ${f.type}" data-feature-idx="${FEATURED.indexOf(f)}">
                 <div class="feature-icon">${iconSvg}</div>
@@ -2488,6 +2640,8 @@ function renderListas() {
             const f = FEATURED[idx];
             if (f.type === 'pdf') {
                 openPdf({ file: f.file, title: f.title, desc: f.desc });
+            } else if (f.type === 'catalog') {
+                descargarCatalogoMaxifer(f.url, f.title);
             } else {
                 // Excel: descarga directa
                 const a = document.createElement('a');
@@ -2822,7 +2976,12 @@ $('closeBtn').addEventListener('click', closeModal);
 $('modal').addEventListener('click', e => { if (e.target === $('modal')) closeModal(); });
 document.addEventListener('keydown', e => {
     if (e.key === 'Escape' && $('modal').classList.contains('active')) closeModal();
+    if (e.key === 'Escape' && $('catalogOverlay').classList.contains('active')) cerrarCatalogOverlay();
 });
+
+$('catalogCloseBtn').addEventListener('click', cerrarCatalogOverlay);
+$('catalogOverlay').addEventListener('click', e => { if (e.target === $('catalogOverlay')) cerrarCatalogOverlay(); });
+$('catalogFallbackBtn').addEventListener('click', () => { setTimeout(cerrarCatalogOverlay, 500); });
 
 $('downloadBtn').addEventListener('click', () => downloadPdf(currentPdf));
 
