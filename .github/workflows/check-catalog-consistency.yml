@@ -1,0 +1,132 @@
+name: Check catalog consistency
+
+# Cuando cambia "Precio Surtidos.xlsx" en este repo, comparar contra
+# Flyers-Catalogo/surtidos-data.js y, si hay drift, abrir/actualizar
+# un Issue en Flyers-Catalogo para que Maxi sepa qué falta.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "Precio Surtidos.xlsx"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - run: pip install openpyxl
+
+      - name: Clone Flyers-Catalogo (sólo el archivo que necesitamos)
+        env:
+          GH_TOKEN: ${{ secrets.ARCHITECTURE_MAP_PAT }}
+        run: |
+          git clone --depth=1 \
+            "https://x-access-token:${GH_TOKEN}@github.com/maxifercotizador/Flyers-Catalogo.git" \
+            /tmp/flyers
+
+      - name: Detectar drift
+        id: check
+        run: |
+          python3 scripts/check_catalog_consistency.py \
+            --excel "Precio Surtidos.xlsx" \
+            --js /tmp/flyers/surtidos-data.js \
+            > /tmp/drift.json
+          DIFF=$(python3 -c "import json; print(json.load(open('/tmp/drift.json'))['diff'])")
+          echo "diff=$DIFF" >> "$GITHUB_OUTPUT"
+          cat /tmp/drift.json
+
+      - name: Construir cuerpo del Issue
+        if: steps.check.outputs.diff == 'True'
+        run: |
+          python3 - << 'PY' > /tmp/body.md
+          import json
+          d = json.load(open("/tmp/drift.json"))
+          lines = [
+            "**Detectado drift entre `Precio Surtidos.xlsx` (Presupuestador) y `surtidos-data.js` (Flyers-Catalogo).**",
+            "",
+            f"- Surtidos en el Excel: **{d['totals']['excel']}**",
+            f"- Surtidos en el catálogo público: **{d['totals']['js']}**",
+            "",
+          ]
+          if d["new_in_excel"]:
+              lines.append(f"### 🆕 Surtidos en el Excel que faltan en el catálogo ({len(d['new_in_excel'])})")
+              for it in d["new_in_excel"]:
+                  lines.append(f"- `{it['codigo']}` — {it['nombre_excel']} ({it['total_piezas']} piezas)")
+              lines.append("")
+              lines.append("Para cada uno: agregar bloque en `surtidos-data.js` con nombre comercial, fotos y descripción.")
+              lines.append("")
+          if d["removed_from_excel"]:
+              lines.append(f"### 🗑️ Surtidos en el catálogo que ya no están en el Excel ({len(d['removed_from_excel'])})")
+              for it in d["removed_from_excel"]:
+                  lines.append(f"- `{it['codigo']}` — {it['nombre_js']}")
+              lines.append("")
+              lines.append("Probablemente discontinuados — revisar si conviene sacarlos también del catálogo.")
+              lines.append("")
+          if d["pieza_changes"]:
+              lines.append(f"### 🔢 Cantidades distintas ({len(d['pieza_changes'])})")
+              for it in d["pieza_changes"]:
+                  lines.append(f"- `{it['codigo']}` ({it['nombre_js']}): Excel={it['piezas_excel']} vs JS={it['piezas_js']}")
+              lines.append("")
+          lines.append("---")
+          lines.append("")
+          lines.append("_Este Issue se genera automáticamente cuando se modifica `Precio Surtidos.xlsx` en Presupuestador. El workflow que lo crea es `check-catalog-consistency.yml`._")
+          print("\n".join(lines))
+          PY
+
+      - name: Crear o actualizar Issue en Flyers-Catalogo
+        if: steps.check.outputs.diff == 'True'
+        env:
+          GH_TOKEN: ${{ secrets.ARCHITECTURE_MAP_PAT }}
+        run: |
+          BODY=$(cat /tmp/body.md)
+          # Buscar issue abierto con label `catalog-drift`
+          EXISTING=$(curl -sf \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/maxifercotizador/Flyers-Catalogo/issues?state=open&labels=catalog-drift" \
+            | python3 -c "import json,sys;d=json.load(sys.stdin);print(d[0]['number'] if d else '')" || echo "")
+
+          if [ -n "$EXISTING" ]; then
+            echo "Actualizando issue #$EXISTING"
+            curl -sf -X POST \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/maxifercotizador/Flyers-Catalogo/issues/${EXISTING}/comments" \
+              -d "$(python3 -c "import json,sys;print(json.dumps({'body':open('/tmp/body.md').read()}))")"
+          else
+            echo "Creando issue nuevo"
+            curl -sf -X POST \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/maxifercotizador/Flyers-Catalogo/issues" \
+              -d "$(python3 -c "import json,sys;print(json.dumps({'title':'Catálogo desactualizado vs Precio Surtidos.xlsx','body':open('/tmp/body.md').read(),'labels':['catalog-drift']}))")"
+          fi
+
+      - name: Cerrar issue si ya no hay drift
+        if: steps.check.outputs.diff == 'False'
+        env:
+          GH_TOKEN: ${{ secrets.ARCHITECTURE_MAP_PAT }}
+        run: |
+          EXISTING=$(curl -sf \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/maxifercotizador/Flyers-Catalogo/issues?state=open&labels=catalog-drift" \
+            | python3 -c "import json,sys;d=json.load(sys.stdin);print(d[0]['number'] if d else '')" || echo "")
+          if [ -n "$EXISTING" ]; then
+            echo "No hay drift — cerrando issue #$EXISTING"
+            curl -sf -X PATCH \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/maxifercotizador/Flyers-Catalogo/issues/${EXISTING}" \
+              -d '{"state":"closed","state_reason":"completed"}'
+          fi
