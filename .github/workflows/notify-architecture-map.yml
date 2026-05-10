@@ -1,0 +1,28 @@
+name: Notify architecture map
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'architecture-map/dependency-graph.json'
+      - 'README.md'
+      - 'CLAUDE.md'
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch to architecture map
+        run: |
+          curl -sSf -X POST \
+            -H "Authorization: token ${{ secrets.ARCHITECTURE_MAP_PAT }}" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/maxifercotizador/Proyecto-Privado/dispatches \
+            -d '{
+              "event_type": "source-repo-updated",
+              "client_payload": {
+                "repo": "${{ github.repository }}",
+                "commit": "${{ github.sha }}",
+                "actor": "${{ github.actor }}",
+                "ref": "${{ github.ref }}"
+              }
+            }'
