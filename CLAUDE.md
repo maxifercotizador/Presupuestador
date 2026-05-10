@@ -38,3 +38,10 @@ Repos con la **password de admin** (`maxifer847`) son **`Proyecto-Privado`** y *
 5. Verificar roundtrip (descifrar el resultado y diff contra el descifrado original).
 6. Reemplazar el archivo en el repo, commitear y pushear a `main`. **Siempre re-cifrar antes de cerrar la tarea.**
 - **Nunca** dejes el archivo descifrado en el repo. Lo que se commitea es siempre el cifrado.
+
+
+## Branding compartido (no editar a mano)
+
+`maxifer-branding.css` y `maxifer-branding.js` son archivos **auto-sincronizados**. La fuente de verdad vive en `Flyers-Catalogo`. Cuando cambian allá, un workflow (`Flyers-Catalogo/.github/workflows/sync-branding.yml`) los copia automáticamente a este repo y commitea con el mensaje `chore(branding): sync from Flyers-Catalogo (<sha>)`.
+
+**No edites estos 2 archivos directamente acá.** Si querés cambiar la marca, hacelo en `Flyers-Catalogo` y se propaga solo en menos de 1 minuto.
