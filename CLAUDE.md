@@ -1,5 +1,33 @@
 # Instrucciones para Claude Code
 
+## 🧠 Memoria entre sesiones (LEER PRIMERO)
+
+> **Antes de hacer cualquier cosa**, si tenés acceso al repo `maxifercotizador/Proyecto-Privado`, leé este archivo:
+>
+> `Proyecto-Privado/.claude-memoria/INDEX.md`
+>
+> Si no estás trabajando en `Proyecto-Privado` pero podés leer otros repos, hacé:
+> ```
+> curl -s https://raw.githubusercontent.com/maxifercotizador/Proyecto-Privado/main/.claude-memoria/INDEX.md
+> ```
+> o usá `mcp__github__get_file_contents` con `owner=maxifercotizador, repo=Proyecto-Privado, path=.claude-memoria/INDEX.md`.
+
+Ese archivo es el **registro acumulativo de qué se hizo en sesiones anteriores** entre Maxi y Claude. Te ahorra reaprender todo cada vez. Si Maxi te dice "como hicimos la otra vez", "lo que decidimos antes", "el sistema que armamos" — la respuesta está en esa memoria.
+
+### Tu obligación al cerrar tareas significativas
+
+Cuando mergeés un PR significativo o cuando Maxi cierra un tema importante, antes de terminar tu turno:
+
+1. **Agregá una línea a `Proyecto-Privado/.claude-memoria/INDEX.md`** con: fecha, qué se hizo, link al PR, link al archivo de detalle (si lo creaste).
+2. **Si fue una sesión grande con varias decisiones**, creá un archivo `Proyecto-Privado/.claude-memoria/YYYY-MM-DD-slug.md` con:
+   - Contexto inicial (qué pidió Maxi)
+   - Qué se descubrió / construyó
+   - Decisiones que se tomaron
+   - Pendientes acordados al cierre
+3. **Si Maxi dice "guardá", "cerramos", "perfecto, listo"** o similar — interpretalo como pedido explícito de actualizar la memoria.
+
+Maxi no se acuerda de los detalles técnicos. Vos sí, gracias a este sistema. **Es tu responsabilidad mantenerlo al día.**
+
 ## Workflow de Git
 - Trabajá SIEMPRE directamente sobre la branch main. No crees branches nuevas.
 - Si el harness te asigna una feature branch igual mergeala (fast-forward) a `main` y empujá `main` antes de terminar — GitHub Pages sirve desde `main` y Maxi prueba sobre el sitio en vivo.
