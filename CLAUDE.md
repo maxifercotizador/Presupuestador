@@ -15,27 +15,39 @@ Idioma: español (Argentina).
 - Mensajes de commit cortos y en español. Ejemplo: "fix: corrige cálculo de descuento"
 - Respondeme en español, breve y directo.
 
-## StatiCrypt (archivos cifrados)
+## StatiCrypt — mapa completo (igual en los 3 repos cifrados)
 
-Este repo es de **uso por empleados**. Todos los HTMLs cifrados acá usan la **password de empleados**:
+> Bloque idéntico en `Presupuestador/CLAUDE.md`, `Proyecto-Privado/CLAUDE.md` y `Temporales/CLAUDE.md`. Si tocás uno, sincronizá los otros dos.
 
-- **Password (empleados)**: `159159`
-- **Salt** (mismo para todos los HTMLs del repo, embebido en cada archivo): `cc5a1a7142676e8a40368a16e858f1de`. Usalo con `--salt`, NO el de `.staticrypt.json`.
-- **Storage keys**: `staticrypt_expiration_emp` / `staticrypt_passphrase_emp` (suffix `_emp` = empleados, NO `_maxi`).
-- **HTMLs cifrados**: `index.html`, `index_presupuestador.html`, `3en1.html`, `compras.html`. (`listas.html` queda público.)
+**Las 2 contraseñas del ecosistema MAXIFER**:
 
-Repos con la **password de admin** (`maxifer847`) son **`Proyecto-Privado`** y **`Temporales`** — esos usan suffix `_maxi`.
+| Password | Rol | Suffix de keys (localStorage) | Repos donde se usa | HTMLs |
+|----------|-----|-------------------------------|--------------------|-------|
+| `159159` | Empleados | `_emp` | **Presupuestador** | `index.html`, `index_presupuestador.html`, `3en1.html`, `compras.html` |
+| `maxifer847` | Admin (Maxi) | `_maxi` | **Proyecto-Privado** | `index.html`, `Analisis_de_Costos.html`, `Analisis_de_Gastos.html`, `Pedidos_a_Fabrica.html`, `surtidos.html` |
+| `maxifer847` | Admin (Maxi) | `_maxi` | **Temporales** | `Index_general.html`, `VIAJE_SUR.html`, `Prospectos.html`, `Notas_Pendientes.html`, `analisis_financiero.html`, `postventa_monday.html` |
 
-### Workflow obligatorio cuando edites un HTML cifrado
+**Salt** (mismo para TODOS los HTMLs cifrados de los 3 repos): `cc5a1a7142676e8a40368a16e858f1de`. Usalo con `--salt`, NO el valor de `.staticrypt.json`.
 
-1. Descifrar: `npx --yes staticrypt <archivo> --decrypt -p '159159' --salt 'cc5a1a7142676e8a40368a16e858f1de'` → `decrypted/<archivo>`.
+### Cómo identificar qué password usa un archivo ANTES de descifrar
+
+1. **Por suffix en el HTML cifrado**: buscar `staticrypt_expiration_emp` o `staticrypt_expiration_maxi`:
+   - `_emp` → password `159159`
+   - `_maxi` → password `maxifer847`
+2. **Si el suffix no está claro**: probá con `159159` primero, y si falla con `maxifer847`. La incorrecta tira `ERROR: could not decrypt`, la correcta funciona silenciosa.
+
+**Repo actual** (`Presupuestador`): rol = **empleados**, password = **`159159`**, suffix = **`_emp`**.
+
+### Workflow obligatorio cuando edites un HTML cifrado de este repo
+
+1. Descifrar: `npx --yes staticrypt <archivo> --decrypt -p '159159' --salt 'cc5a1a7142676e8a40368a16e858f1de' -d decrypted/` → `decrypted/<archivo>`.
 2. Editar el HTML descifrado.
 3. Re-cifrar conservando el template del lock screen (`--remember 30`, `--short`, mismo `--salt`, mismos textos en español, mismos colores `#f59e0b` / `#0f172a`).
 4. Post-procesar el archivo cifrado:
-   - Renombrar keys: `staticrypt_expiration` → `staticrypt_expiration_emp`, `staticrypt_passphrase` → `staticrypt_passphrase_emp`.
+   - Renombrar keys: `staticrypt_expiration` → `staticrypt_expiration_emp`, `staticrypt_passphrase` → `staticrypt_passphrase_emp` (suffix correspondiente al rol del repo — `_emp` acá).
    - Re-agregar `<meta name="robots" content="noindex, nofollow">` después del `<meta charset>`.
    - Re-insertar antes de `</head>`: `<link rel="stylesheet" href="maxifer-branding.css">` y `<script defer src="maxifer-branding.js"></script>`.
-5. Verificar roundtrip (descifrar el resultado y diff contra el descifrado original).
+5. Verificar roundtrip (descifrar el resultado y `diff` contra el descifrado original — debe ser vacío).
 6. Reemplazar el archivo en el repo, commitear y pushear a `main`. **Siempre re-cifrar antes de cerrar la tarea.**
 - **Nunca** dejes el archivo descifrado en el repo. Lo que se commitea es siempre el cifrado.
 
