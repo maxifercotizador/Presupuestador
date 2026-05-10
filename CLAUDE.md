@@ -80,7 +80,7 @@ Idioma: español (Argentina).
 | Presupuestador | `check-catalog-consistency.yml` | push de `Precio Surtidos.xlsx` | Compara contra `Flyers-Catalogo/surtidos-data.js`. Si hay drift, abre/actualiza un Issue con label `catalog-drift` en Flyers-Catalogo. Si no hay drift, lo cierra solo. |
 | Presupuestador | `generar-miniaturas.yml` | manual | Genera miniaturas de imágenes |
 | Flyers-Catalogo | `sync-branding.yml` | push de `maxifer-branding.{css,js}` | Copia los archivos a Presupuestador/Proyecto-Privado/Temporales |
-| Proyecto-Privado | `regenerate-architecture-map.yml` | dispatch / cron / push | Re-escanea los 4 repos y regenera `architecture-map/dependency-graph.json` |
+| Proyecto-Privado | `regenerate-architecture-map.yml` | dispatch / cron / push | Re-escanea los 4 repos, regenera `architecture-map/dependency-graph.json`, **detecta cambios significativos vs scan anterior** y **abre Issues automáticos** (label `inventario-pendiente`) cuando aparece un servicio externo / workflow / integración nuevos sin documentar |
 | Los 4 repos | `notify-architecture-map.yml` | push a `main` | Triggerea regenerate del dashboard via repository_dispatch |
 
 ### Secrets requeridos
