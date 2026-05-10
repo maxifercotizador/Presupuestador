@@ -57,3 +57,67 @@ Idioma: español (Argentina).
 `maxifer-branding.css` y `maxifer-branding.js` son archivos **auto-sincronizados**. La fuente de verdad vive en `Flyers-Catalogo`. Cuando cambian allá, un workflow (`Flyers-Catalogo/.github/workflows/sync-branding.yml`) los copia automáticamente a este repo y commitea con el mensaje `chore(branding): sync from Flyers-Catalogo (<sha>)`.
 
 **No edites estos 2 archivos directamente acá.** Si querés cambiar la marca, hacelo en `Flyers-Catalogo` y se propaga solo en menos de 1 minuto.
+
+
+## Contexto del ecosistema MAXIFER (igual en los 4 CLAUDE.md)
+
+> **Importante**: este bloque va idéntico en `Presupuestador/CLAUDE.md`, `Proyecto-Privado/CLAUDE.md`, `Temporales/CLAUDE.md` y `Flyers-Catalogo/CLAUDE.md`. Si lo cambiás en uno, sincronizá los otros tres.
+
+### Los 4 repos
+
+| Repo | Rol | Auth | Dueño efectivo |
+|------|-----|------|----------------|
+| **Presupuestador** | Cotización, listas, compras (apps de empleados) | StatiCrypt `159159` (suffix `_emp`) | Empleados |
+| **Proyecto-Privado** | Backoffice admin (análisis financiero, costos, pedidos a fábrica). **Hostea el dashboard `architecture-map/`**. | StatiCrypt `maxifer847` (suffix `_maxi`) | Maxi |
+| **Temporales** | Apps de Maxi (CRM Prospectos, VIAJE_SUR, postventa Monday, notas, análisis financiero). **Nombre engañoso — son apps de producción, NO temporales.** | StatiCrypt `maxifer847` (suffix `_maxi`) | Maxi |
+| **Flyers-Catalogo** | Catálogo público sin auth. **Hostea `maxifer-branding.{css,js}` como fuente de verdad.** | Sin auth (público) | Público |
+
+### Workflows automáticos del ecosistema
+
+| Repo | Workflow | Disparador | Qué hace |
+|------|----------|------------|----------|
+| Presupuestador | `generar-jsons.yml` | push de `Listas Maxifer.xlsx` o `Precio Surtidos.xlsx` | Regenera `productos.json` y `surtidos.json` con `build_data.py` |
+| Presupuestador | `check-catalog-consistency.yml` | push de `Precio Surtidos.xlsx` | Compara contra `Flyers-Catalogo/surtidos-data.js`. Si hay drift, abre/actualiza un Issue con label `catalog-drift` en Flyers-Catalogo. Si no hay drift, lo cierra solo. |
+| Presupuestador | `generar-miniaturas.yml` | manual | Genera miniaturas de imágenes |
+| Flyers-Catalogo | `sync-branding.yml` | push de `maxifer-branding.{css,js}` | Copia los archivos a Presupuestador/Proyecto-Privado/Temporales |
+| Proyecto-Privado | `regenerate-architecture-map.yml` | dispatch / cron / push | Re-escanea los 4 repos y regenera `architecture-map/dependency-graph.json` |
+| Los 4 repos | `notify-architecture-map.yml` | push a `main` | Triggerea regenerate del dashboard via repository_dispatch |
+
+### Secrets requeridos
+
+- `ARCHITECTURE_MAP_PAT` (en los 4 repos): fine-grained PAT con Contents R/W + Metadata R + Secrets R/W. Permite a los workflows operar cross-repo (commitear, abrir issues, leer/clonar).
+- `STATICRYPT_PASSWORDS` (solo en Proyecto-Privado, valor = `159159,maxifer847`): permite al scan descifrar HTMLs cifrados en CI durante la regeneración del dashboard.
+
+### Archivos auto-generados — NO editar a mano
+
+- `Presupuestador/productos.json`, `Presupuestador/surtidos.json` — generados por `build_data.py` desde los Excels.
+- `Presupuestador/thumbs/` — generados por `generar_miniaturas.py`.
+- `*/maxifer-branding.{css,js}` (excepto en Flyers-Catalogo, que es la fuente) — sincronizados desde Flyers-Catalogo automáticamente.
+- `Proyecto-Privado/architecture-map/dependency-graph.json` — regenerado por `architecture-map/scripts/scan_repos.py`. Si necesitás overrides manuales (nodos que el scan no detecta, edges no inferibles, renames de label), editá `Proyecto-Privado/architecture-map/_manual_nodes.json` — el scan los mergea en cada corrida.
+
+### Apps con dependencias externas importantes
+
+- **Monday.com**: `Temporales/Prospectos.html` (board `18410539555`), `Temporales/postventa_monday.html`, `Proyecto-Privado/surtidos.html`. Todas usan token Monday guardado en `localStorage` del navegador del usuario (nunca commiteado).
+- **OneDrive**: alimenta varios Excels (Maxi los sube manualmente al repo Presupuestador).
+- **Vercel functions**: `Presupuestador/api/sheets.js`, `Presupuestador/api/transcribir.js`, `Proyecto-Privado/mcp-asistente/` (servidor MCP).
+- **WhatsApp**: links `wa.me/<numero>?text=...` desde `Temporales/Prospectos.html` y otras apps. NO automatizado — el usuario tiene que tocar enviar.
+
+### Convenciones de commits y branches
+
+- Mensajes de commit en español Argentina, breves.
+- **Push directo a `main` está bloqueado** por el harness git server (rechaza con `send-pack: unexpected disconnect`). Usar branches `claude/<tema>` + Pull Request + merge vía MCP GitHub (`mcp__github__merge_pull_request`).
+- NO usar `--no-verify`, `--amend`, ni operaciones destructivas (`reset --hard`, `push --force`) salvo pedido explícito de Maxi.
+- Los CLAUDE.md de cada repo dicen "push directo a main" como ideal, pero en la práctica del harness eso no funciona → usar PRs.
+
+### Dashboard de arquitectura
+
+- URL pública: `https://maxifercotizador.github.io/Proyecto-Privado/architecture-map/`
+- Servido desde `Proyecto-Privado/architecture-map/`, NO está cifrado con StatiCrypt (es accesible para Maxi sin password adicional).
+- Linkeado desde `Temporales/Index_general.html` en el módulo "Proyecto Privado" como "🗺️ Mapa de Arquitectura".
+- Si una conexión está mal o falta en el grafo → editar `Proyecto-Privado/architecture-map/_manual_nodes.json` y push a main. El scan auto-mergea esos overrides.
+
+### Tests / validaciones existentes
+
+- `Proyecto-Privado/architecture-map/scripts/validate_graph.py` — valida estructura del JSON del dashboard.
+- `Presupuestador/scripts/check_catalog_consistency.py` — chequea drift Excel ↔ catálogo Flyers.
+- No hay otros tests automatizados. Si querés agregar, integrarlos a los workflows existentes.
