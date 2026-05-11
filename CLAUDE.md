@@ -70,9 +70,11 @@ Idioma: español (Argentina).
 
 1. Descifrar: `npx --yes staticrypt <archivo> --decrypt -p '159159' --salt 'cc5a1a7142676e8a40368a16e858f1de' -d decrypted/` → `decrypted/<archivo>`.
 2. Editar el HTML descifrado.
-3. Re-cifrar conservando el template del lock screen (`--remember 30`, `--short`, mismo `--salt`, mismos textos en español, mismos colores `#f59e0b` / `#0f172a`).
+3. Re-cifrar conservando el template del lock screen (`--remember 365`, `--short`, mismo `--salt`, mismos textos en español, mismos colores `#f59e0b` / `#0f172a`).
 4. Post-procesar el archivo cifrado:
    - Renombrar keys: `staticrypt_expiration` → `staticrypt_expiration_emp`, `staticrypt_passphrase` → `staticrypt_passphrase_emp` (suffix correspondiente al rol del repo — `_emp` acá).
+   - Cambiar el texto del label de remember a `Recordarme 1 año` (staticrypt por default pone "Remember me").
+   - Agregar `checked` al `<input id="staticrypt-remember" type="checkbox" name="remember" />` para que el checkbox venga tildado por default — así los empleados no tienen que acordarse de tildarlo cada vez.
    - Re-agregar `<meta name="robots" content="noindex, nofollow">` después del `<meta charset>`.
    - Re-insertar antes de `</head>`: `<link rel="stylesheet" href="maxifer-branding.css">` y `<script defer src="maxifer-branding.js"></script>`.
 5. Verificar roundtrip (descifrar el resultado y `diff` contra el descifrado original — debe ser vacío).
