@@ -2103,6 +2103,24 @@ const FEATURED = [
 const PDF_FOLDER = "listas/";
 const THUMBS_FOLDER = "thumbs/";
 
+// Construye un item con la forma estándar de GA4 ecommerce a partir de una lista (PDF).
+// item_list_name viene del título de la lista o del agrupador donde aparece el item,
+// para que en GA4 la dimensión "Nombre del surtido" deje de venir (not set).
+function ga4ItemFromLista(lista, extra) {
+    if (!lista) return null;
+    const listName = (extra && extra.list_name) || 'Listas MAXIFER';
+    const listId   = (extra && extra.list_id)   || 'listas_maxifer';
+    return {
+        item_id: lista.file || lista.title,
+        item_name: lista.title,
+        item_brand: 'MAXIFER',
+        item_category: lista.desc || listName,
+        item_list_name: listName,
+        item_list_id: listId,
+        index: (extra && extra.index != null) ? extra.index : undefined
+    };
+}
+
 let DATA = [];
 let _dataReady = null;
 // Leer descuento desde URL (?d=46) si existe
@@ -2518,7 +2536,21 @@ function openCatalogPdf(f) {
     document.body.style.overflow = 'hidden';
 
     if (typeof gtag === 'function') {
-        gtag('event', 'abrir_catalogo_maxifer', { vendedor: 'Maxi', precio: 'lista', modo: 'pdf' });
+        gtag('event', 'abrir_catalogo_maxifer', {
+            vendedor: 'Maxi',
+            precio: 'lista',
+            modo: 'pdf',
+            item_list_name: 'Catálogo de Exhibidores MAXIFER',
+            item_list_id: 'catalogo_exhibidores',
+            items: [{
+                item_id: 'catalogo_exhibidores_pdf',
+                item_name: f && f.title ? f.title : 'Catálogo de Exhibidores 2026',
+                item_brand: 'MAXIFER',
+                item_category: 'Catálogo de Exhibidores',
+                item_list_name: 'Catálogo de Exhibidores MAXIFER',
+                item_list_id: 'catalogo_exhibidores'
+            }]
+        });
     }
 
     if (!_suppressPush) {
@@ -2552,7 +2584,21 @@ function openCatalogHtml(f) {
     document.body.style.overflow = 'hidden';
 
     if (typeof gtag === 'function') {
-        gtag('event', 'abrir_catalogo_maxifer', { vendedor: 'Maxi', precio: 'lista', modo: 'html' });
+        gtag('event', 'abrir_catalogo_maxifer', {
+            vendedor: 'Maxi',
+            precio: 'lista',
+            modo: 'html',
+            item_list_name: 'Catálogo de Exhibidores MAXIFER',
+            item_list_id: 'catalogo_exhibidores',
+            items: [{
+                item_id: 'catalogo_exhibidores_html',
+                item_name: f && f.title ? f.title : 'Catálogo de Exhibidores 2026',
+                item_brand: 'MAXIFER',
+                item_category: 'Catálogo de Exhibidores',
+                item_list_name: 'Catálogo de Exhibidores MAXIFER',
+                item_list_id: 'catalogo_exhibidores'
+            }]
+        });
     }
 
     if (!_suppressPush) {
@@ -2664,6 +2710,21 @@ function renderListas() {
             if (lista) openPdf(lista);
         });
     });
+
+    if (typeof gtag === 'function' && filtered.length > 0) {
+        const listName = q ? ('Búsqueda de listas: ' + q) : 'Listas MAXIFER';
+        const listId   = q ? ('search_' + q) : 'listas_maxifer';
+        const items = filtered.slice(0, 20).map((l, i) => ga4ItemFromLista(l, {
+            list_name: listName,
+            list_id: listId,
+            index: i
+        }));
+        gtag('event', 'view_item_list', {
+            item_list_name: listName,
+            item_list_id: listId,
+            items: items
+        });
+    }
     grid.querySelectorAll('[data-action="dl"]').forEach(el => {
         el.addEventListener('click', e => {
             e.stopPropagation();
@@ -2840,6 +2901,14 @@ function clearMobilePdfViewer() {
 
 function openPdf(lista) {
     if (!lista) return;
+    if (typeof gtag === 'function') {
+        const item = ga4ItemFromLista(lista, { list_name: 'Listas MAXIFER', list_id: 'listas_maxifer' });
+        gtag('event', 'select_item', {
+            item_list_name: 'Listas MAXIFER',
+            item_list_id: 'listas_maxifer',
+            items: item ? [item] : []
+        });
+    }
     currentPdf = lista;
     const url = PDF_FOLDER + encodeURIComponent(lista.file);
     $('modalTitle').textContent = lista.title;
@@ -2873,6 +2942,14 @@ function openPdfByFamily(family) {
     if (!file) { toast('PDF no disponible para esta familia'); return; }
     const lista = LISTAS.find(l => l.file === file);
     if (lista) {
+        if (typeof gtag === 'function') {
+            const item = ga4ItemFromLista(lista, { list_name: 'Familia: ' + family, list_id: 'familia_' + family });
+            gtag('event', 'select_item', {
+                item_list_name: 'Familia: ' + family,
+                item_list_id: 'familia_' + family,
+                items: item ? [item] : []
+            });
+        }
         currentPdf = { ...lista, _originFamily: family };
         const url = PDF_FOLDER + encodeURIComponent(lista.file);
         $('modalTitle').textContent = lista.title;
