@@ -24,6 +24,10 @@ const SLUG_TO_VENDOR = {
   'noa':      'Daniel Noa'
 };
 
+// Slugs que ven TODOS los pedidos (no se filtran por vendedor).
+// Nadia está a cargo de toda la logística, ve el board completo.
+const FULL_ACCESS_SLUGS = new Set(['nadia', 'maxi']);
+
 const COL = {
   status: 'project_status',
   fechaEntrega: 'date',
@@ -233,9 +237,11 @@ export default async function handler(req, res) {
   if (!token) return res.status(500).json({ error: 'Backend no configurado (falta MONDAY_TOKEN_MAXI en Vercel)' });
 
   try {
-    const orders = await fetchOrders(token, vendorLabel);
+    const fullAccess = FULL_ACCESS_SLUGS.has(slug);
+    const orders = await fetchOrders(token, fullAccess ? null : vendorLabel);
     return res.status(200).json({
       vendor: vendorLabel,
+      fullAccess,
       slug,
       generatedAt: new Date().toISOString(),
       count: orders.length,
