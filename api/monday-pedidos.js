@@ -16,7 +16,7 @@ const PROV_COL_ZONA = 'dropdown_mkqx2g3q';
 // Columnas que el visor PUEDE escribir (whitelist de seguridad: aunque el
 // link sea público, solo se pueden tocar estados, nada más).
 const WRITABLE = {
-  order:   { board: BOARD_ID,    cols: new Set(['project_status']) },
+  order:   { board: BOARD_ID,    cols: new Set(['project_status', 'color_mkpd637b']) },
   subitem: { board: SUBBOARD_ID, cols: new Set(['estado__1', 'status']) }
 };
 
