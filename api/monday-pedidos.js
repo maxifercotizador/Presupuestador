@@ -1,11 +1,21 @@
 // Proxy serverless para los visores por vendedor.
 // Consume el token MAXIFER de Monday (env var MONDAY_TOKEN_MAXI) y devuelve
-// solo los pedidos del vendedor identificado por slug. El frontend público
+// los pedidos del vendedor identificado por slug. El frontend público
 // (Temporales/visor.html) no ve el token.
 
 const BOARD_ID = 7212937829;
+const SUBBOARD_ID = 7212960979;
 const ACTIVE_GROUP = 'new_group29179';
 const DONE_GROUP = 'grupo_nuevo86596__1';
+const CLIENTES_BOARD_ID = 8921412317;
+const CLIENTES_COL_ZONA = 'numeric_mkzaa3hk';
+
+// Columnas que el visor PUEDE escribir (whitelist de seguridad: aunque el
+// link sea público, solo se pueden tocar estados, nada más).
+const WRITABLE = {
+  order:   { board: BOARD_ID,    cols: new Set(['project_status']) },
+  subitem: { board: SUBBOARD_ID, cols: new Set(['estado__1', 'status']) }
+};
 
 // Slug → label exacto del dropdown vendedor en el board (color_mkq17tse)
 const SLUG_TO_VENDOR = {
@@ -40,10 +50,13 @@ const COL = {
   telefono: 'lookup_mkpzh2zz',
   ubicacion: 'lookup_mkpztwy2',
   ubiExpreso: 'location_mkqtyppx',
+  pago: 'color_mkpd637b',
+  facturado: 'color_mkpdxc04',
+  otsBs: 'text_mm0wyss6',
   detalleEnv: 'color_mkwanspv'
 };
 const COL_IDS = Object.values(COL);
-const SUB_COL_IDS = ['men__desplegable__1', 'estado__1', 'status', 'men__desplegable8__1'];
+const SUB_COL_IDS = ['men__desplegable__1', 'estado__1', 'status', 'men__desplegable8__1', 'text_mkq4c05', 'text_mkq4hjhx'];
 
 async function mondayQuery(token, query) {
   const r = await fetch('https://api.monday.com/v2', {
@@ -89,6 +102,7 @@ function parseOrder(item, vendorFilter) {
 
   const clientName = (cv[COL.baseClientes]?.display_value ||
                       cv[COL.nombreCliente]?.display_value || '').trim();
+  const clienteId = cv[COL.baseClientes]?.linked_item_ids?.[0] || null;
   const ubicacion = (cv[COL.ubicacion]?.display_value || cv[COL.ubicacion]?.text || '').trim();
   const ubiExpresoCv = cv[COL.ubiExpreso];
   const fechaText = cv[COL.fechaEntrega]?.text || '';
@@ -100,12 +114,17 @@ function parseOrder(item, vendorFilter) {
     estado: cv[COL.status]?.text || '',
     vendedor,
     clientName,
+    clienteId: clienteId ? String(clienteId) : null,
+    zonaCliente: null,
     etiqueta: cv[COL.etiqueta]?.display_value || cv[COL.etiqueta]?.text || '',
     telefono: cv[COL.telefono]?.display_value || cv[COL.telefono]?.text || '',
     ubicacion,
     ubiAddr: ubiExpresoCv?.address || '',
     lat: ubiExpresoCv?.lat || null,
     lng: ubiExpresoCv?.lng || null,
+    pago: cv[COL.pago]?.text || '',
+    facturado: cv[COL.facturado]?.text || '',
+    ots: cv[COL.otsBs]?.text || '',
     detalleEnv: cv[COL.detalleEnv]?.text || '',
     fechaText
   };
@@ -126,7 +145,7 @@ async function fetchOrders(token, vendorLabel) {
           column_values(ids: ${colIdsStr}) {
             id text value
             ... on MirrorValue { display_value }
-            ... on BoardRelationValue { display_value }
+            ... on BoardRelationValue { display_value linked_item_ids }
             ... on LocationValue { lat lng address }
           }
         }
@@ -139,7 +158,7 @@ async function fetchOrders(token, vendorLabel) {
               column_values(ids: ${colIdsStr}) {
                 id text value
                 ... on MirrorValue { display_value }
-                ... on BoardRelationValue { display_value }
+                ... on BoardRelationValue { display_value linked_item_ids }
                 ... on LocationValue { lat lng address }
               }
             }
@@ -167,7 +186,7 @@ async function fetchOrders(token, vendorLabel) {
           column_values(ids: ${colIdsStr}) {
             id text value
             ... on MirrorValue { display_value }
-            ... on BoardRelationValue { display_value }
+            ... on BoardRelationValue { display_value linked_item_ids }
             ... on LocationValue { lat lng address }
           }
         }
@@ -183,58 +202,116 @@ async function fetchOrders(token, vendorLabel) {
     }
   } catch (e) { /* silent */ }
 
-  // Subitems (solo si hay pedidos)
-  if (orders.length > 0) {
-    const subColIds = JSON.stringify(SUB_COL_IDS);
-    const ids = orders.map(o => o.id);
-    const BATCH = 80;
-    const subMap = new Map();
-    for (let i = 0; i < ids.length; i += BATCH) {
-      const batch = ids.slice(i, i + BATCH);
+  if (orders.length === 0) return orders;
+
+  // Subitems en lotes
+  const subColIds = JSON.stringify(SUB_COL_IDS);
+  const ids = orders.map(o => o.id);
+  const BATCH = 80;
+  const subMap = new Map();
+  for (let i = 0; i < ids.length; i += BATCH) {
+    const batch = ids.slice(i, i + BATCH);
+    const q = `query { items(ids: [${batch.join(',')}]) {
+      id subitems { id name column_values(ids: ${subColIds}) { id text value } }
+    }}`;
+    try {
+      const d = await mondayQuery(token, q);
+      for (const it of (d.items || [])) {
+        const subs = (it.subitems || []).map(s => {
+          const cv = {};
+          for (const c of s.column_values) cv[c.id] = c;
+          let tipoIdx = null;
+          try {
+            const v = JSON.parse(cv['men__desplegable__1']?.value || 'null');
+            if (v?.ids?.[0] != null) tipoIdx = v.ids[0];
+          } catch (e) {}
+          return {
+            id: s.id,
+            name: s.name,
+            tipo: cv['men__desplegable__1']?.text || '',
+            tipoIdx,
+            exhibidor: cv['estado__1']?.text || '',
+            gavetaRepo: cv['status']?.text || '',
+            detalles: cv['men__desplegable8__1']?.text || '',
+            faltGav: cv['text_mkq4c05']?.text || '',
+            faltExhib: cv['text_mkq4hjhx']?.text || ''
+          };
+        });
+        subMap.set(it.id, subs);
+      }
+    } catch (e) { /* silent */ }
+  }
+  for (const o of orders) o.subitems = subMap.get(o.id) || [];
+
+  // Zonas de Base Clientes (para el detector de inconsistencias)
+  const cliIds = Array.from(new Set(orders.map(o => o.clienteId).filter(Boolean)));
+  if (cliIds.length > 0) {
+    const zonaMap = new Map();
+    const CLI_BATCH = 100;
+    for (let i = 0; i < cliIds.length; i += CLI_BATCH) {
+      const batch = cliIds.slice(i, i + CLI_BATCH);
       const q = `query { items(ids: [${batch.join(',')}]) {
-        id subitems { id name column_values(ids: ${subColIds}) { id text value } }
+        id column_values(ids: ["${CLIENTES_COL_ZONA}"]) { id text }
       }}`;
       try {
         const d = await mondayQuery(token, q);
         for (const it of (d.items || [])) {
-          const subs = (it.subitems || []).map(s => {
-            const cv = {};
-            for (const c of s.column_values) cv[c.id] = c;
-            return {
-              id: s.id,
-              name: s.name,
-              tipo: cv['men__desplegable__1']?.text || '',
-              exhibidor: cv['estado__1']?.text || '',
-              gavetaRepo: cv['status']?.text || '',
-              detalles: cv['men__desplegable8__1']?.text || ''
-            };
-          });
-          subMap.set(it.id, subs);
+          const z = it.column_values?.[0]?.text;
+          if (z !== undefined && z !== null && z !== '') zonaMap.set(String(it.id), z);
         }
       } catch (e) { /* silent */ }
     }
-    for (const o of orders) o.subitems = subMap.get(o.id) || [];
+    for (const o of orders) {
+      if (o.clienteId) o.zonaCliente = zonaMap.get(String(o.clienteId)) || null;
+    }
   }
 
   return orders;
 }
 
+async function handleUpdate(req, res, token) {
+  let body = req.body;
+  if (typeof body === 'string') { try { body = JSON.parse(body); } catch (e) { body = {}; } }
+  const kind = String(body?.kind || '');
+  const itemId = String(body?.itemId || '');
+  const columnId = String(body?.columnId || '');
+  const value = body?.value;
+
+  const rule = WRITABLE[kind];
+  if (!rule) return res.status(400).json({ error: 'kind inválido' });
+  if (!rule.cols.has(columnId)) return res.status(403).json({ error: 'Columna no editable: ' + columnId });
+  if (!/^\d+$/.test(itemId)) return res.status(400).json({ error: 'itemId inválido' });
+  if (typeof value !== 'string' || value.length > 80) return res.status(400).json({ error: 'value inválido' });
+
+  const q = `mutation {
+    change_simple_column_value(board_id: ${rule.board}, item_id: ${itemId}, column_id: "${columnId}", value: ${JSON.stringify(value)}, create_labels_if_missing: false) { id }
+  }`;
+  try {
+    const d = await mondayQuery(token, q);
+    return res.status(200).json({ ok: true, id: d?.change_simple_column_value?.id || itemId });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=180');
   if (req.method === 'OPTIONS') return res.status(200).end();
+
+  const token = process.env.MONDAY_TOKEN_MAXI;
+  if (!token) return res.status(500).json({ error: 'Backend no configurado (falta MONDAY_TOKEN_MAXI en Vercel)' });
+
+  if (req.method === 'POST') return handleUpdate(req, res, token);
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
+  res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=180');
   const slug = String(req.query.slug || req.query.v || '').toLowerCase().trim();
   if (!slug) return res.status(400).json({ error: 'Falta parámetro ?slug=' });
 
   const vendorLabel = SLUG_TO_VENDOR[slug];
   if (!vendorLabel) return res.status(404).json({ error: 'Vendedor no encontrado', slug, validSlugs: Object.keys(SLUG_TO_VENDOR) });
-
-  const token = process.env.MONDAY_TOKEN_MAXI;
-  if (!token) return res.status(500).json({ error: 'Backend no configurado (falta MONDAY_TOKEN_MAXI en Vercel)' });
 
   try {
     const fullAccess = FULL_ACCESS_SLUGS.has(slug);
