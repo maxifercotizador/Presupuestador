@@ -9,6 +9,9 @@ const ACTIVE_GROUP = 'new_group29179';
 const DONE_GROUP = 'grupo_nuevo86596__1';
 const CLIENTES_BOARD_ID = 8921412317;
 const CLIENTES_COL_ZONA = 'numeric_mkzaa3hk';
+const PROV_BOARD_ID = 9028339792;
+const PROV_COL_UBIC = 'location_mkqf6pe1';
+const PROV_COL_ZONA = 'dropdown_mkqx2g3q';
 
 // Columnas que el visor PUEDE escribir (whitelist de seguridad: aunque el
 // link sea público, solo se pueden tocar estados, nada más).
@@ -294,6 +297,35 @@ async function handleUpdate(req, res, token) {
   }
 }
 
+async function fetchProveedores(token) {
+  const q = `query { boards(ids: ${PROV_BOARD_ID}) {
+    items_page(limit: 200) {
+      items {
+        id name
+        column_values(ids: ["${PROV_COL_UBIC}", "${PROV_COL_ZONA}"]) {
+          id text
+          ... on LocationValue { lat lng address }
+        }
+      }
+    }
+  }}`;
+  const data = await mondayQuery(token, q);
+  const items = data.boards?.[0]?.items_page?.items || [];
+  return items.map(it => {
+    const cv = {};
+    for (const c of it.column_values) cv[c.id] = c;
+    const loc = cv[PROV_COL_UBIC];
+    return {
+      id: String(it.id),
+      name: it.name,
+      zona: cv[PROV_COL_ZONA]?.text || '',
+      lat: loc?.lat ? parseFloat(loc.lat) : null,
+      lng: loc?.lng ? parseFloat(loc.lng) : null,
+      address: loc?.address || ''
+    };
+  });
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -315,14 +347,18 @@ export default async function handler(req, res) {
 
   try {
     const fullAccess = FULL_ACCESS_SLUGS.has(slug);
-    const orders = await fetchOrders(token, fullAccess ? null : vendorLabel);
+    const [orders, proveedores] = await Promise.all([
+      fetchOrders(token, fullAccess ? null : vendorLabel),
+      fetchProveedores(token).catch(() => [])
+    ]);
     return res.status(200).json({
       vendor: vendorLabel,
       fullAccess,
       slug,
       generatedAt: new Date().toISOString(),
       count: orders.length,
-      orders
+      orders,
+      proveedores
     });
   } catch (err) {
     return res.status(500).json({ error: err.message });
