@@ -9,15 +9,20 @@ const ACTIVE_GROUP = 'new_group29179';
 const DONE_GROUP = 'grupo_nuevo86596__1';
 const CLIENTES_BOARD_ID = 8921412317;
 const CLIENTES_COL_ZONA = 'numeric_mkzaa3hk';
+const EXPRESOS_BOARD_ID = 8921417911;
 const PROV_BOARD_ID = 9028339792;
 const PROV_COL_UBIC = 'location_mkqf6pe1';
 const PROV_COL_ZONA = 'dropdown_mkqx2g3q';
 
-// Columnas que el visor PUEDE escribir (whitelist de seguridad: aunque el
-// link sea público, solo se pueden tocar estados, nada más).
+// Columna board_relation del cliente que apunta al board de Expresos.
+const CLIENT_EXPRESO_COL = 'board_relation_mkpz3z72';
+
+// Columnas que el visor PUEDE escribir (whitelist de seguridad). Aunque el
+// link sea público, solo se editan campos operativos de pedidos y clientes.
 const WRITABLE = {
-  order:   { board: BOARD_ID,    cols: new Set(['project_status', 'color_mkpd637b']) },
-  subitem: { board: SUBBOARD_ID, cols: new Set(['estado__1', 'status']) }
+  order:   { board: BOARD_ID,          cols: new Set(['project_status', 'color_mkpd637b', 'color_mkq17tse', 'text_mm0wyss6', 'date']) },
+  subitem: { board: SUBBOARD_ID,       cols: new Set(['estado__1', 'status']) },
+  client:  { board: CLIENTES_BOARD_ID, cols: new Set(['label__1', CLIENT_EXPRESO_COL]) }
 };
 
 // Slug → label exacto del dropdown vendedor en el board (color_mkq17tse)
@@ -48,6 +53,7 @@ const COL = {
   vendedor: 'color_mkq17tse',
   vendedorMirror: 'lookup_mkpzg5rd',
   etiqueta: 'lookup_mkpz5epk',
+  expreso: 'lookup_mkpzstfb',
   baseClientes: 'board_relation_mkpzzjqf',
   nombreCliente: 'lookup_mkpzmn01',
   telefono: 'lookup_mkpzh2zz',
@@ -120,6 +126,7 @@ function parseOrder(item, vendorFilter) {
     clienteId: clienteId ? String(clienteId) : null,
     zonaCliente: null,
     etiqueta: cv[COL.etiqueta]?.display_value || cv[COL.etiqueta]?.text || '',
+    expreso: cv[COL.expreso]?.display_value || cv[COL.expreso]?.text || '',
     telefono: cv[COL.telefono]?.display_value || cv[COL.telefono]?.text || '',
     ubicacion,
     ubiAddr: ubiExpresoCv?.address || '',
@@ -272,6 +279,43 @@ async function fetchOrders(token, vendorLabel) {
   return orders;
 }
 
+// Opciones de los selectores editables del panel + lista de expresos.
+function parseStatusLabels(settingsStr) {
+  try {
+    const s = JSON.parse(settingsStr || '{}');
+    const labels = s.labels || {};
+    const pos = s.labels_positions_v2 || {};
+    return Object.keys(labels)
+      .filter(k => labels[k] && String(labels[k]).trim())
+      .sort((a, b) => (pos[a] != null ? pos[a] : 999) - (pos[b] != null ? pos[b] : 999))
+      .map(k => labels[k]);
+  } catch (e) { return []; }
+}
+
+async function fetchMeta(token) {
+  const q = `query {
+    cols: boards(ids: [${BOARD_ID}, ${CLIENTES_BOARD_ID}]) { id columns { id settings_str } }
+    exp: boards(ids: ${EXPRESOS_BOARD_ID}) { items_page(limit: 300) { items { id name } } }
+  }`;
+  const d = await mondayQuery(token, q);
+  const byBoard = {};
+  for (const b of (d.cols || [])) {
+    const m = {};
+    for (const c of (b.columns || [])) m[c.id] = c.settings_str;
+    byBoard[String(b.id)] = m;
+  }
+  const pedidos = byBoard[String(BOARD_ID)] || {};
+  const clientes = byBoard[String(CLIENTES_BOARD_ID)] || {};
+  const columnOptions = {
+    estado:   parseStatusLabels(pedidos['project_status']),
+    vendedor: parseStatusLabels(pedidos['color_mkq17tse']),
+    pago:     parseStatusLabels(pedidos['color_mkpd637b']),
+    etiqueta: parseStatusLabels(clientes['label__1'])
+  };
+  const expresos = (d.exp?.[0]?.items_page?.items || []).map(it => ({ id: String(it.id), name: it.name }));
+  return { columnOptions, expresos };
+}
+
 async function handleUpdate(req, res, token) {
   let body = req.body;
   if (typeof body === 'string') { try { body = JSON.parse(body); } catch (e) { body = {}; } }
@@ -284,14 +328,21 @@ async function handleUpdate(req, res, token) {
   if (!rule) return res.status(400).json({ error: 'kind inválido' });
   if (!rule.cols.has(columnId)) return res.status(403).json({ error: 'Columna no editable: ' + columnId });
   if (!/^\d+$/.test(itemId)) return res.status(400).json({ error: 'itemId inválido' });
-  if (typeof value !== 'string' || value.length > 80) return res.status(400).json({ error: 'value inválido' });
 
-  const q = `mutation {
-    change_simple_column_value(board_id: ${rule.board}, item_id: ${itemId}, column_id: "${columnId}", value: ${JSON.stringify(value)}, create_labels_if_missing: false) { id }
-  }`;
+  let q;
+  if (columnId === CLIENT_EXPRESO_COL) {
+    // Expreso del cliente: board_relation → change_column_value con JSON.
+    const linkedId = String(value == null ? '' : value).trim();
+    if (linkedId && !/^\d+$/.test(linkedId)) return res.status(400).json({ error: 'value inválido' });
+    const jsonVal = JSON.stringify(linkedId ? { item_ids: [Number(linkedId)] } : { item_ids: [] });
+    q = `mutation { change_column_value(board_id: ${rule.board}, item_id: ${itemId}, column_id: "${columnId}", value: ${JSON.stringify(jsonVal)}) { id } }`;
+  } else {
+    if (typeof value !== 'string' || value.length > 255) return res.status(400).json({ error: 'value inválido' });
+    q = `mutation { change_simple_column_value(board_id: ${rule.board}, item_id: ${itemId}, column_id: "${columnId}", value: ${JSON.stringify(value)}, create_labels_if_missing: false) { id } }`;
+  }
   try {
-    const d = await mondayQuery(token, q);
-    return res.status(200).json({ ok: true, id: d?.change_simple_column_value?.id || itemId });
+    await mondayQuery(token, q);
+    return res.status(200).json({ ok: true });
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
@@ -347,9 +398,10 @@ export default async function handler(req, res) {
 
   try {
     const fullAccess = FULL_ACCESS_SLUGS.has(slug);
-    const [orders, proveedores] = await Promise.all([
+    const [orders, proveedores, meta] = await Promise.all([
       fetchOrders(token, fullAccess ? null : vendorLabel),
-      fetchProveedores(token).catch(() => [])
+      fetchProveedores(token).catch(() => []),
+      fetchMeta(token).catch(() => ({ columnOptions: {}, expresos: [] }))
     ]);
     return res.status(200).json({
       vendor: vendorLabel,
@@ -358,7 +410,9 @@ export default async function handler(req, res) {
       generatedAt: new Date().toISOString(),
       count: orders.length,
       orders,
-      proveedores
+      proveedores,
+      columnOptions: meta.columnOptions,
+      expresos: meta.expresos
     });
   } catch (err) {
     return res.status(500).json({ error: err.message });
