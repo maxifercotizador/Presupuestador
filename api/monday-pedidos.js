@@ -67,13 +67,29 @@ const COL = {
 const COL_IDS = Object.values(COL);
 const SUB_COL_IDS = ['men__desplegable__1', 'estado__1', 'status', 'men__desplegable8__1', 'text_mkq4c05', 'text_mkq4hjhx'];
 
-async function mondayQuery(token, query) {
+// Columnas extra del subelemento para los visores de taller.
+const SUB_COL_ITEMS = 'numeric_mkw6x384'; // cantidad de ítems (lo usa el visor de reposiciones)
+// Columnas fórmula que calculan cuántas gavetas de cada tipo lleva el surtido.
+const SUB_GAVETA_COLS = {
+  formula_mkspr5nv: 'Gav 35 ch',
+  formula_mksp4d6w: 'Gav 40',
+  formula_mksp3m57: 'Gav 35',
+  formula_mkspj0ep: 'Gav 24 gr',
+  formula_mksp39r:  'Gav 24',
+  formula_mkspv5f7: 'Gav 20 gr',
+  formula_mkspq6fj: 'Gav 30'
+};
+const SUB_COL_IDS_TALLER = [...SUB_COL_IDS, SUB_COL_ITEMS, ...Object.keys(SUB_GAVETA_COLS)];
+// Las columnas fórmula sólo exponen su valor calculado en versiones nuevas de la API.
+const TALLER_API_VERSION = '2025-01';
+
+async function mondayQuery(token, query, version) {
   const r = await fetch('https://api.monday.com/v2', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': token,
-      'API-Version': '2024-10'
+      'API-Version': version || '2024-10'
     },
     body: JSON.stringify({ query })
   });
@@ -140,7 +156,7 @@ function parseOrder(item, vendorFilter) {
   };
 }
 
-async function fetchOrders(token, vendorLabel) {
+async function fetchOrders(token, vendorLabel, tallerMode) {
   const colIdsStr = JSON.stringify(COL_IDS);
   const orders = [];
 
@@ -184,48 +200,57 @@ async function fetchOrders(token, vendorLabel) {
     cursor = pageObj.cursor;
   } while (cursor && page < 20);
 
-  // Finalizados de la semana
-  const week = getCurrentWeek();
-  const fromStr = ymd(week[0]);
-  const toStr = ymd(week[6]);
-  const finQ = `query { boards(ids: ${BOARD_ID}) {
-    groups(ids: ["${DONE_GROUP}"]) {
-      items_page(limit: 200, query_params: { rules: [{ column_id: "date", compare_value: ["${fromStr}", "${toStr}"], operator: between }], operator: and }) {
-        items {
-          id name group { id title }
-          column_values(ids: ${colIdsStr}) {
-            id text value
-            ... on MirrorValue { display_value }
-            ... on BoardRelationValue { display_value linked_item_ids }
-            ... on LocationValue { lat lng address }
+  // Finalizados de la semana. Los visores de taller no los necesitan
+  // (sólo muestran subelementos pendientes), así que se saltean.
+  if (!tallerMode) {
+    const week = getCurrentWeek();
+    const fromStr = ymd(week[0]);
+    const toStr = ymd(week[6]);
+    const finQ = `query { boards(ids: ${BOARD_ID}) {
+      groups(ids: ["${DONE_GROUP}"]) {
+        items_page(limit: 200, query_params: { rules: [{ column_id: "date", compare_value: ["${fromStr}", "${toStr}"], operator: between }], operator: and }) {
+          items {
+            id name group { id title }
+            column_values(ids: ${colIdsStr}) {
+              id text value
+              ... on MirrorValue { display_value }
+              ... on BoardRelationValue { display_value linked_item_ids }
+              ... on LocationValue { lat lng address }
+            }
           }
         }
       }
-    }
-  }}`;
-  try {
-    const finData = await mondayQuery(token, finQ);
-    const finItems = finData.boards?.[0]?.groups?.[0]?.items_page?.items || [];
-    for (const item of finItems) {
-      const o = parseOrder(item, vendorLabel);
-      if (o) { o.isFinalized = true; orders.push(o); }
-    }
-  } catch (e) { /* silent */ }
+    }}`;
+    try {
+      const finData = await mondayQuery(token, finQ);
+      const finItems = finData.boards?.[0]?.groups?.[0]?.items_page?.items || [];
+      for (const item of finItems) {
+        const o = parseOrder(item, vendorLabel);
+        if (o) { o.isFinalized = true; orders.push(o); }
+      }
+    } catch (e) { /* silent */ }
+  }
 
   if (orders.length === 0) return orders;
 
   // Subitems en lotes. items(ids:[...]) trunca a 25 si no se pasa limit.
-  const subColIds = JSON.stringify(SUB_COL_IDS);
+  // En modo taller se piden columnas extra (cantidad de ítems + gavetas por
+  // surtido). Las gavetas son columnas fórmula: sólo exponen su valor con el
+  // fragmento FormulaValue y una versión de API reciente.
+  const subColIds = JSON.stringify(tallerMode ? SUB_COL_IDS_TALLER : SUB_COL_IDS);
+  const cvSelection = tallerMode
+    ? 'id text value ... on FormulaValue { display_value }'
+    : 'id text value';
   const ids = orders.map(o => o.id);
   const BATCH = 80;
   const subMap = new Map();
   for (let i = 0; i < ids.length; i += BATCH) {
     const batch = ids.slice(i, i + BATCH);
     const q = `query { items(ids: [${batch.join(',')}], limit: 200) {
-      id subitems { id name column_values(ids: ${subColIds}) { id text value } }
+      id subitems { id name column_values(ids: ${subColIds}) { ${cvSelection} } }
     }}`;
     try {
-      const d = await mondayQuery(token, q);
+      const d = await mondayQuery(token, q, tallerMode ? TALLER_API_VERSION : undefined);
       for (const it of (d.items || [])) {
         const subs = (it.subitems || []).map(s => {
           const cv = {};
@@ -235,7 +260,7 @@ async function fetchOrders(token, vendorLabel) {
             const v = JSON.parse(cv['men__desplegable__1']?.value || 'null');
             if (v?.ids?.[0] != null) tipoIdx = v.ids[0];
           } catch (e) {}
-          return {
+          const sub = {
             id: s.id,
             name: s.name,
             tipo: cv['men__desplegable__1']?.text || '',
@@ -246,6 +271,19 @@ async function fetchOrders(token, vendorLabel) {
             faltGav: cv['text_mkq4c05']?.text || '',
             faltExhib: cv['text_mkq4hjhx']?.text || ''
           };
+          if (tallerMode) {
+            const n = parseInt(cv[SUB_COL_ITEMS]?.text ?? '', 10);
+            sub.items = Number.isFinite(n) ? n : null;
+            const gav = [];
+            for (const [colId, label] of Object.entries(SUB_GAVETA_COLS)) {
+              const c = cv[colId];
+              const raw = c ? (c.display_value != null ? c.display_value : c.text) : null;
+              const str = (raw == null ? '' : String(raw)).trim();
+              if (str !== '') gav.push({ tipo: label, val: str });
+            }
+            sub.gavetas = gav;
+          }
+          return sub;
         });
         subMap.set(it.id, subs);
       }
@@ -253,9 +291,10 @@ async function fetchOrders(token, vendorLabel) {
   }
   for (const o of orders) o.subitems = subMap.get(o.id) || [];
 
-  // Zonas de Base Clientes (para el detector de inconsistencias)
+  // Zonas de Base Clientes (para el detector de inconsistencias).
+  // No hace falta en modo taller.
   const cliIds = Array.from(new Set(orders.map(o => o.clienteId).filter(Boolean)));
-  if (cliIds.length > 0) {
+  if (!tallerMode && cliIds.length > 0) {
     const zonaMap = new Map();
     const CLI_BATCH = 100;
     for (let i = 0; i < cliIds.length; i += CLI_BATCH) {
@@ -314,6 +353,57 @@ async function fetchMeta(token) {
   };
   const expresos = (d.exp?.[0]?.items_page?.items || []).map(it => ({ id: String(it.id), name: it.name }));
   return { columnOptions, expresos };
+}
+
+// Opciones de estado del subboard, para los pickers de los visores de taller.
+async function fetchSubStatusOptions(token) {
+  const q = `query { boards(ids: ${SUBBOARD_ID}) { columns { id settings_str } } }`;
+  const d = await mondayQuery(token, q);
+  const m = {};
+  for (const c of (d.boards?.[0]?.columns || [])) m[c.id] = c.settings_str;
+  return {
+    gaveta:    parseStatusLabels(m['status']),
+    exhibidor: parseStatusLabels(m['estado__1'])
+  };
+}
+
+// Modo taller: todos los pedidos activos + subelementos con columnas extra.
+// Sirve a taller.html (visores de gavetas / exhibidores / reposiciones).
+async function handleTaller(req, res, token) {
+  const [orders, statusOptions] = await Promise.all([
+    fetchOrders(token, null, true),
+    fetchSubStatusOptions(token).catch(() => ({ gaveta: [], exhibidor: [] }))
+  ]);
+
+  // Sonda de columnas fórmula: cuántos subelementos devolvieron gavetas.
+  let totalSubitems = 0, conGavetas = 0, muestra = null;
+  for (const o of orders) {
+    for (const s of (o.subitems || [])) {
+      totalSubitems++;
+      if (s.gavetas && s.gavetas.length) {
+        conGavetas++;
+        if (!muestra) muestra = { subitem: s.name, gavetas: s.gavetas };
+      }
+    }
+  }
+  const formulaProbe = {
+    apiVersion: TALLER_API_VERSION,
+    totalSubitems,
+    conGavetas,
+    columnasFormulaSeLeen: conGavetas > 0,
+    muestra
+  };
+
+  if (req.query.probe != null) return res.status(200).json({ _formulaProbe: formulaProbe });
+
+  return res.status(200).json({
+    mode: 'taller',
+    generatedAt: new Date().toISOString(),
+    count: orders.length,
+    orders,
+    statusOptions,
+    _formulaProbe: formulaProbe
+  });
 }
 
 async function handleUpdate(req, res, token) {
@@ -392,6 +482,15 @@ export default async function handler(req, res) {
   // El visor agrega &t= para forzar datos frescos justo después de guardar.
   if (req.query.t != null) res.setHeader('Cache-Control', 'no-store');
   else res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=180');
+
+  // Modo taller: no usa slug de vendedor (ve todo el board).
+  if (req.query.taller != null) {
+    try {
+      return await handleTaller(req, res, token);
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
+    }
+  }
 
   const slug = String(req.query.slug || req.query.v || '').toLowerCase().trim();
   if (!slug) return res.status(400).json({ error: 'Falta parámetro ?slug=' });
