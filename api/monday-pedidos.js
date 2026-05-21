@@ -207,14 +207,14 @@ async function fetchOrders(token, vendorLabel) {
 
   if (orders.length === 0) return orders;
 
-  // Subitems en lotes
+  // Subitems en lotes. items(ids:[...]) trunca a 25 si no se pasa limit.
   const subColIds = JSON.stringify(SUB_COL_IDS);
   const ids = orders.map(o => o.id);
   const BATCH = 80;
   const subMap = new Map();
   for (let i = 0; i < ids.length; i += BATCH) {
     const batch = ids.slice(i, i + BATCH);
-    const q = `query { items(ids: [${batch.join(',')}]) {
+    const q = `query { items(ids: [${batch.join(',')}], limit: 200) {
       id subitems { id name column_values(ids: ${subColIds}) { id text value } }
     }}`;
     try {
@@ -253,7 +253,7 @@ async function fetchOrders(token, vendorLabel) {
     const CLI_BATCH = 100;
     for (let i = 0; i < cliIds.length; i += CLI_BATCH) {
       const batch = cliIds.slice(i, i + CLI_BATCH);
-      const q = `query { items(ids: [${batch.join(',')}]) {
+      const q = `query { items(ids: [${batch.join(',')}], limit: 200) {
         id column_values(ids: ["${CLIENTES_COL_ZONA}"]) { id text }
       }}`;
       try {
