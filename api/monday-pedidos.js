@@ -389,7 +389,10 @@ export default async function handler(req, res) {
   if (req.method === 'POST') return handleUpdate(req, res, token);
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
-  res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=180');
+  // El visor agrega &t= para forzar datos frescos justo después de guardar.
+  if (req.query.t != null) res.setHeader('Cache-Control', 'no-store');
+  else res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=180');
+
   const slug = String(req.query.slug || req.query.v || '').toLowerCase().trim();
   if (!slug) return res.status(400).json({ error: 'Falta parámetro ?slug=' });
 
