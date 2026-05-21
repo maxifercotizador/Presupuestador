@@ -79,8 +79,10 @@ const SUB_GAVETA_COLS = {
   formula_mkspv5f7: 'Gav 20 gr',
   formula_mkspq6fj: 'Gav 30'
 };
-const SUB_COL_IDS_TALLER = [...SUB_COL_IDS, SUB_COL_ITEMS, ...Object.keys(SUB_GAVETA_COLS)];
-// Las columnas fórmula sólo exponen su valor calculado en versiones nuevas de la API.
+// La query principal del taller NO incluye las columnas fórmula: se leen
+// aparte (fetchGavetas) porque Monday limita a 5 columnas fórmula por request.
+const SUB_COL_IDS_TALLER = [...SUB_COL_IDS, SUB_COL_ITEMS];
+// Las columnas fórmula sólo exponen su valor calculado con API >= 2025-01.
 const TALLER_API_VERSION = '2025-01';
 
 async function mondayQuery(token, query, version) {
@@ -154,6 +156,39 @@ function parseOrder(item, vendorFilter) {
     detalleEnv: cv[COL.detalleEnv]?.text || '',
     fechaText
   };
+}
+
+// Lee las columnas fórmula de gavetas de un conjunto de subelementos.
+// Monday limita a 5 columnas fórmula por request y necesita API >= 2025-01,
+// así que se piden en chunks. Es best-effort: si falla, se devuelve vacío.
+async function fetchGavetas(token, subitemIds) {
+  const out = new Map();
+  const colEntries = Object.entries(SUB_GAVETA_COLS);
+  const ID_BATCH = 80;
+  const COL_CHUNK = 5;
+  for (let i = 0; i < subitemIds.length; i += ID_BATCH) {
+    const idBatch = subitemIds.slice(i, i + ID_BATCH);
+    for (let c = 0; c < colEntries.length; c += COL_CHUNK) {
+      const colIds = JSON.stringify(colEntries.slice(c, c + COL_CHUNK).map(([id]) => id));
+      const q = `query { items(ids: [${idBatch.join(',')}], limit: 200) {
+        id column_values(ids: ${colIds}) { id ... on FormulaValue { display_value } }
+      }}`;
+      try {
+        const d = await mondayQuery(token, q, TALLER_API_VERSION);
+        for (const it of (d.items || [])) {
+          const key = String(it.id);
+          let arr = out.get(key);
+          if (!arr) { arr = []; out.set(key, arr); }
+          for (const cv of (it.column_values || [])) {
+            const label = SUB_GAVETA_COLS[cv.id];
+            const str = (cv.display_value == null ? '' : String(cv.display_value)).trim();
+            if (label && str !== '') arr.push({ tipo: label, val: str });
+          }
+        }
+      } catch (e) { /* best-effort: si falla, el surtido queda sin gavetas */ }
+    }
+  }
+  return out;
 }
 
 async function fetchOrders(token, vendorLabel, tallerMode) {
@@ -234,23 +269,19 @@ async function fetchOrders(token, vendorLabel, tallerMode) {
   if (orders.length === 0) return orders;
 
   // Subitems en lotes. items(ids:[...]) trunca a 25 si no se pasa limit.
-  // En modo taller se piden columnas extra (cantidad de ítems + gavetas por
-  // surtido). Las gavetas son columnas fórmula: sólo exponen su valor con el
-  // fragmento FormulaValue y una versión de API reciente.
+  // En modo taller se suma la columna de cantidad de ítems. Las gavetas
+  // (columnas fórmula) NO van acá: se leen aparte con fetchGavetas.
   const subColIds = JSON.stringify(tallerMode ? SUB_COL_IDS_TALLER : SUB_COL_IDS);
-  const cvSelection = tallerMode
-    ? 'id text value ... on FormulaValue { display_value }'
-    : 'id text value';
   const ids = orders.map(o => o.id);
   const BATCH = 80;
   const subMap = new Map();
   for (let i = 0; i < ids.length; i += BATCH) {
     const batch = ids.slice(i, i + BATCH);
     const q = `query { items(ids: [${batch.join(',')}], limit: 200) {
-      id subitems { id name column_values(ids: ${subColIds}) { ${cvSelection} } }
+      id subitems { id name column_values(ids: ${subColIds}) { id text value } }
     }}`;
     try {
-      const d = await mondayQuery(token, q, tallerMode ? TALLER_API_VERSION : undefined);
+      const d = await mondayQuery(token, q);
       for (const it of (d.items || [])) {
         const subs = (it.subitems || []).map(s => {
           const cv = {};
@@ -274,14 +305,7 @@ async function fetchOrders(token, vendorLabel, tallerMode) {
           if (tallerMode) {
             const n = parseInt(cv[SUB_COL_ITEMS]?.text ?? '', 10);
             sub.items = Number.isFinite(n) ? n : null;
-            const gav = [];
-            for (const [colId, label] of Object.entries(SUB_GAVETA_COLS)) {
-              const c = cv[colId];
-              const raw = c ? (c.display_value != null ? c.display_value : c.text) : null;
-              const str = (raw == null ? '' : String(raw)).trim();
-              if (str !== '') gav.push({ tipo: label, val: str });
-            }
-            sub.gavetas = gav;
+            sub.gavetas = [];
           }
           return sub;
         });
@@ -290,6 +314,19 @@ async function fetchOrders(token, vendorLabel, tallerMode) {
     } catch (e) { /* silent */ }
   }
   for (const o of orders) o.subitems = subMap.get(o.id) || [];
+
+  // Gavetas por surtido (columnas fórmula) — pasada separada y best-effort.
+  if (tallerMode) {
+    const subIds = [];
+    for (const o of orders) for (const s of o.subitems) subIds.push(s.id);
+    if (subIds.length) {
+      const gavMap = await fetchGavetas(token, subIds);
+      for (const o of orders) for (const s of o.subitems) {
+        const g = gavMap.get(String(s.id));
+        if (g) s.gavetas = g;
+      }
+    }
+  }
 
   // Zonas de Base Clientes (para el detector de inconsistencias).
   // No hace falta en modo taller.
